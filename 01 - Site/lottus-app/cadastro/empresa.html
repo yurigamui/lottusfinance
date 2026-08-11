@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottus Finance | Cadastro Corporativo</title>
+    <meta name="description" content="Abra sua conta corporativa na Lottus e destrave seu fluxo de caixa.">
+    
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="icon" type="image/x-icon" href="../assets/img/Favicon.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body, html { background-color: var(--lottus-beige); margin: 0; padding: 0; min-height: 100vh; font-family: 'Inter', sans-serif; color: var(--lottus-graphite); position: relative; }
+
+        /* TOAST ALERT */
+        .toast-alert { position: fixed; top: 24px; right: 24px; padding: 16px 24px; background: var(--lottus-white); border-left: 4px solid var(--lottus-pink); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.08); z-index: 10000; transform: translateX(150%); transition: transform 0.3s ease; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 0.95rem; }
+        .toast-alert.show { transform: translateX(0); }
+        .toast-alert.error { border-left-color: #C92A2A; color: #C92A2A; }
+        .toast-alert.success { border-left-color: #2B8A3E; color: #2B8A3E; }
+
+        .header-pill-wrapper { position: absolute; top: 0; left: 0; right: 0; padding: 24px; display: flex; justify-content: center; z-index: 100; }
+        .header-pill { background-color: var(--lottus-white); border-radius: 100px; padding: 12px 32px; display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1400px; box-shadow: 0 4px 20px rgba(33, 37, 41, 0.03); border: 1px solid rgba(0,0,0,0.03); }
+        .header-pill nav { display: flex; gap: 32px; align-items: center; }
+        .header-pill nav a { text-decoration: none; color: var(--lottus-graphite); font-weight: 500; font-size: 0.95rem; transition: color var(--transition-fast); }
+        .header-pill nav a:hover { color: var(--lottus-pink); }
+        .header-actions-pill { display: flex; align-items: center; gap: 24px; }
+
+        .auth-split-container { display: flex; align-items: center; justify-content: center; padding: 140px 40px 60px 40px; min-height: 100vh; box-sizing: border-box; }
+        .auth-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 60px; align-items: center; max-width: 1100px; width: 100%; margin: 0 auto; }
+
+        .tracker-col h1 { font-size: clamp(2.2rem, 4vw, 3rem); font-weight: 700; color: var(--lottus-graphite); margin-bottom: 16px; letter-spacing: -0.03em; line-height: 1.1; }
+        .tracker-col p { font-size: 1.1rem; color: var(--lottus-graphite-light); line-height: 1.6; max-width: 95%; margin: 0 0 48px 0; }
+
+        .stepper-horizontal { display: flex; align-items: center; justify-content: space-between; max-width: 100%; }
+        .step-item { display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0.4; transition: opacity var(--transition-fast); position: relative; }
+        .step-item.active, .step-item.completed { opacity: 1; }
+        .step-indicator { width: 32px; height: 32px; background-color: var(--lottus-beige); border: 2px solid var(--lottus-border); color: var(--lottus-graphite-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all var(--transition-fast); z-index: 2; }
+        .step-item.active .step-indicator { border-color: var(--lottus-pink); background-color: var(--lottus-pink); color: var(--lottus-white); box-shadow: 0 0 0 4px rgba(200, 42, 96, 0.15); }
+        .step-item.completed .step-indicator { border-color: var(--lottus-graphite); background-color: var(--lottus-graphite); color: var(--lottus-white); }
+        .step-label h4 { font-size: 0.85rem; color: var(--lottus-graphite); font-weight: 600; margin: 0; white-space: nowrap; }
+        .step-line { flex: 1; height: 2px; background-color: rgba(33, 37, 41, 0.1); margin: 0 16px; transform: translateY(-12px); }
+
+        .form-card { background-color: var(--lottus-white); border-radius: 24px; padding: 48px 40px; box-shadow: 0 12px 40px rgba(33, 37, 41, 0.06); border: 1px solid var(--lottus-border); box-sizing: border-box; display: flex; flex-direction: column; }
+        .step-pane { display: none; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .step-pane.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .step-pane h3 { font-size: 1.4rem; color: var(--lottus-graphite); margin-bottom: 6px; }
+        .step-pane > p { color: var(--lottus-graphite-light); font-size: 0.95rem; margin-bottom: 32px; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .full-width { grid-column: span 2; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 6px; position: relative; }
+        .label-row { display: flex; justify-content: space-between; align-items: baseline; }
+        .input-group label { font-size: 0.85rem; font-weight: 600; color: var(--lottus-graphite); }
+        
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper input, .input-wrapper select { width: 100%; padding: 14px 16px; border: 1.5px solid #E2E8F0; border-radius: 8px; font-family: var(--font-primary); font-size: 0.95rem; color: var(--lottus-graphite); background-color: #F8FAFC; transition: all var(--transition-fast); outline: none; }
+        .input-wrapper input:focus, .input-wrapper select:focus { border-color: var(--lottus-pink); background-color: var(--lottus-white); box-shadow: 0 0 0 3px rgba(200, 42, 96, 0.1); }
+        .input-group.has-error .input-wrapper input, .input-group.has-error .input-wrapper select { border-color: #E63946; background-color: #FFF0F1; }
+        
+        .pwd-toggle { position: absolute; right: 16px; background: none; border: none; color: var(--lottus-graphite-light); cursor: pointer; padding: 0; display: flex; align-items: center; }
+        .pwd-toggle:hover { color: var(--lottus-pink); }
+
+        .error-msg { color: #E63946; font-size: 0.75rem; font-weight: 600; display: none; margin: 0; text-align: right;}
+        .error-msg a { color: #C92A2A; text-decoration: underline; }
+        .input-group.has-error .error-msg { display: block; }
+
+        .form-navigation { display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--lottus-border); }
+        .btn-prev { background: transparent; color: var(--lottus-graphite-light); border: none; font-weight: 600; font-size: 0.95rem; cursor: pointer; padding: 10px 0; transition: color var(--transition-fast); display: flex; align-items: center; gap: 6px; }
+        .btn-prev:hover { color: var(--lottus-graphite); }
+        .btn-prev[disabled] { opacity: 0; pointer-events: none; }
+        
+        .btn-next, .btn-submit { padding: 14px 28px; background-color: var(--lottus-pink); color: var(--lottus-white); border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background-color var(--transition-fast); display: inline-flex; align-items: center; gap: 8px; }
+        .btn-next:hover, .btn-submit:hover { background-color: var(--lottus-pink-hover); }
+        .btn-next[disabled], .btn-submit[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+        .terms-text { font-size: 0.8rem; color: var(--lottus-graphite-light); margin-top: 16px; line-height: 1.5; }
+        .terms-text a { color: var(--lottus-pink); text-decoration: none; }
+
+        @media (max-width: 992px) {
+            .auth-grid { grid-template-columns: 1fr; gap: 40px; align-items: flex-start; }
+            .step-label h4 { display: none; }
+            .step-line { margin: 0 8px; transform: translateY(-4px); }
+            .form-card { padding: 32px 24px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
+            .auth-split-container { padding: 120px 24px 60px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOAST ALERT -->
+    <div id="toast" class="toast-alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="toast-icon"></svg>
+        <span id="toast-msg">Mensagem</span>
+    </div>
+
+    <!-- CABEÇALHO PADRÃO DO SITE -->
+    <header class="lottus-header">
+        <div class="container header-container">
+            <a href="https://www.lottusfinance.com.br/" class="logo-link">
+                <img src="../assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span class="logo-text" style="display: none;">Lottus</span>
+            </a>
+            
+            <nav class="main-nav">
+                <a href="https://www.lottusfinance.com.br/" class="nav-link">Home</a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false">
+                        Soluções 
+                        <svg class="dropdown-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </a>
+                    <div class="dropdown-menu solutions-dropdown">
+                        <div class="dropdown-section">
+                            <span class="dropdown-header-title">Para Empresas</span>
+                            <a href="https://www.lottusfinance.com.br/credito.html" class="dropdown-item">
+                                <div class="item-title">Crédito Corporativo</div>
+                                <small class="item-desc">Antecipação de recebíveis, risco sacado e capital de giro.</small>
+                            </a>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-section">
+                            <span class="dropdown-header-title">Para Parceiros</span>
+                            <a href="https://www.lottusfinance.com.br/credito-as-a-service.html" class="dropdown-item">
+                                <div class="item-title">Credit as a Service</div>
+                                <small class="item-desc">API nativa para embutir inteligência de crédito na sua plataforma.</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="https://www.lottusfinance.com.br/sobre.html" class="nav-link">Sobre Nós</a>
+                <a href="https://www.lottusfinance.com.br/contato.html" class="nav-link">Contato</a>
+            </nav>
+            
+            <div class="header-actions" style="display: flex; align-items: center; gap: 24px;">
+                <a href="../login/index.html" class="nav-link" style="font-weight: 600; color: var(--lottus-graphite);">Entrar</a>
+                <a href="index.html" class="btn btn-primary">Criar Conta</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="auth-split-container">
+        <div class="auth-grid">
+            
+            <div class="tracker-col">
+                <h1>Abertura de Conta</h1>
+                <p>O ecossistema Lottus é segmentado. Preencha o formulário e siga as etapas para estruturar sua conta corporativa de forma rápida e segura.</p>
+                
+                <div class="stepper-horizontal">
+                    <div class="step-item active" id="tracker-step-1">
+                        <div class="step-indicator">1</div>
+                        <div class="step-label"><h4>Empresa</h4></div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" id="tracker-step-2">
+                        <div class="step-indicator">2</div>
+                        <div class="step-label"><h4>Contato</h4></div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" id="tracker-step-3">
+                        <div class="step-indicator">3</div>
+                        <div class="step-label"><h4>Operação</h4></div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" id="tracker-step-4">
+                        <div class="step-indicator">4</div>
+                        <div class="step-label"><h4>Segurança</h4></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-card">
+                <form id="multi-step-form" novalidate>
+                    
+                    <div class="step-pane active" id="pane-step-1">
+                        <h3>Dados da Empresa</h3>
+                        <p>Qual empresa você está representando?</p>
+                        <div class="form-grid">
+                            <div class="input-group full-width">
+                                <div class="label-row">
+                                    <label for="cnpj">CNPJ</label>
+                                    <span class="error-msg" id="cnpj-error">O CNPJ informado é inválido.</span>
+                                </div>
+                                <div class="input-wrapper">
+                                    <input type="text" id="cnpj" placeholder="00.000.000/0001-00" maxlength="18" required>
+                                </div>
+                            </div>
+                            <div class="input-group full-width">
+                                <div class="label-row">
+                                    <label for="razao">Razão Social</label>
+                                    <span class="error-msg">A Razão Social é obrigatória.</span>
+                                </div>
+                                <div class="input-wrapper">
+                                    <input type="text" id="razao" required readonly style="background-color: #F1F5F9; cursor: not-allowed; color: var(--lottus-graphite-light);">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-pane" id="pane-step-2">
+                        <h3>Dados do Usuário</h3>
+                        <p>Quem será o administrador principal desta conta?</p>
+                        <div class="form-grid">
+                            <div class="input-group full-width">
+                                <div class="label-row">
+                                    <label for="nome">Nome Completo</label>
+                                    <span class="error-msg">Informe seu nome completo.</span>
+                                </div>
+                                <div class="input-wrapper"><input type="text" id="nome" placeholder="Seu nome" required></div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label-row">
+                                    <label for="cargo">Seu Cargo</label>
+                                    <span class="error-msg">O cargo é obrigatório.</span>
+                                </div>
+                                <div class="input-wrapper"><input type="text" id="cargo" placeholder="Ex: Diretor Financeiro" required></div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label-row">
+                                    <label for="telefone">WhatsApp Comercial</label>
+                                    <span class="error-msg">Informe um celular válido.</span>
+                                </div>
+                                <div class="input-wrapper"><input type="tel" id="telefone" placeholder="(00) 00000-0000" maxlength="15" required></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-pane" id="pane-step-3">
+                        <h3>Perfil Operacional</h3>
+                        <p>Para adequarmos os limites e taxas da sua conta.</p>
+                        <div class="form-grid">
+                            <div class="input-group full-width">
+                                <div class="label-row">
+                                    <label for="necessidade">Principal necessidade de fluxo</label>
+                                    <span class="error-msg">Selecione um objetivo financeiro.</span>
+                                </div>
+                                <div class="input-wrapper">
+                                    <select id="necessidade" required>
+                                        <option value="" disabled selected>Selecione o principal objetivo</option>
+                                        <option value="recebiveis">Antecipação de Recebíveis (Vendas a prazo)</option>
+                                        <option value="fornecedores">Risco Sacado (Pagamento de Fornecedores)</option>
+                                        <option value="giro">Capital de Giro (Expansão/Caixa)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-pane" id="pane-step-4">
+                        <h3>Credenciais de Acesso</h3>
+                        <p>Defina a segurança para acesso ao seu painel Lottus.</p>
+                        <div class="form-grid">
+                            <div class="input-group full-width">
+                                <div class="label-row">
+                                    <label for="email">E-mail Corporativo</label>
+                                    <span class="error-msg">Informe um e-mail válido.</span>
+                                </div>
+                                <div class="input-wrapper"><input type="email" id="email" placeholder="nome@suaempresa.com.br" required></div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label-row">
+                                    <label for="senha">Senha</label>
+                                    <span class="error-msg">Mínimo 8 caracteres.</span>
+                                </div>
+                                <div class="input-wrapper">
+                                    <input type="password" id="senha" placeholder="Mínimo 8 caracteres" minlength="8" required>
+                                    <button type="button" class="pwd-toggle" onclick="togglePwd('senha')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label-row">
+                                    <label for="confirma_senha">Confirmar Senha</label>
+                                    <span class="error-msg">As senhas não coincidem.</span>
+                                </div>
+                                <div class="input-wrapper">
+                                    <input type="password" id="confirma_senha" placeholder="Repita a senha" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="terms-text">
+                            Ao finalizar, concordo com os <a href="../termos.html" target="_blank">Termos</a> e <a href="../privacidade.html" target="_blank">Privacidade</a>.
+                        </div>
+                    </div>
+
+                    <div class="form-navigation">
+                        <button type="button" class="btn-prev" id="btn-prev" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                            Voltar
+                        </button>
+                        <button type="button" class="btn-next" id="btn-next" disabled>
+                            Continuar
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                        <button type="submit" class="btn-submit" id="btn-submit" style="display: none;">
+                            Finalizar Cadastro
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const supabaseUrl = 'https://rowhslnnlzfbhmzbylbz.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvd2hzbG5ubHpmYmhtemJ5bGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4Mjg2MTgsImV4cCI6MjEwMDQwNDYxOH0.hUvOsj_Tpf1asd7Neh4tnlLg5Vc-amcLRfbcoZKYX-0';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        function showToast(message, type = 'error') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            document.getElementById('toast-msg').innerText = message;
+            toast.className = `toast-alert show ${type}`;
+            
+            if (type === 'error') {
+                icon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>';
+            } else {
+                icon.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
+            }
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        function togglePwd(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === "password" ? "text" : "password";
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            
+            // ==========================================
+            // AUTO-LOGIN REDIRECT
+            // ==========================================
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+            if (session && !sessionError) {
+                window.location.href = '../dashboard/index.html';
+                return; // Impede que a tela carregue se o usuário já estiver logado
+            }
+
+            // ==========================================
+            // LÓGICA DO FORMULÁRIO
+            // ==========================================
+            const totalSteps = 4;
+            let currentStep = 1;
+            let relatorioRiscoGlobal = null; 
+
+            const form = document.getElementById('multi-step-form');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const btnSubmit = document.getElementById('btn-submit');
+            
+            const cnpjInput = document.getElementById('cnpj');
+            const razaoInput = document.getElementById('razao');
+            const cnpjErrorMsg = document.getElementById('cnpj-error');
+            const phoneInput = document.getElementById('telefone');
+
+            cnpjInput.addEventListener('input', async function (e) {
+                let v = e.target.value.replace(/\D/g, ""); 
+                if (v.length > 14) v = v.substring(0, 14);
+                v = v.replace(/^(\d{2})(\d)/, "$1.$2");
+                v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+                v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
+                v = v.replace(/(\d{4})(\d)/, "$1-$2");
+                e.target.value = v;
+                
+                const cnpjLimpo = v.replace(/\D/g, "");
+                const group = cnpjInput.closest('.input-group');
+                
+                // Se o usuário apagar ou não tiver 14 dígitos, zera tudo silenciosamente
+                if (cnpjLimpo.length < 14) {
+                    btnNext.disabled = true;
+                    relatorioRiscoGlobal = null;
+                    razaoInput.value = "";
+                    group.classList.remove('has-error');
+                    return;
+                }
+
+                // Assim que atinge 14 dígitos
+                if (cnpjLimpo.length === 14) {
+                    // 1. Validação Matemática
+                    if (!validarCNPJ(cnpjLimpo)) {
+                        cnpjErrorMsg.innerHTML = "O CNPJ informado é inválido.";
+                        group.classList.add('has-error');
+                        return;
+                    }
+
+                    // Se a matemática estiver ok, removemos o erro visual (caso estivesse lá)
+                    group.classList.remove('has-error');
+                    btnNext.disabled = true;
+                    razaoInput.value = ""; // Mantém em branco até a API voltar com sucesso
+
+                    try {
+                        // 2. Valida se já existe na base da Lottus
+                        const { data: empresaExistente, error: checkError } = await supabaseClient
+                            .from('empresas').select('id').eq('cnpj', cnpjLimpo).maybeSingle();
+
+                        if (empresaExistente) {
+                            throw new Error('Este CNPJ já possui cadastro. Faça <a href="../login/index.html">login aqui</a>.');
+                        }
+
+                        // 3. Consulta BrasilAPI
+                        const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+                        if (!response.ok) throw new Error("CNPJ não localizado na base nacional.");
+                        const dadosApi = await response.json();
+
+                        // 4. Consulta Motor de Risco Supabase
+                        const { data: relatorioRisco, error: rpcError } = await supabaseClient
+                            .rpc('processar_onboarding_cnpj', { p_payload: dadosApi });
+
+                        if (rpcError) throw new Error("Erro na avaliação de crédito interna.");
+                        if (relatorioRisco.status === 'BLOQUEADA') throw new Error(`BLOQUEADA: ${relatorioRisco.motivo_bloqueio}`);
+
+                        // Deu tudo certo, preenche a Razão Social
+                        relatorioRiscoGlobal = relatorioRisco;
+                        razaoInput.value = dadosApi.razao_social || dadosApi.nome || "Razão Social indisponível";
+                        btnNext.disabled = false;
+
+                    } catch (err) {
+                        cnpjErrorMsg.innerHTML = err.message;
+                        group.classList.add('has-error');
+                        razaoInput.value = '';
+                        relatorioRiscoGlobal = null;
+                        btnNext.disabled = true;
+                    }
+                }
+            });
+
+            phoneInput.addEventListener('input', function (e) {
+                let v = e.target.value.replace(/\D/g, "");
+                if (v.length > 11) v = v.substring(0, 11);
+                v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
+                v = v.replace(/(\d)(\d{4})$/, "$1-$2");
+                e.target.value = v;
+            });
+
+            function validarCNPJ(cnpj) {
+                cnpj = cnpj.replace(/[^\d]+/g, '');
+                if (cnpj.length !== 14) return false;
+                if (/^(\d)\1+$/.test(cnpj)) return false;
+                let tamanho = cnpj.length - 2;
+                let numeros = cnpj.substring(0, tamanho);
+                let digitos = cnpj.substring(tamanho);
+                let soma = 0; let pos = tamanho - 7;
+                for (let i = tamanho; i >= 1; i--) { soma += numeros.charAt(tamanho - i) * pos--; if (pos < 2) pos = 9; }
+                let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+                if (resultado != digitos.charAt(0)) return false;
+                tamanho = tamanho + 1; numeros = cnpj.substring(0, tamanho); soma = 0; pos = tamanho - 7;
+                for (let i = tamanho; i >= 1; i--) { soma += numeros.charAt(tamanho - i) * pos--; if (pos < 2) pos = 9; }
+                resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+                if (resultado != digitos.charAt(1)) return false;
+                return true;
+            }
+
+            function validarEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+
+            function updateUI() {
+                document.querySelectorAll('.step-pane').forEach((pane, index) => pane.classList.toggle('active', index + 1 === currentStep));
+                document.querySelectorAll('.stepper-horizontal .step-item').forEach((item, index) => {
+                    const stepNum = index + 1;
+                    item.classList.remove('active', 'completed');
+                    if (stepNum === currentStep) { item.classList.add('active'); item.querySelector('.step-indicator').innerHTML = stepNum; }
+                    else if (stepNum < currentStep) { item.classList.add('completed'); item.querySelector('.step-indicator').innerHTML = '✓'; }
+                    else { item.querySelector('.step-indicator').innerHTML = stepNum; }
+                });
+                btnPrev.disabled = currentStep === 1;
+                if (currentStep === totalSteps) { btnNext.style.display = 'none'; btnSubmit.style.display = 'inline-flex'; } 
+                else { btnNext.style.display = 'inline-flex'; btnSubmit.style.display = 'none'; }
+            }
+
+            function validateCurrentStep() {
+                const currentPane = document.getElementById(`pane-step-${currentStep}`);
+                const inputs = currentPane.querySelectorAll('input[required], select[required]');
+                let isValid = true;
+
+                inputs.forEach(input => {
+                    let isInputValid = true;
+                    const val = input.value.trim();
+                    const group = input.closest('.input-group');
+
+                    if (!val) { isInputValid = false; } 
+                    else {
+                        if (input.id === 'cnpj') isInputValid = validarCNPJ(val) && relatorioRiscoGlobal !== null;
+                        else if (input.id === 'telefone') isInputValid = val.length >= 14; 
+                        else if (input.id === 'email') isInputValid = validarEmail(val);
+                        else if (input.id === 'senha') isInputValid = val.length >= 8;
+                        else if (input.id === 'confirma_senha') isInputValid = (val === document.getElementById('senha').value);
+                    }
+
+                    if(!isInputValid) { group.classList.add('has-error'); isValid = false; }
+                    else { group.classList.remove('has-error'); }
+                });
+                return isValid;
+            }
+
+            btnNext.addEventListener('click', () => { if (validateCurrentStep() && currentStep < totalSteps) { currentStep++; updateUI(); }});
+            btnPrev.addEventListener('click', () => { if (currentStep > 1) { currentStep--; updateUI(); }});
+            
+            // Corrige o bug do Flicker: O listener global agora ignora o campo de CNPJ
+            form.addEventListener('input', (e) => {
+                const group = e.target.closest('.input-group');
+                if (group && group.classList.contains('has-error') && e.target.id !== 'cnpj') {
+                    group.classList.remove('has-error');
+                }
+            });
+            
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault(); 
+                if (!validateCurrentStep()) return; 
+
+                const textoOriginal = btnSubmit.innerHTML;
+                btnSubmit.innerHTML = `<div class="spinner" style="width: 20px; height: 20px; border-width: 2px; margin: 0; border-top-color: white;"></div> Criando Conta...`;
+                btnSubmit.disabled = true;
+
+                try {
+                    const cnpjLimpo = document.getElementById('cnpj').value.replace(/\D/g, "");
+                    const razao = document.getElementById('razao').value;
+                    const nome = document.getElementById('nome').value;
+                    const cargo = document.getElementById('cargo').value;
+                    const telefone = document.getElementById('telefone').value.replace(/\D/g, "");
+                    const email = document.getElementById('email').value;
+                    const senha = document.getElementById('senha').value;
+
+                    const { data: authData, error: authError } = await supabaseClient.auth.signUp({ email: email, password: senha });
+                    if (authError) throw new Error('Erro ao criar login: ' + authError.message);
+                    const authUserId = authData.user.id;
+
+                    const { data: empresaData, error: empresaError } = await supabaseClient
+                        .from('empresas')
+                        .insert([{ cnpj: cnpjLimpo, razao: razao, nome: razao, status: relatorioRiscoGlobal.status === 'ANALISE_MANUAL' ? 'EM_ANALISE' : 'ONBOARDING', score: relatorioRiscoGlobal.score, limite_total: relatorioRiscoGlobal.limite_sugerido }])
+                        .select();
+                    if (empresaError) throw new Error('Erro ao cadastrar empresa: ' + empresaError.message);
+                    const empresaId = empresaData[0].id;
+
+                    if (relatorioRiscoGlobal.administradores && relatorioRiscoGlobal.administradores.length > 0) {
+                        const repsToInsert = relatorioRiscoGlobal.administradores.map(admin => ({ empresa_id: empresaId, nome: admin.nome, documento: admin.documento, tipo: admin.tipo, status: 'PENDENTE' }));
+                        await supabaseClient.from('representantes').insert(repsToInsert);
+                    }
+
+                    const { error: userError } = await supabaseClient
+                        .from('usuarios_empresa')
+                        .insert([{ empresa_id: empresaId, auth_user_id: authUserId, nome: nome, cargo: cargo, email: email, telefone: telefone, perfil: 'MASTER' }]);
+                    if (userError) throw new Error('Erro ao vincular usuário: ' + userError.message);
+
+                    window.location.href = 'verificacao.html';
+
+                } catch (error) {
+                    showToast(error.message, 'error');
+                    btnSubmit.innerHTML = textoOriginal;
+                    btnSubmit.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
