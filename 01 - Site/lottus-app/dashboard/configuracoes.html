@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottus Finance | Configurações</title>
+    
+    <link rel="icon" type="image/x-icon" href="../assets/img/Favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --lottus-beige: #F4F1EA;
+            --lottus-pink: #C82A60; 
+            --lottus-pink-hover: #A01F4A;
+            --lottus-white: #FFFFFF;
+            --lottus-graphite: #212529; 
+            --lottus-graphite-light: #555555;
+            --lottus-border: #E5E0D8;
+            --lottus-success: #2B8A3E;
+            --lottus-error: #C92A2A;
+            --sidebar-width: 280px;
+            --border-radius-sm: 8px;
+            --border-radius-md: 16px;
+            --border-radius-pill: 50px;
+            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-sm: 0 4px 12px rgba(33, 37, 41, 0.04);
+            --shadow-md: 0 12px 32px rgba(33, 37, 41, 0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        html, body { font-family: 'Inter', sans-serif; background-color: var(--lottus-beige); color: var(--lottus-graphite); display: flex; height: 100vh; overflow: hidden; width: 100vw; -webkit-font-smoothing: antialiased; }
+
+        /* TELA DE CARREGAMENTO & TOAST */
+        #global-loader { position: fixed; inset: 0; background-color: var(--lottus-beige); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease, visibility 0.4s ease; }
+        .spinner { width: 48px; height: 48px; border: 4px solid rgba(200, 42, 96, 0.15); border-top-color: var(--lottus-pink); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .loader-text { font-weight: 600; font-size: 1.1rem; color: var(--lottus-graphite); }
+        .toast-alert { position: fixed; top: 24px; right: 24px; padding: 16px 24px; background: var(--lottus-white); border-left: 4px solid var(--lottus-pink); border-radius: var(--border-radius-sm); box-shadow: var(--shadow-md); z-index: 10000; transform: translateX(150%); transition: transform 0.3s ease; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 0.95rem; }
+        .toast-alert.show { transform: translateX(0); }
+        .toast-alert.success { border-left-color: var(--lottus-success); color: var(--lottus-success); }
+        .toast-alert.error { border-left-color: var(--lottus-error); color: var(--lottus-error); }
+        .toast-alert.info { border-left-color: #3B82F6; color: #1D4ED8; }
+
+        /* SIDEBAR */
+        .sidebar { width: var(--sidebar-width); border-right: 1px solid var(--lottus-border); display: flex; flex-direction: column; background-color: var(--lottus-white); flex-shrink: 0; z-index: 100; }
+        .sidebar-header { padding: 32px 24px 16px 24px; display: flex; align-items: center; }
+        .company-dropdown-container { position: relative; width: 100%; padding: 0 16px; margin-bottom: 24px; }
+        .company-selector { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--border-radius-md); border: 1px solid var(--lottus-border); background-color: rgba(33, 37, 41, 0.02); cursor: pointer; transition: var(--transition-fast); }
+        .company-selector:hover { border-color: var(--lottus-pink); background-color: var(--lottus-white); box-shadow: var(--shadow-sm); }
+        .company-avatar { width: 36px; height: 36px; background-color: var(--lottus-graphite); color: var(--lottus-white); border-radius: var(--border-radius-sm); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
+        .company-info { flex: 1; overflow: hidden; min-width: 0; }
+        .company-info h4 { font-size: 0.9rem; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--lottus-graphite); }
+        .company-info p { font-size: 0.75rem; color: var(--lottus-graphite-light); margin: 2px 0 0 0; font-family: monospace; }
+        .dropdown-chevron { color: var(--lottus-graphite-light); transition: transform var(--transition-fast); flex-shrink: 0; }
+        .company-dropdown-container.open .dropdown-chevron { transform: rotate(180deg); color: var(--lottus-pink); }
+        .company-dropdown-menu { position: absolute; top: calc(100% + 8px); left: 16px; right: 16px; background-color: var(--lottus-white); border-radius: var(--border-radius-md); border: 1px solid var(--lottus-border); box-shadow: var(--shadow-md); padding: 8px; display: none; flex-direction: column; gap: 4px; z-index: 200; }
+        .company-dropdown-container.open .company-dropdown-menu { display: flex; animation: fadeIn 0.2s ease; }
+        .dropdown-company-item { padding: 12px 16px; border-radius: var(--border-radius-sm); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: var(--transition-fast); }
+        .dropdown-company-item:hover { background-color: var(--lottus-beige); }
+        .dropdown-company-info { min-width: 0; flex: 1; }
+        .dropdown-company-info h5 { margin: 0; font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--lottus-graphite); }
+        .dropdown-company-info p { margin: 0; font-size: 0.75rem; color: var(--lottus-graphite-light); font-family: monospace; }
+        .add-company-item { padding: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--lottus-pink); font-weight: 600; font-size: 0.9rem; cursor: pointer; border-top: 1px solid var(--lottus-border); margin-top: 4px; transition: var(--transition-fast); border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm); }
+        .add-company-item:hover { background-color: rgba(200, 42, 96, 0.05); }
+
+        .sidebar-nav { padding: 0 16px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: var(--border-radius-pill); color: var(--lottus-graphite-light); text-decoration: none; font-size: 0.95rem; font-weight: 600; transition: var(--transition-fast); }
+        .nav-item svg { width: 20px; height: 20px; stroke-width: 2.2; flex-shrink: 0; transition: transform var(--transition-fast); }
+        .nav-item:hover:not(.disabled) { background-color: var(--lottus-beige); color: var(--lottus-graphite); }
+        .nav-item:hover:not(.disabled) svg { transform: scale(1.1); }
+        .nav-item.active { background-color: rgba(200, 42, 96, 0.08); color: var(--lottus-pink); }
+        .nav-item.disabled { opacity: 0.4; pointer-events: none; }
+        
+        .sidebar-footer { padding: 24px; border-top: 1px solid var(--lottus-border); display: flex; align-items: center; gap: 14px; background-color: var(--lottus-white); }
+        .user-avatar { width: 36px; height: 36px; background-color: var(--lottus-beige); color: var(--lottus-pink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700; flex-shrink: 0; border: 1px solid var(--lottus-border);}
+        .user-info { flex: 1; overflow: hidden; min-width: 0; }
+        .user-info p { margin: 0; font-size: 0.9rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-info span { font-size: 0.75rem; color: var(--lottus-graphite-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .logout-btn { background: none; border: none; cursor: pointer; color: var(--lottus-graphite-light); transition: var(--transition-fast); padding: 8px; border-radius: 50%; }
+        .logout-btn:hover { color: var(--lottus-error); background-color: #FFF0F0; }
+
+        /* ================= ÁREA PRINCIPAL ================= */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
+        .topbar { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; flex-shrink: 0; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; color: var(--lottus-graphite-light); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;}
+        .breadcrumb a { color: inherit; text-decoration: none; transition: color var(--transition-fast); }
+        .breadcrumb a:hover { color: var(--lottus-pink); }
+        
+        .page-body { padding: 16px 40px 60px 40px; max-width: 1300px; width: 100%; margin: 0 auto; display: flex; gap: 40px; }
+
+        /* MENU INTERNO DE CONFIGURAÇÕES */
+        .settings-menu { width: 240px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+        .settings-tab-btn { padding: 14px 20px; background: transparent; border: none; border-radius: var(--border-radius-md); text-align: left; font-size: 1rem; font-weight: 600; color: var(--lottus-graphite-light); cursor: pointer; transition: var(--transition-fast); display: flex; align-items: center; gap: 12px; }
+        .settings-tab-btn svg { width: 18px; height: 18px; stroke-width: 2.5; }
+        .settings-tab-btn:hover { background-color: rgba(33, 37, 41, 0.03); color: var(--lottus-graphite); }
+        .settings-tab-btn.active { background-color: var(--lottus-white); color: var(--lottus-pink); box-shadow: var(--shadow-sm); border: 1px solid var(--lottus-border); }
+
+        /* PAINEIS DE CONTEÚDO */
+        .settings-content { flex: 1; background: var(--lottus-white); border: 1px solid var(--lottus-border); border-radius: var(--border-radius-md); box-shadow: var(--shadow-sm); overflow: hidden; min-height: 500px; }
+        .tab-panel { display: none; padding: 40px; animation: fadeIn 0.3s ease; }
+        .tab-panel.active { display: block; }
+        
+        .panel-header { margin-bottom: 32px; border-bottom: 1px solid var(--lottus-border); padding-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end;}
+        .panel-header-text h2 { font-size: 1.5rem; font-weight: 700; color: var(--lottus-graphite); margin: 0 0 8px 0; letter-spacing: -0.02em; }
+        .panel-header-text p { font-size: 0.95rem; color: var(--lottus-graphite-light); margin: 0; }
+
+        /* FORMULÁRIOS */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        .full-width { grid-column: span 2; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        .input-group label { font-size: 0.85rem; font-weight: 700; color: var(--lottus-graphite-light); text-transform: uppercase; letter-spacing: 0.05em; }
+        .input-group input, .input-group select { padding: 14px 16px; border: 1px solid var(--lottus-border); border-radius: var(--border-radius-sm); font-family: 'Inter', sans-serif; font-size: 0.95rem; color: var(--lottus-graphite); background-color: #F8FAFC; transition: var(--transition-fast); outline: none; }
+        .input-group input:focus, .input-group select:focus { border-color: var(--lottus-pink); background-color: var(--lottus-white); box-shadow: 0 0 0 3px rgba(200, 42, 96, 0.1); }
+        .input-group input:disabled, .input-group input[readonly] { background-color: var(--lottus-beige); color: var(--lottus-graphite-light); cursor: not-allowed; border-color: transparent; }
+
+        /* BOTÕES */
+        .btn-save { padding: 14px 28px; background: var(--lottus-graphite); color: var(--lottus-white); border: none; border-radius: var(--border-radius-pill); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; transition: var(--transition-fast); }
+        .btn-save:hover { background: #000000; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        .btn-secondary { padding: 10px 16px; background: transparent; border: 1px solid var(--lottus-border); border-radius: var(--border-radius-pill); color: var(--lottus-graphite); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; transition: var(--transition-fast); text-decoration: none;}
+        .btn-secondary:hover { background: var(--lottus-beige); border-color: #CBD5E1; }
+        
+        .btn-secondary.disabled { opacity: 0.5; pointer-events: none; }
+
+        /* SEÇÃO DE DOCUMENTOS (Uploads) */
+        .docs-section { margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--lottus-border); }
+        .docs-section h3 { font-size: 1.15rem; font-weight: 700; color: var(--lottus-graphite); margin: 0 0 6px 0; }
+        .docs-section > p { font-size: 0.9rem; color: var(--lottus-graphite-light); margin: 0 0 24px 0; }
+        
+        .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+        .upload-card { border: 2px dashed #CBD5E1; border-radius: var(--border-radius-sm); padding: 24px; text-align: center; background-color: #F8FAFC; transition: var(--transition-fast); cursor: pointer; position: relative; }
+        .upload-card:hover { border-color: var(--lottus-pink); background-color: rgba(200, 42, 96, 0.02); }
+        .upload-card.success { border-color: var(--lottus-success); background-color: rgba(43, 138, 62, 0.05); }
+        .upload-card.success svg { color: var(--lottus-success); }
+        .upload-card.loading { opacity: 0.6; pointer-events: none; }
+        .upload-card svg { color: var(--lottus-pink); margin-bottom: 12px; }
+        .upload-card h4 { font-size: 0.9rem; font-weight: 700; color: var(--lottus-graphite); margin: 0 0 4px 0; }
+        .upload-card p { font-size: 0.8rem; color: var(--lottus-graphite-light); margin: 0; }
+        .upload-card input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+        /* CARD DO CONTRATO MÃE */
+        .contract-master-card { display: flex; align-items: center; justify-content: space-between; padding: 20px; border: 1px solid var(--lottus-border); border-radius: var(--border-radius-md); background: #FAFAFA;}
+        .contract-master-card.active { background-color: rgba(43, 138, 62, 0.05); border-color: #A3E635; }
+        .contract-info { display: flex; align-items: center; gap: 16px; }
+        .contract-icon { width: 40px; height: 40px; background-color: var(--lottus-white); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--lottus-graphite-light); box-shadow: var(--shadow-sm); }
+        .contract-master-card.active .contract-icon { color: var(--lottus-success); }
+        .contract-info h4 { margin: 0 0 4px 0; font-size: 1rem; font-weight: 700; color: var(--lottus-graphite); }
+        .contract-info p { margin: 0; font-size: 0.85rem; color: var(--lottus-graphite-light); }
+
+        /* TABELA DE REPRESENTANTES */
+        .compliance-card { border: 1px solid var(--lottus-border); border-radius: var(--border-radius-md); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 16px; background: #FAFAFA; transition: var(--transition-fast); }
+        .compliance-card:hover { border-color: #CBD5E1; box-shadow: var(--shadow-sm); }
+        .rep-info { flex: 1; }
+        .rep-info h4 { margin: 0 0 6px 0; font-size: 1.1rem; font-weight: 700; color: var(--lottus-graphite); }
+        .rep-info p { margin: 0; font-size: 0.85rem; color: var(--lottus-graphite-light); font-family: monospace; }
+        
+        .rep-status { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: var(--border-radius-pill); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 12px; }
+        .status-pendente { background: #FEF3C7; color: #B45309; }
+        .status-assinado { background: #E6FCF5; color: var(--lottus-success); }
+
+        .rep-actions { display: flex; align-items: center; gap: 12px; }
+        .rep-input { padding: 12px 16px; border: 1px solid var(--lottus-border); border-radius: var(--border-radius-sm); font-size: 0.9rem; width: 260px; outline: none; transition: var(--transition-fast); }
+        .rep-input:focus { border-color: var(--lottus-pink); box-shadow: 0 0 0 3px rgba(200, 42, 96, 0.1); }
+        .btn-send { padding: 12px 20px; background: var(--lottus-pink); color: var(--lottus-white); border: none; border-radius: var(--border-radius-pill); font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: var(--transition-fast); white-space: nowrap; }
+        .btn-send:hover { background: var(--lottus-pink-hover); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="global-loader">
+        <div class="spinner"></div>
+        <div class="loader-text">Carregando configurações...</div>
+    </div>
+
+    <div id="toast" class="toast-alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span id="toast-msg">Sucesso!</span>
+    </div>
+
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-header">
+                <img src="../assets/img/Logo 1.png" alt="Lottus Finance" style="max-height: 32px; width: auto; object-fit: contain;">
+            </div>
+
+            <div class="company-dropdown-container" id="company-dropdown-container">
+                <div class="company-selector" id="company-selector-btn">
+                    <div class="company-avatar" id="sidebar-avatar">--</div>
+                    <div class="company-info">
+                        <h4 id="sidebar-company-name">Carregando...</h4>
+                        <p id="sidebar-company-cnpj">--.---.---/----.--</p>
+                    </div>
+                    <svg class="dropdown-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <div class="company-dropdown-menu" id="company-dropdown-list"></div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="index.html" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Visão Geral
+                </a>
+                <a href="solicitacoes.html" class="nav-item disabled" id="nav-solicitacoes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    Solicitações
+                </a>
+                <a href="relatorios.html" class="nav-item disabled" id="nav-relatorios">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    Relatórios
+                </a>
+                <a href="configuracoes.html" class="nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    Configurações
+                </a>
+            </nav>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-avatar" id="footer-avatar">--</div>
+            <div class="user-info">
+                <p id="footer-user-name">Carregando...</p>
+                <span id="footer-user-email">--</span>
+            </div>
+            <button class="logout-btn" id="btn-logout" title="Sair da conta">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div class="breadcrumb">
+                <a href="index.html">Visão Geral</a>
+                <span>/</span>
+                <span style="color: var(--lottus-graphite);">Configurações</span>
+            </div>
+        </header>
+
+        <div class="page-body">
+            
+            <!-- MENU INTERNO -->
+            <aside class="settings-menu">
+                <button class="settings-tab-btn active" data-target="perfil">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    Meu Perfil
+                </button>
+                <button class="settings-tab-btn" data-target="empresa">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    Dados da Empresa
+                </button>
+                <button class="settings-tab-btn" data-target="bancario">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                    Dados Bancários
+                </button>
+                <button class="settings-tab-btn" data-target="representantes" id="btn-tab-compliance">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Representantes
+                </button>
+            </aside>
+
+            <!-- PAINEIS -->
+            <div class="settings-content">
+                
+                <!-- ABA: PERFIL -->
+                <div class="tab-panel active" id="tab-perfil">
+                    <div class="panel-header">
+                        <div class="panel-header-text">
+                            <h2>Meu Perfil</h2>
+                            <p>Gerencie suas informações de acesso à plataforma Lottus.</p>
+                        </div>
+                    </div>
+                    <form id="form-perfil">
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>Nome Completo</label>
+                                <input type="text" id="perfil-nome" required>
+                            </div>
+                            <div class="input-group">
+                                <label>E-mail de Acesso</label>
+                                <input type="email" id="perfil-email" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Seu Cargo</label>
+                                <input type="text" id="perfil-cargo" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Telefone / WhatsApp</label>
+                                <input type="tel" id="perfil-telefone" placeholder="(00) 00000-0000" maxlength="15" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-save">
+                            Salvar Alterações
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- ABA: EMPRESA E DOCUMENTOS -->
+                <div class="tab-panel" id="tab-empresa">
+                    <div class="panel-header">
+                        <div class="panel-header-text">
+                            <h2>Dados da Empresa</h2>
+                            <p>Informações fiscais da empresa e repositório de documentos regulatórios.</p>
+                        </div>
+                    </div>
+                    <form id="form-empresa">
+                        <div class="form-grid">
+                            <div class="input-group full-width">
+                                <label>Razão Social</label>
+                                <input type="text" id="emp-razao" readonly disabled>
+                            </div>
+                            <div class="input-group">
+                                <label>CNPJ</label>
+                                <input type="text" id="emp-cnpj" readonly disabled>
+                            </div>
+                            <div class="input-group">
+                                <label>Status da Conta na Lottus</label>
+                                <input type="text" id="emp-status" readonly disabled style="font-weight: 700; color: var(--lottus-pink);">
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- CONTRATO MÃE DINÂMICO -->
+                    <div class="docs-section">
+                        <h3>Contrato de Antecipação (Contrato Mãe)</h3>
+                        <p>Este é o instrumento guarda-chuva que rege todas as operações futuras da sua empresa.</p>
+                        
+                        <div class="contract-master-card" id="contrato-mae-container">
+                            <!-- Injetado via JS dependendo do Status -->
+                        </div>
+                    </div>
+
+                    <!-- UPLOAD DE DOCUMENTOS NA NUVEM -->
+                    <div class="docs-section">
+                        <h3>Documentos da Empresa (Compliance)</h3>
+                        <p>Faça o upload dos arquivos abaixo para mantermos o seu dossiê regulatório atualizado.</p>
+                        
+                        <div class="doc-grid">
+                            <div class="upload-card" id="card-upload-social">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <h4>Contrato Social Consolidado</h4>
+                                <p>Arraste o arquivo PDF ou clique aqui</p>
+                                <input type="file" accept=".pdf" id="file-contrato-social" onchange="uploadDocumentToCloud(this, 'contrato_social')">
+                            </div>
+                            <div class="upload-card" id="card-upload-dre">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <h4>DRE / Balanço Patrimonial</h4>
+                                <p>Arraste o arquivo PDF ou clique aqui</p>
+                                <input type="file" accept=".pdf" id="file-dre" onchange="uploadDocumentToCloud(this, 'dre')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA: DADOS BANCÁRIOS -->
+                <div class="tab-panel" id="tab-bancario">
+                    <div class="panel-header">
+                        <div class="panel-header-text">
+                            <h2>Conta Bancária (Recebimento)</h2>
+                            <p>A conta oficial da empresa onde os valores líquidos das antecipações serão depositados.</p>
+                        </div>
+                    </div>
+                    <form id="form-banco">
+                        <div class="form-grid">
+                            <div class="input-group full-width">
+                                <label>Banco da Instituição</label>
+                                <select id="banco-nome" required>
+                                    <option value="" disabled selected>Carregando bancos...</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Agência (Sem dígito)</label>
+                                <input type="text" id="banco-agencia" placeholder="Ex: 0001" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Conta com Dígito</label>
+                                <input type="text" id="banco-conta" placeholder="Ex: 12345-6" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-save">
+                            Salvar Dados Bancários
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- ABA: REPRESENTANTES -->
+                <div class="tab-panel" id="tab-representantes">
+                    <div class="panel-header">
+                        <div class="panel-header-text">
+                            <h2>Dados dos Representantes</h2>
+                            <p>Gerencie os sócios que possuem poderes legais para assinar as operações na Lottus.</p>
+                        </div>
+                    </div>
+                    
+                    <div id="reps-container"></div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Supabase SDK & Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = 'https://rowhslnnlzfbhmzbylbz.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvd2hzbG5ubHpmYmhtemJ5bGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4Mjg2MTgsImV4cCI6MjEwMDQwNDYxOH0.hUvOsj_Tpf1asd7Neh4tnlLg5Vc-amcLRfbcoZKYX-0';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let userEmpresasGlobal = [];
+        let activeEmpresaObj = null;
+        let currentUserVinculoId = null;
+        let originalAuthEmail = "";
+
+        // ==========================================
+        // UTILITÁRIOS E MÁSCARAS
+        // ==========================================
+        function formatCNPJ(v) {
+            if (!v) return '--.---.---/----.--';
+            v = v.replace(/\D/g, "");
+            if (v.length > 14) v = v.substring(0, 14);
+            return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+        }
+        function getInitials(name) {
+            if (!name) return '--';
+            const words = name.trim().split(' ');
+            let initials = words[0].substring(0, 1).toUpperCase();
+            if (words.length > 1) initials += words[words.length - 1].substring(0, 1).toUpperCase();
+            return initials;
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = message;
+            toast.className = `toast-alert show ${type}`;
+            setTimeout(() => { toast.classList.remove('show'); }, 4000);
+        }
+
+        document.getElementById('perfil-telefone').addEventListener('input', function (e) {
+            let v = e.target.value.replace(/\D/g, "");
+            if (v.length > 11) v = v.substring(0, 11);
+            v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
+            v = v.replace(/(\d)(\d{4})$/, "$1-$2");
+            e.target.value = v;
+        });
+
+        // ==========================================
+        // INTEGRAÇÃO COM BRASIL API (Bancos)
+        // ==========================================
+        async function loadBanks() {
+            try {
+                const response = await fetch('https://brasilapi.com.br/api/banks/v1');
+                const banks = await response.json();
+                const select = document.getElementById('banco-nome');
+                select.innerHTML = '<option value="" disabled selected>Selecione um banco</option>';
+                const validBanks = banks.filter(b => b.code != null).sort((a, b) => a.name.localeCompare(b.name));
+                
+                validBanks.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.code;
+                    opt.text = `${String(b.code).padStart(3, '0')} - ${b.name}`;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                document.getElementById('banco-nome').innerHTML = '<option value="" disabled selected>Erro ao carregar lista de bancos</option>';
+            }
+        }
+
+        // ==========================================
+        // UPLOAD DE DOCUMENTOS (SUPABASE STORAGE)
+        // ==========================================
+        window.uploadDocumentToCloud = async function(inputElement, docType) {
+            if (inputElement.files.length === 0) return;
+            
+            const file = inputElement.files[0];
+            const card = inputElement.closest('.upload-card');
+            const originalTitle = card.querySelector('h4').innerText;
+            
+            // UI Loading State
+            card.classList.add('loading');
+            card.querySelector('h4').innerText = 'Enviando arquivo...';
+
+            try {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${docType}_${Date.now()}.${fileExt}`;
+                const filePath = `${activeEmpresaObj.cnpj}/${fileName}`;
+
+                // Faz o upload pro Bucket "documentos_empresas"
+                const { data, error } = await supabaseClient.storage
+                    .from('documentos_empresas')
+                    .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+                if (error) throw error;
+
+                // Sucesso na UI
+                card.classList.remove('loading');
+                card.classList.add('success');
+                card.querySelector('h4').innerText = 'Arquivo salvo: ' + file.name;
+                showToast('Documento enviado com sucesso para a Lottus.', 'success');
+
+            } catch (error) {
+                console.error("Erro no upload:", error);
+                card.classList.remove('loading');
+                card.querySelector('h4').innerText = originalTitle;
+                showToast('Erro ao enviar documento. Tente novamente.', 'error');
+                inputElement.value = ''; // Reseta o input
+            }
+        };
+
+        // ==========================================
+        // NAVEGAÇÃO DE TABS
+        // ==========================================
+        document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                
+                const target = e.currentTarget.getAttribute('data-target');
+                e.currentTarget.classList.add('active');
+                document.getElementById(`tab-${target}`).classList.add('active');
+            });
+        });
+
+        // ==========================================
+        // CARREGAMENTO DE DADOS PRINCIPAL
+        // ==========================================
+        async function loadConfigData() {
+            if (!activeEmpresaObj) return;
+
+            // Aba Empresa
+            document.getElementById('emp-razao').value = activeEmpresaObj.razao || activeEmpresaObj.nome || '';
+            document.getElementById('emp-cnpj').value = formatCNPJ(activeEmpresaObj.cnpj);
+            document.getElementById('emp-status').value = activeEmpresaObj.status.replace('_', ' ');
+
+            // Reseta UI de Documentos
+            document.querySelectorAll('.upload-card').forEach(card => {
+                card.classList.remove('success', 'loading');
+                const title = card.id === 'card-upload-social' ? 'Contrato Social Consolidado' : 'DRE / Balanço Patrimonial';
+                card.querySelector('h4').innerText = title;
+                card.querySelector('input').value = '';
+            });
+
+            // Lógica do Contrato Mãe (Status do Banco)
+            const contratoContainer = document.getElementById('contrato-mae-container');
+            if (activeEmpresaObj.status === 'ATIVO' || activeEmpresaObj.status === 'AGUARDANDO_ASSINATURA') {
+                contratoContainer.className = 'contract-master-card active';
+                contratoContainer.innerHTML = `
+                    <div class="contract-info">
+                        <div class="contract-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        </div>
+                        <div>
+                            <h4>Contrato Matriz de Securitização</h4>
+                            <p>Assinado digitalmente. Válido para todas as operações.</p>
+                        </div>
+                    </div>
+                    <a href="#" class="btn-secondary" onclick="showToast('Iniciando download do Contrato Mãe...', 'info')">
+                        Download PDF
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </a>
+                `;
+            } else {
+                contratoContainer.className = 'contract-master-card';
+                contratoContainer.innerHTML = `
+                    <div class="contract-info">
+                        <div class="contract-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </div>
+                        <div>
+                            <h4>Contrato Bloqueado</h4>
+                            <p>O instrumento será liberado após o comitê finalizar a análise de crédito.</p>
+                        </div>
+                    </div>
+                    <button class="btn-secondary disabled">Indisponível</button>
+                `;
+            }
+
+            // Aba Representantes
+            const repsContainer = document.getElementById('reps-container');
+            repsContainer.innerHTML = '<div style="text-align: center; padding: 40px;">Atualizando representantes...</div>';
+
+            const { data: reps } = await supabaseClient.from('representantes').select('*').eq('empresa_id', activeEmpresaObj.id);
+            
+            if (!reps || reps.length === 0) {
+                repsContainer.innerHTML = '<div style="text-align: center; padding: 40px; border: 1px dashed var(--lottus-border); border-radius: var(--border-radius-md);">Nenhum representante localizado.</div>';
+            } else {
+                repsContainer.innerHTML = '';
+                reps.forEach(rep => {
+                    const isAssinado = rep.status === 'ASSINADO';
+                    const badgeClass = isAssinado ? 'status-assinado' : 'status-pendente';
+                    const badgeText = isAssinado ? 'Assinado ✓' : 'Aguardando Assinatura';
+                    
+                    const card = document.createElement('div');
+                    card.className = 'compliance-card';
+                    card.innerHTML = `
+                        <div class="rep-info">
+                            <h4>${rep.nome}</h4>
+                            <p>Documento (CPF): ${rep.documento || 'Não informado'}</p>
+                            <div><span class="rep-status ${badgeClass}">${badgeText}</span></div>
+                        </div>
+                        ${!isAssinado ? `
+                        <div class="rep-actions">
+                            <input type="email" class="rep-input" id="email-${rep.id}" placeholder="E-mail de contato do sócio" required>
+                            <button class="btn-send" onclick="simulateSendContract('${rep.id}', '${rep.empresa_id}')">
+                                Enviar Link de Assinatura
+                            </button>
+                        </div>
+                        ` : `
+                        <div class="rep-actions">
+                            <span style="font-size: 0.9rem; color: var(--lottus-success); font-weight: 700; background: rgba(43, 138, 62, 0.05); padding: 12px 20px; border-radius: var(--border-radius-pill);">Contrato Vinculado Ativo</span>
+                        </div>
+                        `}
+                    `;
+                    repsContainer.appendChild(card);
+                });
+            }
+        }
+
+        // ==========================================
+        // AÇÕES DOS FORMULÁRIOS
+        // ==========================================
+        
+        // Form Perfil
+        document.getElementById('form-perfil').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerHTML = 'Salvando...';
+            
+            try {
+                const nome = document.getElementById('perfil-nome').value;
+                const cargo = document.getElementById('perfil-cargo').value;
+                const telefone = document.getElementById('perfil-telefone').value;
+                const novoEmail = document.getElementById('perfil-email').value;
+
+                const { error: dbError } = await supabaseClient
+                    .from('usuarios_empresa')
+                    .update({ nome, cargo, telefone })
+                    .eq('id', currentUserVinculoId);
+
+                if (dbError) throw dbError;
+
+                document.getElementById('footer-user-name').innerText = nome;
+                document.getElementById('footer-avatar').innerText = getInitials(nome);
+                
+                if (novoEmail !== originalAuthEmail) {
+                    const { error: authError } = await supabaseClient.auth.updateUser({ email: novoEmail });
+                    if (authError) {
+                        showToast(`Erro ao alterar e-mail: ${authError.message}`, 'error');
+                    } else {
+                        showToast('Perfil salvo. Verifique a caixa de entrada do NOVO e do ANTIGO e-mail para confirmar a alteração.', 'info');
+                        originalAuthEmail = novoEmail;
+                    }
+                } else {
+                    showToast('Perfil atualizado com sucesso!', 'success');
+                }
+                
+            } catch (err) {
+                showToast('Erro ao salvar perfil.', 'error');
+            } finally {
+                btn.innerHTML = `Salvar Alterações <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            }
+        });
+
+        // Simulação de Envio de Contrato
+        window.simulateSendContract = async function(repId, empresaId) {
+            const emailInput = document.getElementById(`email-${repId}`).value;
+            if (!emailInput || !emailInput.includes('@')) {
+                showToast('Informe um e-mail válido para enviar o contrato.', 'error');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient.from('representantes').update({ status: 'ASSINADO' }).eq('id', repId);
+                if (error) throw error;
+                
+                showToast('Contrato enviado e assinado com sucesso!', 'success');
+                await selectEmpresa(activeEmpresaObj); 
+                
+            } catch (err) {
+                showToast('Erro ao processar assinatura.', 'error');
+            }
+        };
+
+        // Form Banco
+        document.getElementById('form-banco').addEventListener('submit', (e) => {
+            e.preventDefault();
+            showToast('Dados bancários salvos e criptografados.', 'success');
+        });
+
+        // ==========================================
+        // SETUP INICIAL / AUTH
+        // ==========================================
+        async function selectEmpresa(empresaObj) {
+            activeEmpresaObj = empresaObj;
+            const cName = empresaObj.nome || empresaObj.razao || 'Sua Empresa';
+            
+            document.getElementById('sidebar-company-name').innerText = cName;
+            document.getElementById('sidebar-company-cnpj').innerText = formatCNPJ(empresaObj.cnpj);
+            document.getElementById('sidebar-avatar').innerText = getInitials(cName);
+            
+            const list = document.getElementById('company-dropdown-list');
+            list.querySelectorAll('.dropdown-company-item, .add-company-item').forEach(e => e.remove());
+            
+            userEmpresasGlobal.forEach(emp => {
+                const item = document.createElement('div');
+                item.className = `dropdown-company-item ${emp.id === activeEmpresaObj.id ? 'active' : ''}`;
+                item.innerHTML = `<div class="dropdown-company-info"><h5>${emp.nome || emp.razao || 'Empresa'}</h5><p>${formatCNPJ(emp.cnpj)}</p></div>${emp.id === activeEmpresaObj.id ? '<span style="color:var(--lottus-pink); font-weight:800;">✓</span>' : ''}`;
+                item.onclick = async (e) => { 
+                    e.stopPropagation(); 
+                    document.getElementById('company-dropdown-container').classList.remove('open');
+                    
+                    const loader = document.getElementById('global-loader');
+                    loader.style.visibility = 'visible'; loader.style.opacity = '1';
+                    
+                    await selectEmpresa(emp); 
+                    
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.visibility = 'hidden', 400);
+                };
+                list.appendChild(item);
+            });
+
+            const addBtn = document.createElement('div');
+            addBtn.className = 'add-company-item';
+            addBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Adicionar nova empresa`;
+            addBtn.onclick = () => window.location.href = '../cadastro/empresa.html';
+            list.appendChild(addBtn);
+
+            const navSolicitacoes = document.getElementById('nav-solicitacoes');
+            const navRelatorios = document.getElementById('nav-relatorios');
+            if (activeEmpresaObj.status === 'ATIVO') {
+                navSolicitacoes.classList.remove('disabled'); navRelatorios.classList.remove('disabled');
+            } else {
+                navSolicitacoes.classList.add('disabled'); navRelatorios.classList.add('disabled');
+            }
+
+            await loadConfigData();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadBanks();
+
+            const { data: { session }, error: sessionErr } = await supabaseClient.auth.getSession();
+            if (!session || sessionErr) { window.location.href = '../login/index.html'; return; }
+            
+            const authUser = session.user;
+            const userEmail = authUser.email;
+            let userName = authUser.user_metadata?.nome || userEmail.split('@')[0];
+            
+            originalAuthEmail = userEmail;
+            document.getElementById('footer-user-email').innerText = userEmail;
+            document.getElementById('perfil-email').value = userEmail;
+
+            const dropdownContainer = document.getElementById('company-dropdown-container');
+            document.getElementById('company-selector-btn').onclick = (e) => { e.stopPropagation(); dropdownContainer.classList.toggle('open'); };
+            document.addEventListener('click', () => dropdownContainer.classList.remove('open'));
+
+            try {
+                const { data: userVinculos } = await supabaseClient.from('usuarios_empresa').select('*').eq('auth_user_id', authUser.id);
+                if (userVinculos && userVinculos.length > 0) {
+                    
+                    currentUserVinculoId = userVinculos[0].id;
+                    document.getElementById('perfil-nome').value = userVinculos[0].nome || '';
+                    document.getElementById('perfil-cargo').value = userVinculos[0].cargo || '';
+                    
+                    let savedPhone = userVinculos[0].telefone || '';
+                    if(savedPhone.length === 11) savedPhone = savedPhone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+                    document.getElementById('perfil-telefone').value = savedPhone;
+
+                    if (userVinculos[0].nome) { userName = userVinculos[0].nome; }
+                    
+                    document.getElementById('footer-user-name').innerText = userName;
+                    document.getElementById('footer-avatar').innerText = getInitials(userName);
+
+                    const empIds = userVinculos.map(v => v.empresa_id).filter(Boolean);
+                    if (empIds.length > 0) {
+                        const { data: empresas } = await supabaseClient.from('empresas').select('*').in('id', empIds);
+                        if (empresas && empresas.length > 0) {
+                            userEmpresasGlobal = empresas;
+                            await selectEmpresa(userEmpresasGlobal[0]);
+                        }
+                    }
+                }
+            } catch (error) { console.error("Erro na busca de dados:", error); }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            if (tabParam) {
+                const actualTab = tabParam === 'compliance' ? 'representantes' : tabParam;
+                const targetBtn = document.querySelector(`.settings-tab-btn[data-target="${actualTab}"]`);
+                if (targetBtn) targetBtn.click();
+            }
+
+            const loader = document.getElementById('global-loader');
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.visibility = 'hidden', 400);
+
+            document.getElementById('btn-logout').addEventListener('click', async (e) => {
+                e.preventDefault(); await supabaseClient.auth.signOut(); window.location.href = '../login/index.html';
+            });
+        });
+    </script>
+</body>
+</html>
