@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottus Finance | Credit as a Service (CaaS)</title>
+    <meta name="description" content="Embuta inteligência de crédito na sua plataforma. Nós entramos com o capital e assumimos o risco.">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="assets/img/Favicon.png">
+</head>
+<body>
+    <div id="custom-ui-alert" class="ui-alert hidden"></div>
+
+    <header class="lottus-header">
+        <div class="container header-container">
+            <a href="index.html" class="logo-link">
+                <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span class="logo-text" style="display: none;">Lottus</span>
+            </a>
+            
+            <nav class="main-nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false">
+                        Soluções 
+                        <svg class="dropdown-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </a>
+                    <div class="dropdown-menu solutions-dropdown">
+                        <div class="dropdown-section">
+                            <span class="dropdown-header-title">Para Empresas</span>
+                            <a href="credito.html" class="dropdown-item">
+                                <div class="item-title">Crédito Corporativo</div>
+                                <small class="item-desc">Antecipação de recebíveis, risco sacado e capital de giro.</small>
+                            </a>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-section">
+                            <span class="dropdown-header-title">Para Parceiros</span>
+                            <a href="credito-as-a-service.html" class="dropdown-item">
+                                <div class="item-title">Credit as a Service</div>
+                                <small class="item-desc">API nativa para embutir inteligência de crédito na sua plataforma.</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="sobre.html" class="nav-link">Sobre Nós</a>
+                <a href="contato.html" class="nav-link">Contato</a>
+            </nav>
+            
+            <div class="header-actions" style="display: flex; align-items: center; gap: 24px;">
+                <a href="#" class="nav-link coming-soon" style="font-weight: 600; color: var(--lottus-graphite);">App em breve</a>
+                <a href="#" class="btn btn-primary coming-soon">Cadastro em breve</a>
+            </div>
+        </div>
+    </header>
+    <main>
+        <!-- Hero Section -->
+        <section class="hero-section floating-section light-section" style="padding-bottom: var(--space-md);">
+            <div class="container hero-container">
+                <div class="hero-content">
+                    <div class="badge-regulator">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                        <span>API de Credit-as-a-Service (CaaS)</span>
+                    </div>
+                    <h1 class="hero-title" style="font-size: clamp(2.8rem, 5vw, 4.2rem); margin-bottom: var(--space-md);">
+                        Sua plataforma.<br>
+                        Nosso motor de <span class="typewriter-text" style="color: var(--lottus-pink); border-bottom: 3px solid var(--lottus-pink);">crédito.</span><span class="cursor" style="background-color: var(--lottus-pink);"></span>
+                    </h1>
+                    <p class="hero-subtitle" style="font-size: 1.2rem; max-width: 85%;">
+                        Transforme seu software em uma nova linha de receita. Integre a API da Lottus para oferecer limites pré-aprovados aos seus clientes. Nós assumimos o capital, o risco financeiro e a operação de cobrança. Você foca em escalar.
+                    </p>
+                    <div class="hero-cta-group" style="margin-top: var(--space-md);">
+                        <a href="#contato" class="btn btn-primary btn-large">Integrar Plataforma</a>
+                        <a href="#como-funciona" class="btn btn-secondary btn-large">Ver a Dinâmica</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- A Dinâmica da Parceria (Split Panel) -->
+        <section id="como-funciona" class="faq-section-new floating-section graphite-section">
+            <div class="container" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: var(--space-xl); align-items: center;">
+                <div class="dark-mode-text">
+                    <h2 style="font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: var(--space-sm); color: var(--lottus-white);">Uma divisão de forças clara e lucrativa.</h2>
+                    <p style="color: var(--lottus-beige); opacity: 0.9; line-height: 1.6; margin-bottom: var(--space-md);">
+                        Você já possui a audiência engajada e os dados transacionais. A Lottus entra com a inteligência matemática e o fundo estruturado. Criamos uma simbiose onde seu cliente acessa crédito barato e você monetiza a operação sem onerar seu balanço patrimonial.
+                    </p>
+                </div>
+                
+                <div style="background-color: var(--lottus-white); border-radius: var(--border-radius-md); padding: var(--space-lg); border: 1px solid var(--lottus-border); display: flex; flex-direction: column; gap: var(--space-md);">
+                    
+                    <!-- Lado do Parceiro -->
+                    <div style="background-color: var(--lottus-beige); padding: 24px; border-radius: var(--border-radius-sm); border-left: 4px solid var(--lottus-graphite);">
+                        <h4 style="color: var(--lottus-graphite); font-size: 1.1rem; margin-bottom: 8px;">O que a sua empresa faz:</h4>
+                        <ul style="list-style: none; color: var(--lottus-graphite-light); font-size: 0.95rem; display: flex; flex-direction: column; gap: 8px;">
+                            <li style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--lottus-pink);">✓</span> Mantém o relacionamento com o cliente</li>
+                            <li style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--lottus-pink);">✓</span> Fornece o ambiente digital (White label)</li>
+                            <li style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--lottus-pink);">✓</span> Recebe o repasse financeiro a cada operação</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Lado da Lottus -->
+                    <div style="background-color: rgba(200, 42, 96, 0.05); padding: 24px; border-radius: var(--border-radius-sm); border-left: 4px solid var(--lottus-pink);">
+                        <h4 style="color: var(--lottus-graphite); font-size: 1.1rem; margin-bottom: 8px;">O que a Lottus faz:</h4>
+                        <ul style="list-style: none; color: var(--lottus-graphite-light); font-size: 0.95rem; display: flex; flex-direction: column; gap: 8px;">
+                            <li style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--lottus-pink);">✓</span> Origina o capital através do fundo próprio</li>
+                            <li style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--lottus-pink);">✓</span> Analisa o risco de crédito em tempo real</li>
+                            <li style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--lottus-pink);">✓</span> Absorve 100% da inadimplência e faz a cobrança</li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- API e Tecnologia -->
+        <section class="floating-section light-section">
+            <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); align-items: center;">
+                <div style="background-color: var(--lottus-graphite); border-radius: var(--border-radius-md); padding: var(--space-lg); border: 1px solid var(--lottus-graphite-light); font-family: monospace; color: var(--lottus-white); font-size: 0.9rem; line-height: 1.6; overflow-x: auto; box-shadow: var(--shadow-md);">
+                    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ff5f56;"></div>
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ffbd2e;"></div>
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #27c93f;"></div>
+                    </div>
+                    <span style="color: #6366f1; font-weight: 600;">POST</span> /api/v1/credit/offer<br><br>
+                    {<br>
+                    &nbsp;&nbsp;"client_id": "8492-ABCD",<br>
+                    &nbsp;&nbsp;"requested_limit": 50000.00,<br>
+                    &nbsp;&nbsp;"partner_fee": 1.5,<br>
+                    &nbsp;&nbsp;"risk_model": "lottus_default"<br>
+                    }<br><br>
+                    <span style="color: var(--lottus-success); font-weight: 600;">200 OK</span><br>
+                    {<br>
+                    &nbsp;&nbsp;"status": "approved",<br>
+                    &nbsp;&nbsp;"available_limit": 50000.00,<br>
+                    &nbsp;&nbsp;"funds_secured": true,<br>
+                    &nbsp;&nbsp;"contract_url": "https://api.lottus.com/..."<br>
+                    }
+                </div>
+
+                <div>
+                    <h2 style="font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: var(--space-sm); color: var(--lottus-graphite);">Integração nativa em poucos dias.</h2>
+                    <p style="color: var(--lottus-graphite-light); font-size: 1.05rem; line-height: 1.6; margin-bottom: var(--space-md);">
+                        Nossa API RESTful foi construída por desenvolvedores, para desenvolvedores. Endpoints limpos, documentação clara e webhooks robustos para sincronização de status. A jornada do seu cliente ocorre inteiramente dentro do seu ERP, marketplace ou SaaS.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: var(--space-lg);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background-color: var(--lottus-beige); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--lottus-pink); font-weight: 700;">01</div>
+                            <span style="font-weight: 500; color: var(--lottus-graphite);">Simulação e Score instantâneo</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background-color: var(--lottus-beige); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--lottus-pink); font-weight: 700;">02</div>
+                            <span style="font-weight: 500; color: var(--lottus-graphite);">Assinatura digital integrada</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background-color: var(--lottus-beige); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--lottus-pink); font-weight: 700;">03</div>
+                            <span style="font-weight: 500; color: var(--lottus-graphite);">Liquidação automática</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Formulário de Contato Específico para CaaS -->
+        <section id="contato" class="contact-section floating-section graphite-section">
+            <div class="container contact-container">
+                <div class="contact-content dark-mode-text">
+                    <h2>Inicie sua nova linha de receita</h2>
+                    <p>Preencha os dados da sua plataforma. Nosso time de parcerias estratégicas fará o contato para alinhar o potencial de originação e os detalhes técnicos da integração API.</p>
+                </div>
+                <div class="contact-form-wrapper">
+                    <form id="lottus-caas-form" action="https://formspree.io/f/dummy_endpoint_replace_me" method="POST">
+                        <div class="form-group">
+                            <label for="name">Seu nome completo</label>
+                            <input type="text" id="name" name="name" required placeholder="Nome e Sobrenome">
+                        </div>
+                        <div class="form-group">
+                            <label for="company">Nome da Plataforma / Empresa</label>
+                            <input type="text" id="company" name="company" required placeholder="Sua empresa">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">E-mail corporativo</label>
+                            <input type="email" id="email" name="email" required placeholder="seuemail@empresa.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="type">Tipo de Plataforma</label>
+                            <select id="type" name="type" required>
+                                <option value="" disabled selected>Selecione o modelo do seu negócio</option>
+                                <option value="ERP">Sistema de Gestão (ERP)</option>
+                                <option value="Marketplace">Marketplace B2B / B2C</option>
+                                <option value="SaaS">SaaS de Nicho</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="volume">Volume estimado de clientes ativos</label>
+                            <select id="volume" name="volume" required>
+                                <option value="" disabled selected>Selecione uma estimativa</option>
+                                <option value="Ate 500">Até 500 clientes</option>
+                                <option value="500 a 2000">De 500 a 2.000 clientes</option>
+                                <option value="Acima de 2000">Acima de 2.000 clientes</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full" id="submit-btn">Agendar Reunião Técnica</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="lottus-footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo footer-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span class="logo-text" style="display: none; color: white;">Lottus</span>
+                <p>Otimizando o fluxo financeiro de operações modernas através de conformidade regulatória e excelência em tecnologia de crédito.</p>
+            </div>
+
+            <div class="footer-links">
+                <h4>Soluções</h4>
+                <a href="credito.html">Crédito Corporativo</a>
+                <a href="credito-as-a-service.html">Credit as a Service</a>
+                <a href="parceiros.html">Programa de Parceiros</a>
+            </div>
+
+            <div class="footer-links">
+                <h4>Institucional</h4>
+                <a href="sobre.html">Sobre Nós</a>
+                <a href="carreiras.html">Carreiras</a>
+                <a href="contato.html">Fale Conosco</a>
+            </div>
+
+            <div class="footer-links">
+                <h4>Legal & Recursos</h4>
+                <a href="index.html#faq">FAQ / Ajuda</a>
+                <a href="termos.html">Termos de Uso</a>
+                <a href="privacidade.html">Privacidade</a>
+            </div>
+        </div>
+
+        <div class="container footer-disclaimer">
+            <p>A Lottus Finance não é uma instituição financeira tradicional e não realiza captação de recursos diretamente. A Lottus atua estritamente como plataforma tecnológica de estruturação, securitização e facilitação de crédito, distribuindo operações em estrita conformidade com as resoluções vigentes do Banco Central do Brasil. Todas as antecipações e linhas de crédito integradas ao nosso sistema são adquiridas ou executadas por veículos de securitização devidamente estruturados e autorizados, garantindo segurança jurídica e transparência a cada transação.</p>
+        </div>
+
+        <div class="container footer-bottom">
+            <p>&copy; 2026 Lottus Tecnologia LTDA. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
