@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottus Finance | Entrar na Conta</title>
+    <meta name="description" content="Acesse o painel da Lottus Finance para gerenciar seus recebíveis e operações de crédito.">
+    
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="icon" type="image/x-icon" href="../assets/img/Favicon.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base e Fundo Travado no estilo da tela de cadastro */
+        body, html {
+            background-color: var(--lottus-beige);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            color: var(--lottus-graphite);
+            position: relative;
+        }
+
+        /* HEADER PÍLULA FLUTUANTE */
+        .header-pill-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .header-pill {
+            background-color: var(--lottus-white);
+            border-radius: 100px;
+            padding: 12px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1400px;
+            box-shadow: 0 4px 20px rgba(33, 37, 41, 0.03);
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .header-pill nav {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .header-pill nav a {
+            text-decoration: none;
+            color: var(--lottus-graphite);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color var(--transition-fast);
+        }
+
+        .header-pill nav a:hover {
+            color: var(--lottus-pink);
+        }
+
+        .btn-pill-primary {
+            background-color: var(--lottus-pink);
+            color: var(--lottus-white) !important;
+            padding: 12px 24px;
+            border-radius: 100px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color var(--transition-fast);
+        }
+
+        .btn-pill-primary:hover {
+            background-color: var(--lottus-pink-hover);
+        }
+
+        /* CONTAINER CENTRALIZADO */
+        .auth-split-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 140px 40px 60px 40px;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .auth-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            gap: 60px;
+            align-items: center;
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* COLUNA DA ESQUERDA (TEXTO) */
+        .tracker-col h1 {
+            font-size: clamp(2.2rem, 4vw, 3rem);
+            font-weight: 700;
+            color: var(--lottus-graphite);
+            margin-bottom: 16px;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        .tracker-col p {
+            font-size: 1.1rem;
+            color: var(--lottus-graphite-light);
+            line-height: 1.6;
+            max-width: 95%;
+            margin: 0 0 24px 0;
+        }
+
+        .auth-help-link {
+            font-size: 1rem;
+            color: var(--lottus-graphite-light);
+        }
+
+        .auth-help-link a {
+            color: var(--lottus-pink);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color var(--transition-fast);
+        }
+
+        .auth-help-link a:hover {
+            color: var(--lottus-pink-hover);
+        }
+
+        /* COLUNA DA DIREITA (CARD DE LOGIN IDÊNTICO AO DE CADASTRO) */
+        .form-card {
+            background-color: var(--lottus-white);
+            border-radius: var(--border-radius-lg);
+            padding: 48px 40px;
+            box-shadow: 0 12px 40px rgba(33, 37, 41, 0.06);
+            border: 1px solid var(--lottus-border);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-card h3 {
+            font-size: 1.4rem;
+            color: var(--lottus-graphite);
+            margin: 0 0 6px 0;
+            font-weight: 700;
+        }
+
+        .form-card > p {
+            color: var(--lottus-graphite-light);
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+        }
+
+        .form-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+        }
+
+        .input-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--lottus-graphite);
+        }
+
+        .forgot-link {
+            font-size: 0.8rem;
+            color: var(--lottus-pink);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color var(--transition-fast);
+        }
+
+        .forgot-link:hover {
+            color: var(--lottus-pink-hover);
+        }
+
+        .input-group input {
+            padding: 14px 16px;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 8px;
+            font-family: var(--font-primary);
+            font-size: 0.95rem;
+            color: var(--lottus-graphite);
+            background-color: #F8FAFC;
+            transition: all var(--transition-fast);
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--lottus-pink);
+            background-color: var(--lottus-white);
+            box-shadow: 0 0 0 3px rgba(200, 42, 96, 0.1);
+        }
+
+        /* CAIXINHA DE ALERTA DE ERRO */
+        .alert-error {
+            background-color: #FFF0F1;
+            border: 1px solid #FFC9CC;
+            color: #E63946;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: none;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .btn-submit {
+            padding: 14px 28px;
+            background-color: var(--lottus-pink);
+            color: var(--lottus-white);
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--lottus-pink-hover);
+        }
+
+        /* RESPONSIVIDADE MOBILE */
+        @media (max-width: 992px) {
+            .auth-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            .header-pill nav {
+                display: none;
+            }
+            .form-card {
+                padding: 32px 24px;
+            }
+            .auth-split-container {
+                padding: 120px 24px 60px 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-pill-wrapper">
+        <header class="lottus-header">
+            <div class="container header-container">
+                <a href="https://www.lottusfinance.com.br/" class="logo-link">
+                    <img src="../assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span class="logo-text" style="display: none;">Lottus</span>
+                </a>
+                
+                <nav class="main-nav">
+                    <a href="https://www.lottusfinance.com.br/" class="nav-link">Home</a>
+                    <div class="nav-dropdown">
+                        <a href="#" class="nav-link dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false">
+                            Soluções 
+                            <svg class="dropdown-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </a>
+                        <div class="dropdown-menu solutions-dropdown">
+                            <div class="dropdown-section">
+                                <span class="dropdown-header-title">Para Empresas</span>
+                                <a href="https://www.lottusfinance.com.br/credito.html" class="dropdown-item">
+                                    <div class="item-title">Crédito Corporativo</div>
+                                    <small class="item-desc">Antecipação de recebíveis, risco sacado e capital de giro.</small>
+                                </a>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-section">
+                                <span class="dropdown-header-title">Para Parceiros</span>
+                                <a href="https://www.lottusfinance.com.br/credito-as-a-service.html" class="dropdown-item">
+                                    <div class="item-title">Credit as a Service</div>
+                                    <small class="item-desc">API nativa para embutir inteligência de crédito na sua plataforma.</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="https://www.lottusfinance.com.br/sobre.html" class="nav-link">Sobre Nós</a>
+                    <a href="https://www.lottusfinance.com.br/contato.html" class="nav-link">Contato</a>
+                </nav>
+                
+                <div class="header-actions" style="display: flex; align-items: center; gap: 24px;">
+                    <a href="index.html" class="nav-link" style="font-weight: 600; color: var(--lottus-graphite);">Entrar</a>
+                    <a href="../cadastro/index.html" class="btn btn-primary">Criar Conta</a>
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <!-- Layout Split Centralizado -->
+    <main class="auth-split-container">
+        <div class="auth-grid">
+            
+            <!-- Coluna da Esquerda: Texto -->
+            <div class="tracker-col">
+                <h1>Acesse sua conta</h1>
+                <p>Entre no ecossistema Lottus para acompanhar suas operações, gerenciar limites e solicitar antecipação de recebíveis com segurança.</p>
+                <div class="auth-help-link">
+                    Ainda não possui uma conta? <a href="../cadastro/index.html">Cadastre sua empresa</a>
+                </div>
+            </div>
+
+            <!-- Coluna da Direita: Card de Formulário -->
+            <div class="form-card">
+                <h3>Identificação</h3>
+                <p>Informe suas credenciais de acesso corporativo.</p>
+
+                <!-- Alerta de erro dinâmico -->
+                <div class="alert-error" id="login-alert"></div>
+
+                <form id="login-form" action="#" method="POST" novalidate>
+                    <div class="form-grid">
+                        
+                        <div class="input-group">
+                            <label for="email">E-mail Corporativo</label>
+                            <input type="email" id="email" name="email" placeholder="nome@suaempresa.com.br" required>
+                        </div>
+
+                        <div class="input-group">
+                            <div class="input-group-header">
+                                <label for="senha">Senha</label>
+                                <a href="#" id="forgot-password-link" class="forgot-link">Esqueceu a senha?</a>
+                            </div>
+                            <input type="password" id="senha" name="senha" placeholder="Digite sua senha" required>
+                        </div>
+
+                        <button type="submit" class="btn-submit" id="btn-login">
+                            Entrar no Painel
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const supabaseUrl = 'https://rowhslnnlzfbhmzbylbz.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvd2hzbG5ubHpmYmhtemJ5bGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4Mjg2MTgsImV4cCI6MjEwMDQwNDYxOH0.hUvOsj_Tpf1asd7Neh4tnlLg5Vc-amcLRfbcoZKYX-0';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('login-form');
+            const alertBox = document.getElementById('login-alert');
+            const btnLogin = document.getElementById('btn-login');
+            const forgotLink = document.getElementById('forgot-password-link');
+
+            function showAlert(message) {
+                alertBox.innerText = message;
+                alertBox.style.display = 'block';
+            }
+
+            function hideAlert() {
+                alertBox.innerText = '';
+                alertBox.style.display = 'none';
+            }
+
+            // --- AUTENTICAÇÃO COM SUPABASE ---
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideAlert();
+
+                const email = document.getElementById('email').value.trim();
+                const senha = document.getElementById('senha').value;
+
+                if (!email || !senha) {
+                    showAlert("Por favor, preencha o e-mail e a senha.");
+                    return;
+                }
+
+                const textoOriginal = btnLogin.innerHTML;
+                btnLogin.innerHTML = 'Entrando...';
+                btnLogin.disabled = true;
+
+                try {
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({
+                        email: email,
+                        password: senha,
+                    });
+
+                    if (error) {
+                        if (error.message.includes("Email not confirmed")) {
+                            throw new Error("Seu e-mail ainda não foi verificado. Por favor, cheque sua caixa de entrada e confirme seu e-mail.");
+                        } else if (error.message.includes("Invalid login credentials")) {
+                            throw new Error("E-mail ou senha incorretos. Verifique suas credenciais.");
+                        } else {
+                            throw new Error(error.message);
+                        }
+                    }
+
+                    // Redireciona para o Dashboard após login bem-sucedido
+                    window.location.href = '../dashboard/index.html';
+
+                } catch (err) {
+                    showAlert(err.message);
+                    btnLogin.innerHTML = textoOriginal;
+                    btnLogin.disabled = false;
+                }
+            });
+
+            // --- RECOVERY DE SENHA ---
+            forgotLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                hideAlert();
+
+                const email = document.getElementById('email').value.trim();
+
+                if (!email) {
+                    showAlert("Digite seu e-mail corporativo no campo acima e clique em 'Esqueceu a senha?' novamente.");
+                    document.getElementById('email').focus();
+                    return;
+                }
+
+                try {
+                    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                        redirectTo: window.location.origin + '/login/redefinir.html',
+                    });
+
+                    if (error) throw error;
+
+                    alert("Instruções para redefinição enviadas para: " + email);
+                } catch (err) {
+                    showAlert("Erro ao processar: " + err.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
