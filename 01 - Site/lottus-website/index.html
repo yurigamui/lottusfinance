@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottus Finance | Inteligência em Crédito e Securitização</title>
+    <meta name="description" content="Estruturamos capital sob medida para a sua empresa ou entregamos a infraestrutura para você oferecer crédito aos seus clientes.">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="assets/img/Favicon.png">
+</head>
+<body>
+    <div id="custom-ui-alert" class="ui-alert hidden"></div>
+
+    <header class="lottus-header">
+        <div class="header-container">
+            <div class="header-content">
+                <a href="index.html" class="logo-link">
+                    <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span class="logo-text" style="display: none;">Lottus</span>
+                </a>
+
+                <button type="button" class="mobile-menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                </button>
+            </div>
+            
+            <nav class="main-nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false">
+                        Soluções 
+                        <svg class="dropdown-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </a>
+                    <div class="dropdown-menu solutions-dropdown">
+                        <div class="dropdown-section">
+                            <span class="dropdown-header-title">Para Empresas</span>
+                            <a href="credito.html" class="dropdown-item">
+                                <div class="item-title">Crédito Corporativo</div>
+                                <small class="item-desc">Antecipação de recebíveis, risco sacado e capital de giro.</small>
+                            </a>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-section">
+                            <span class="dropdown-header-title">Para Parceiros</span>
+                            <a href="credito-as-a-service.html" class="dropdown-item">
+                                <div class="item-title">Credit as a Service</div>
+                                <small class="item-desc">API nativa para embutir inteligência de crédito na sua plataforma.</small>
+                            </a>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-section">
+                            <span class="dropdown-header-title">Para Investidores</span>
+                            <a href="investimentos.html" class="dropdown-item">
+                                <div class="item-title">Investimentos</div>
+                                <small class="item-desc">Oportunidades em crédito estruturado com lastro real.</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="sobre.html" class="nav-link">Sobre Nós</a>
+                <a href="contato.html" class="nav-link">Contato</a>
+            </nav>
+            
+            <div class="header-actions" style="display: flex; align-items: center; gap: 24px;">
+                <a href="contato.html" class="btn btn-secondary">Fale conosco</a>
+                <a href="contato.html" class="btn btn-primary">Criar conta agora</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- 1. Hero Section -->
+        <section class="hero-section floating-section light-section" style="padding-bottom: var(--space-md);">
+            <div class="container hero-container">
+                <div class="hero-content">
+                    <div class="badge-regulator">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <span>Securitização regulada e infraestrutura B2B</span>
+                    </div>
+                    <h1 class="hero-title" style="font-size: clamp(2.8rem, 5vw, 4.2rem); margin-bottom: var(--space-md);">
+                        O motor de crédito por trás de <span class="typewriter-text" style="color: var(--lottus-pink); border-bottom: 3px solid var(--lottus-pink);">grandes operações</span><span class="cursor" style="background-color: var(--lottus-pink);"></span>
+                    </h1>
+                    <p class="hero-subtitle" style="font-size: 1.2rem; max-width: 85%;">
+                        Atuamos em duas frentes claras para acelerar negócios. Financiamos o fluxo de caixa da sua empresa de forma direta ou entregamos a nossa API para você oferecer crédito aos seus próprios clientes.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. O Hub de Decisão -->
+        <section id="hub-solucoes" class="floating-section graphite-section" style="padding: var(--space-xl) 0;">
+            <div class="container">
+                <div class="section-header dark-mode-text" style="text-align: center; margin-bottom: var(--space-lg);">
+                    <h2 style="font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.15; letter-spacing: -0.03em;">Escolha o caminho ideal para o seu momento</h2>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-md); align-items: stretch;">
+                    
+                    <!-- Card 1: Crédito Corporativo -->
+                    <div style="background-color: var(--lottus-white); border-radius: var(--border-radius-md); padding: var(--space-lg); display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--lottus-border);">
+                        <div>
+                            <div style="color: var(--lottus-pink); margin-bottom: var(--space-sm);">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                            </div>
+                            <h3 style="font-size: 1.8rem; font-weight: 700; color: var(--lottus-graphite); margin-bottom: 12px; letter-spacing: -0.02em;">Crédito Corporativo</h3>
+                            <h4 style="font-size: 1rem; color: var(--lottus-pink); font-weight: 600; margin-bottom: var(--space-sm); text-transform: uppercase; letter-spacing: 0.05em;">Para a sua empresa</h4>
+                            <p style="font-size: 1.05rem; line-height: 1.6; color: var(--lottus-graphite-light); margin-bottom: var(--space-md);">
+                                Conectamos sua operação diretamente ao nosso fundo. Transforme suas vendas a prazo em dinheiro imediato na conta, ganhe fôlego negociando com fornecedores ou solicite capital de giro para expansão sem a burocracia das mesas de crédito tradicionais.
+                            </p>
+                        </div>
+                        <a href="credito.html" class="btn btn-primary btn-full" style="padding: 16px;">Antecipar Agora</a>
+                    </div>
+
+                    <!-- Card 2: Credit as a Service -->
+                    <div style="background-color: var(--lottus-white); border-radius: var(--border-radius-md); padding: var(--space-lg); display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--lottus-border);">
+                        <div>
+                            <div style="color: var(--lottus-pink); margin-bottom: var(--space-sm);">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                            </div>
+                            <h3 style="font-size: 1.8rem; font-weight: 700; color: var(--lottus-graphite); margin-bottom: 12px; letter-spacing: -0.02em;">Credit as a Service</h3>
+                            <h4 style="font-size: 1rem; color: var(--lottus-pink); font-weight: 600; margin-bottom: var(--space-sm); text-transform: uppercase; letter-spacing: 0.05em;">Para o seu cliente final</h4>
+                            <p style="font-size: 1.05rem; line-height: 1.6; color: var(--lottus-graphite-light); margin-bottom: var(--space-md);">
+                                Embuta a inteligência e o capital da Lottus dentro da sua própria plataforma. Você oferece o limite de crédito com a sua marca e nós operacionalizamos os bastidores. Garantimos uma nova linha de receita para o seu negócio.
+                            </p>
+                        </div>
+                        <a href="credito-as-a-service.html" class="btn btn-secondary btn-full" style="padding: 16px;">Implementar Agora</a>
+                    </div>
+
+                    <!-- Card 3: Investimentos -->
+                    <div style="background-color: var(--lottus-white); border-radius: var(--border-radius-md); padding: var(--space-lg); display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--lottus-border);">
+                        <div>
+                            <div style="color: var(--lottus-pink); margin-bottom: var(--space-sm);">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+                            </div>
+                            <h3 style="font-size: 1.8rem; font-weight: 700; color: var(--lottus-graphite); margin-bottom: 12px; letter-spacing: -0.02em;">Investimentos <br></h3>
+                            <h4 style="font-size: 1rem; color: var(--lottus-pink); font-weight: 600; margin-bottom: var(--space-sm); text-transform: uppercase; letter-spacing: 0.05em;">Para Investidores</h4>
+                            <p style="font-size: 1.05rem; line-height: 1.6; color: var(--lottus-graphite-light); margin-bottom: var(--space-md);">
+                                Aloque capital em operações de crédito securitizado com lastro real, garantias sólidas e retornos altamente atrativos. Estruturas sob medida em conformidade com as regras do Banco Central.
+                            </p>
+                        </div>
+                        <a href="investimentos.html" class="btn btn-secondary btn-full" style="padding: 16px;">Investir Agora</a>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Foco Cedente: A Paz de Espírito -->
+        <section class="floating-section light-section">
+            <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); align-items: center;">
+                <div>
+                    <h2 style="font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: var(--space-sm);">Feche negócios e deixe o fluxo de caixa com a nossa equipe.</h2>
+                    <p style="color: var(--lottus-graphite-light); font-size: 1.05rem; line-height: 1.6; margin-bottom: var(--space-md);">
+                        Entendemos que gerenciar faturas com prazos longos trava o seu crescimento. Ao enviar seus recebíveis para a Lottus, o capital entra na sua conta rapidamente. Você ganha tranquilidade absoluta para focar nas vendas e no relacionamento com os seus clientes. Esqueça as planilhas de controle diário e a insegurança financeira.
+                    </p>
+                    <a href="credito.html" class="btn btn-primary">Resolver meu fluxo de caixa</a>
+                </div>
+                
+                <div style="background-color: var(--lottus-beige); border-radius: var(--border-radius-md); padding: var(--space-lg); border: 1px solid var(--lottus-border); display: flex; flex-direction: column; gap: 16px;">
+                    <div style="background-color: var(--lottus-white); padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--lottus-border); display: flex; align-items: center; gap: 12px;">
+                        <span style="color: var(--lottus-pink); font-size: 1.2rem;">✓</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <strong style="color: var(--lottus-graphite); font-size: 0.95rem;">Faturas cadastradas</strong>
+                            <span style="color: var(--lottus-graphite-light); font-size: 0.85rem;">Documentação aprovada</span>
+                        </div>
+                    </div>
+                    <div style="background-color: var(--lottus-white); padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--lottus-border); display: flex; align-items: center; gap: 12px;">
+                        <span style="color: var(--lottus-pink); font-size: 1.2rem;">✓</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <strong style="color: var(--lottus-graphite); font-size: 0.95rem;">Análise concluída</strong>
+                            <span style="color: var(--lottus-graphite-light); font-size: 0.85rem;">Liberação autorizada pelo fundo</span>
+                        </div>
+                    </div>
+                    <div style="background-color: var(--lottus-white); padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--lottus-success); display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm);">
+                        <span style="color: var(--lottus-success); font-size: 1.2rem;">✓</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <strong style="color: var(--lottus-graphite); font-size: 0.95rem;">Dinheiro na conta</strong>
+                            <span style="color: var(--lottus-graphite-light); font-size: 0.85rem;">Operação financiada com sucesso</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Foco CaaS: A Evolução do Sistema -->
+        <section class="floating-section graphite-section">
+            <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); align-items: center;">
+                <div style="background-color: rgba(0,0,0,0.2); border-radius: var(--border-radius-md); padding: var(--space-lg); border: 1px solid rgba(255,255,255,0.1); font-family: monospace; color: var(--lottus-white); font-size: 0.85rem; line-height: 1.6; overflow: hidden;">
+                    <span style="color: #6366f1;">POST</span> /api/v1/credit/offer<br><br>
+                    {<br>
+                    &nbsp;&nbsp;"client_id": "8492-ABCD",<br>
+                    &nbsp;&nbsp;"requested_limit": 50000.00,<br>
+                    &nbsp;&nbsp;"partner_fee": 1.5,<br>
+                    &nbsp;&nbsp;"risk_model": "lottus_default"<br>
+                    }<br><br>
+                    <span style="color: var(--lottus-success);">200 OK</span><br>
+                    {<br>
+                    &nbsp;&nbsp;"status": "approved",<br>
+                    &nbsp;&nbsp;"available_limit": 50000.00,<br>
+                    &nbsp;&nbsp;"funds_secured": true<br>
+                    }
+                </div>
+
+                <div>
+                    <h2 style="font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: var(--space-sm); color: var(--lottus-white);">Transforme sua plataforma em uma máquina de crédito.</h2>
+                    <p style="color: var(--lottus-beige); opacity: 0.9; font-size: 1.05rem; line-height: 1.6; margin-bottom: var(--space-md);">
+                        Você já possui a audiência e o relacionamento. Nós fornecemos o capital e a inteligência matemática. Ao plugar a API da Lottus, seus clientes recebem limites de crédito pré-aprovados sem sair do seu ambiente. Nós assumimos integralmente o risco de inadimplência e a operação de cobrança. Você ganha uma nova fonte de receita limpa.
+                    </p>
+                    <a href="credito-as-a-service.html" class="btn btn-primary" style="background-color: var(--lottus-white); color: var(--lottus-graphite);">Documentação da API</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Nossa Estrutura -->
+        <section class="floating-section light-section">
+            <div class="container" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--space-xl); align-items: center;">
+                <div>
+                    <h2 style="font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: var(--space-sm);">Fundamentos sólidos geram operações rápidas.</h2>
+                    <p style="color: var(--lottus-graphite-light); font-size: 1.05rem; line-height: 1.6; margin-bottom: var(--space-md);">
+                        Somos uma securitizadora projetada com mentalidade de empresa de tecnologia. Analisamos os dados vitais do seu negócio em tempo real para criar aprovações precisas. O resultado é a liberação de capital em velocidade recorde, mantendo conformidade total com os padrões do Banco Central.
+                    </p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--lottus-border);">
+                        <div>
+                            <strong style="font-size: 2.2rem; color: var(--lottus-graphite); display: block; font-feature-settings: 'tnum'; line-height: 1;">Rápido</strong>
+                            <span style="font-size: 0.95rem; color: var(--lottus-pink); font-weight: 600;">Decisão baseada em dados</span>
+                        </div>
+                        <div>
+                            <strong style="font-size: 2.2rem; color: var(--lottus-graphite); display: block; font-feature-settings: 'tnum'; line-height: 1;">Regulado</strong>
+                            <span style="font-size: 0.95rem; color: var(--lottus-pink); font-weight: 600;">Estrutura 100% aderente ao Bacen</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background-color: var(--lottus-beige); border-radius: var(--border-radius-md); padding: var(--space-lg); border: 1px solid var(--lottus-border);">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+                        <div>
+                            <h4 style="color: var(--lottus-graphite); font-size: 1.1rem; font-weight: 600; margin-bottom: 4px;">Análise Proprietária</h4>
+                            <p style="font-size: 0.95rem; color: var(--lottus-graphite-light); line-height: 1.5;">Nosso modelo de crédito lê o momento exato da sua operação, ignorando scores genéricos de mercado.</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--lottus-graphite); font-size: 1.1rem; font-weight: 600; margin-bottom: 4px;">Visibilidade Absoluta</h4>
+                            <p style="font-size: 0.95rem; color: var(--lottus-graphite-light); line-height: 1.5;">Acompanhe o lastro das suas operações através de painéis dinâmicos. Sem surpresas ou taxas escondidas.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. CTA Final -->
+        <section class="floating-section graphite-section" style="padding: var(--space-lg) 0; text-align: center;">
+            <div class="container">
+                <h2 style="font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: var(--space-sm); color: var(--lottus-white);">Pronto para plugar a Lottus no seu negócio?</h2>
+                <p style="color: var(--lottus-beige); opacity: 0.9; font-size: 1.1rem; line-height: 1.6; margin-bottom: var(--space-md); max-width: 600px; margin-left: auto; margin-right: auto;">
+                    Diga-nos qual caminho faz sentido para o seu cenário atual e nossa equipe de especialistas entrará em ação.
+                </p>
+                <div style="display: flex; justify-content: center; gap: var(--space-sm); flex-wrap: wrap;">
+                        <a href="contato.html" class="btn btn-primary btn-large">Análise para minha empresa</a>
+                    <a href="contato.html" class="btn btn-secondary btn-large" style="color: var(--lottus-white); border-color: rgba(255,255,255,0.3);">Explorar solução CaaS</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="lottus-footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo footer-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span class="logo-text" style="display: none; color: white;">Lottus</span>
+                <p>Otimizando o fluxo financeiro de operações modernas através de conformidade regulatória e excelência em tecnologia de crédito.</p>
+            </div>
+
+            <div class="footer-links">
+                <h4>Soluções</h4>
+                <a href="credito.html">Crédito Corporativo</a>
+                <a href="credito-as-a-service.html">Credit as a Service</a>
+                <a href="investimentos.html">Investimentos</a>
+            </div>
+
+            <div class="footer-links">
+                <h4>Institucional</h4>
+                <a href="sobre.html">Sobre Nós</a>
+                <a href="carreiras.html">Carreiras</a>
+                <a href="contato.html">Fale Conosco</a>
+            </div>
+
+            <div class="footer-links">
+                <h4>Legal & Recursos</h4>
+                <a href="faq.html">FAQ / Ajuda</a>
+                <a href="termos.html">Termos de Uso</a>
+                <a href="privacidade.html">Privacidade</a>
+            </div>
+        </div>
+
+        <div class="container footer-disclaimer">
+            <p>A Lottus Finance atua como veículo de securitização devidamente estruturado e autorizado, conforme as regras e resoluções vigentes do Banco Central do Brasil. A Lottus não é uma instituição financeira tradicional e não realiza captação de recursos diretamente junto ao público. Todas as operações de crédito e antecipação são estruturadas por meio de emissão de títulos de securitização com lastro real, garantindo segurança jurídica e transparência a cada transação.</p>
+        </div>
+
+        <div class="container footer-bottom">
+            <p>&copy; 2026 Lottus Securitizadora de Créditos S/A. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
