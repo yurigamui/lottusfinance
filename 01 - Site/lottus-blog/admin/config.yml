@@ -1,0 +1,30 @@
+# Conexão direta com o seu repositório no GitHub
+backend:
+  name: github
+  repo: yurigamui/lottusfinance # O seu repositório principal
+  branch: main # A branch onde os artigos serão salvos
+  # Usar "implicit" permite fazer login via GitHub sem precisar de um servidor backend
+  auth_type: implicit 
+  app_id: COLOQUE_SEU_CLIENT_ID_DO_GITHUB_AQUI
+
+# Como a Lottus fará upload de imagens
+media_folder: "public/assets/img/blog" # Onde as imagens ficam salvas no código
+public_folder: "/assets/img/blog"      # O caminho que aparece no site final
+
+# Customização visual do painel com as cores da Lottus
+logo_url: "https://lottusfinance.com.br/assets/img/Logo%201.png"
+
+# Coleções (O que pode ser postado)
+collections:
+  - name: "artigos"
+    label: "Artigos do Blog"
+    folder: "src/content/blog" # Onde o Astro vai buscar os textos em Markdown
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - { label: "Título", name: "title", widget: "string" }
+      - { label: "Data de Publicação", name: "date", widget: "datetime" }
+      - { label: "Autor", name: "author", widget: "string", default: "Equipe Lottus" }
+      - { label: "Imagem de Capa", name: "image", widget: "image", required: false }
+      - { label: "Resumo (SEO)", name: "description", widget: "text" }
+      - { label: "Corpo do Texto", name: "body", widget: "markdown" }
