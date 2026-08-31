@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog | Lottus Finance - Insights sobre Crédito e Mercado</title>
+    <meta name="description" content="Análises profundas sobre o mercado de crédito, securitização e gestão de caixa para empresas que não param de crescer.">
+    <!-- CSS da Lottus (Deve estar na pasta assets/css/) -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="assets/img/Favicon.png">
+</head>
+<body>
+    <!-- ================= HEADER ESPECÍFICO DO BLOG ================= -->
+    <header class="lottus-header">
+        <div class="header-container">
+            <div class="header-content" style="display: flex; align-items: center; gap: 12px;">
+                <a href="index.html" class="logo-link" style="display: flex; align-items: center; text-decoration: none;">
+                    <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo" style="height: 32px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span class="logo-text" style="display: none;">Lottus</span>
+                </a>
+                <!-- Tag indicando que estamos no Blog -->
+                <span style="background-color: var(--lottus-beige); color: var(--lottus-pink); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--lottus-border);">Blog</span>
+            </div>
+            
+            <!-- Navegação focada em Categorias de Conteúdo -->
+            <nav class="main-nav">
+                <a href="#" class="nav-link">Mercado Financeiro</a>
+                <a href="#" class="nav-link">Gestão de Caixa</a>
+                <a href="#" class="nav-link">CFO & Tesouraria</a>
+                <a href="#" class="nav-link">Tech & API</a>
+            </nav>
+            
+            <div class="header-actions">
+                <a href="https://lottusfinance.com.br" class="nav-link" style="margin-right: 16px; font-size: 0.9rem;">Ir para o site principal ↗</a>
+                <a href="https://lottusfinance.com.br/contato.html" class="btn btn-primary" style="padding: 10px 24px; font-size: 0.9rem;">Simular Crédito</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- ================= HERO DO BLOG ================= -->
+        <section class="floating-section light-section" style="padding-bottom: var(--space-xl); margin-top: 20px;">
+            <div class="container" style="text-align: center; max-width: 800px;">
+                <div class="badge-regulator" style="margin-top: 40px;">
+                    <span>Radar Financeiro Lottus</span>
+                </div>
+                <h1 style="margin-bottom: var(--space-sm);">
+                    Insights & <em class="highlight-pink">Estratégia</em>
+                </h1>
+                <p class="subtitle" style="margin-bottom: var(--space-lg);">
+                    Artigos, análises de dados e tendências sobre o mercado de crédito B2B e securitização para líderes financeiros.
+                </p>
+            </div>
+
+            <!-- ================= GRID DE ARTIGOS ================= -->
+            <div class="container">
+                <!-- A tag abaixo é onde o seu script build.js vai injetar os posts automatizados -->
+                <!-- POSTS_AQUI -->
+
+                <!-- Deixei 3 cards estáticos aqui como exemplo visual do layout -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 40px;">
+                    
+                    <!-- Card Artigo 1 -->
+                    <a href="posts/post-01.html" style="text-decoration: none; color: inherit; display: block;">
+                        <div style="background: var(--lottus-white); border: 1px solid var(--lottus-border); border-radius: var(--border-radius-lg); overflow: hidden; transition: all var(--transition-fast); height: 100%; display: flex; flex-direction: column;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                            <div style="height: 220px; background-color: var(--lottus-beige); background-image: linear-gradient(135deg, rgba(200, 42, 96, 0.05) 0%, rgba(0,0,0,0) 100%); display: flex; align-items: center; justify-content: center; position: relative;">
+                                <span style="color: var(--lottus-pink); font-weight: 500; font-size: 0.9rem;">[ Imagem de Capa ]</span>
+                            </div>
+                            <div style="padding: 32px; display: flex; flex-direction: column; flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--lottus-pink); text-transform: uppercase; letter-spacing: 0.08em;">Gestão de Caixa</span>
+                                    <span style="font-size: 0.8rem; color: var(--lottus-graphite-light);">18 Ago, 2026</span>
+                                </div>
+                                <h3 style="font-size: 1.4rem; font-weight: 700; color: var(--lottus-graphite); margin-bottom: 12px; line-height: 1.3; letter-spacing: -0.01em;">
+                                    O Brasil bate recorde histórico de Recuperações Judiciais. Onde as empresas estão errando?
+                                </h3>
+                                <p style="font-size: 0.95rem; color: var(--lottus-graphite-light); margin-bottom: 24px; line-height: 1.6; flex: 1;">
+                                    Não é apenas falta de vendas. O maior vilão é a asfixia do fluxo de caixa combinada ao alto endividamento bancário.
+                                </p>
+                                <div style="display: flex; align-items: center; gap: 8px; color: var(--lottus-graphite); font-weight: 600; font-size: 0.9rem;">
+                                    Ler artigo completo 
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lottus-pink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Card Artigo 2 -->
+                    <a href="#" style="text-decoration: none; color: inherit; display: block;">
+                        <div style="background: var(--lottus-white); border: 1px solid var(--lottus-border); border-radius: var(--border-radius-lg); overflow: hidden; transition: all var(--transition-fast); height: 100%; display: flex; flex-direction: column;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                            <div style="height: 220px; background-color: var(--lottus-graphite); display: flex; align-items: center; justify-content: center; position: relative;">
+                                <span style="color: var(--lottus-white); font-weight: 500; font-size: 0.9rem; opacity: 0.5;">[ Imagem de Capa ]</span>
+                            </div>
+                            <div style="padding: 32px; display: flex; flex-direction: column; flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--lottus-pink); text-transform: uppercase; letter-spacing: 0.08em;">Mercado Financeiro</span>
+                                    <span style="font-size: 0.8rem; color: var(--lottus-graphite-light);">12 Ago, 2026</span>
+                                </div>
+                                <h3 style="font-size: 1.4rem; font-weight: 700; color: var(--lottus-graphite); margin-bottom: 12px; line-height: 1.3; letter-spacing: -0.01em;">
+                                    Credit Squeeze: Por que os grandes bancos estão cortando o limite de empresas saudáveis?
+                                </h3>
+                                <p style="font-size: 0.95rem; color: var(--lottus-graphite-light); margin-bottom: 24px; line-height: 1.6; flex: 1;">
+                                    Com o mercado volátil, bancos tradicionais travam o crédito para proteger os próprios balanços. A solução está no Mercado de Capitais.
+                                </p>
+                                <div style="display: flex; align-items: center; gap: 8px; color: var(--lottus-graphite); font-weight: 600; font-size: 0.9rem;">
+                                    Ler artigo completo 
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lottus-pink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Card Artigo 3 -->
+                    <a href="#" style="text-decoration: none; color: inherit; display: block;">
+                        <div style="background: var(--lottus-white); border: 1px solid var(--lottus-border); border-radius: var(--border-radius-lg); overflow: hidden; transition: all var(--transition-fast); height: 100%; display: flex; flex-direction: column;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                            <div style="height: 220px; background-color: var(--lottus-beige); background-image: linear-gradient(135deg, rgba(33, 37, 41, 0.05) 0%, rgba(0,0,0,0) 100%); display: flex; align-items: center; justify-content: center; position: relative;">
+                                <span style="color: var(--lottus-graphite-light); font-weight: 500; font-size: 0.9rem;">[ Imagem de Capa ]</span>
+                            </div>
+                            <div style="padding: 32px; display: flex; flex-direction: column; flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--lottus-pink); text-transform: uppercase; letter-spacing: 0.08em;">Tech & API</span>
+                                    <span style="font-size: 0.8rem; color: var(--lottus-graphite-light);">05 Ago, 2026</span>
+                                </div>
+                                <h3 style="font-size: 1.4rem; font-weight: 700; color: var(--lottus-graphite); margin-bottom: 12px; line-height: 1.3; letter-spacing: -0.01em;">
+                                    Como o Credit as a Service (CaaS) está mudando a relação entre indústrias e fornecedores.
+                                </h3>
+                                <p style="font-size: 0.95rem; color: var(--lottus-graphite-light); margin-bottom: 24px; line-height: 1.6; flex: 1;">
+                                    Entenda a tecnologia por trás das empresas que estão criando seus próprios ecossistemas de crédito B2B.
+                                </p>
+                                <div style="display: flex; align-items: center; gap: 8px; color: var(--lottus-graphite); font-weight: 600; font-size: 0.9rem;">
+                                    Ler artigo completo 
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lottus-pink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= NEWSLETTER (Exclusivo do Blog) ================= -->
+        <section class="floating-section graphite-section" style="padding: 80px 0;">
+            <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); align-items: center;">
+                <div>
+                    <h2 style="font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: var(--space-sm); color: var(--lottus-white);">
+                        Não fique de fora do <em class="highlight-pink">mercado</em>.
+                    </h2>
+                    <p style="color: var(--lottus-beige); opacity: 0.9; font-size: 1.1rem; line-height: 1.6;">
+                        Junte-se a mais de 5.000 CFOs, diretores e investidores que recebem nossa curadoria quinzenal com os melhores artigos e análises sobre o mercado de crédito.
+                    </p>
+                </div>
+                
+                <div style="background-color: rgba(255,255,255,0.05); padding: 40px; border-radius: var(--border-radius-md); border: 1px solid rgba(255,255,255,0.1);">
+                    <form onsubmit="event.preventDefault();" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div>
+                            <label for="email" style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 8px; color: var(--lottus-white);">Seu e-mail corporativo</label>
+                            <input type="email" id="email" placeholder="nome@suaempresa.com.br" required style="width: 100%; padding: 16px; border-radius: var(--border-radius-sm); border: 1px solid var(--lottus-graphite-light); background-color: var(--lottus-white); color: var(--lottus-graphite); font-size: 1rem; outline: none;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px; font-size: 1.05rem;">Assinar Newsletter</button>
+                        <p style="font-size: 0.8rem; color: var(--lottus-graphite-light); text-align: center; margin-top: 8px;">Prometemos não enviar spam. Cancele quando quiser.</p>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= FOOTER DO BLOG ================= -->
+    <footer class="lottus-footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo footer-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span class="logo-text" style="display: none; color: white;">Lottus</span>
+                <p>O radar oficial da Lottus Finance para inteligência de mercado, risco e inovação em crédito corporativo.</p>
+            </div>
+
+            <div class="footer-links">
+                <h4>Categorias do Blog</h4>
+                <a href="#">Mercado Financeiro</a>
+                <a href="#">Gestão de Caixa</a>
+                <a href="#">CFO & Tesouraria</a>
+                <a href="#">Tech & API (CaaS)</a>
+            </div>
+
+            <div class="footer-links">
+                <h4>Lottus Finance</h4>
+                <a href="https://lottusfinance.com.br">Site Institucional</a>
+                <a href="https://lottusfinance.com.br/credito.html">Antecipação de Recebíveis</a>
+                <a href="https://lottusfinance.com.br/credito-as-a-service.html">Credit as a Service</a>
+                <a href="https://lottusfinance.com.br/investimentos.html">Área de Investidores</a>
+            </div>
+
+            <div class="footer-links">
+                <h4>Siga a Lottus</h4>
+                <a href="#">LinkedIn</a>
+                <a href="#">Instagram</a>
+                <a href="https://lottusfinance.com.br/contato.html">Fale com a Mesa</a>
+            </div>
+        </div>
+
+        <div class="container footer-bottom">
+            <p>&copy; 2026 Lottus Securitizadora de Créditos S/A. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>

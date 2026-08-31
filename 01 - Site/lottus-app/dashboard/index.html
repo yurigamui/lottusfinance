@@ -12,7 +12,7 @@
     
     <style>
         /* ==========================================
-           SISTEMA DE CORES E DESIGN TOKENS
+           SISTEMA DE CORES E DESIGN TOKENS GLOBAIS
            ========================================== */
         :root {
             --lottus-beige: #F4F1EA;
@@ -27,88 +27,38 @@
             --lottus-warning: #F59E0B;
             
             --sidebar-width: 280px;
-            
             --border-radius-sm: 8px;
             --border-radius-md: 16px;
             --border-radius-lg: 32px;
             --border-radius-pill: 50px;
-            
             --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            
             --shadow-sm: 0 4px 12px rgba(33, 37, 41, 0.04);
             --shadow-md: 0 12px 32px rgba(33, 37, 41, 0.08);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        html, body { 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-            background-color: var(--lottus-beige); 
-            color: var(--lottus-graphite); 
-            display: flex; 
-            height: 100vh; 
-            overflow: hidden; 
-            width: 100vw;
-            -webkit-font-smoothing: antialiased;
-        }
+        html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: var(--lottus-beige); color: var(--lottus-graphite); display: flex; height: 100vh; overflow: hidden; width: 100vw; -webkit-font-smoothing: antialiased; }
 
-        /* ================= TELA DE CARREGAMENTO (GLOBAL LOADER) ================= */
-        #global-loader {
-            position: fixed;
-            inset: 0;
-            background-color: var(--lottus-beige);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.4s ease, visibility 0.4s ease;
-        }
-        
-        .spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid rgba(200, 42, 96, 0.15);
-            border-top-color: var(--lottus-pink);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
+        /* TELA DE CARREGAMENTO & TOAST */
+        #global-loader { position: fixed; inset: 0; background-color: var(--lottus-beige); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease, visibility 0.4s ease; }
+        .spinner { width: 48px; height: 48px; border: 4px solid rgba(200, 42, 96, 0.15); border-top-color: var(--lottus-pink); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        
-        .loader-text {
-            font-weight: 600;
-            font-size: 1.1rem;
-            color: var(--lottus-graphite);
-            letter-spacing: -0.01em;
-        }
+        .loader-text { font-weight: 600; font-size: 1.1rem; color: var(--lottus-graphite); letter-spacing: -0.01em; }
 
-        /* ================= SIDEBAR PREMIUM ================= */
-        .sidebar { 
-            width: var(--sidebar-width); 
-            border-right: 1px solid var(--lottus-border); 
-            display: flex; 
-            flex-direction: column; 
-            background-color: var(--lottus-white); 
-            flex-shrink: 0; 
-            z-index: 100; 
-        }
-        .sidebar-header { 
-            padding: 32px 24px 16px 24px; 
-            display: flex; 
-            align-items: center; 
-        }
-        
+        .toast-alert { position: fixed; top: 24px; right: 24px; padding: 16px 24px; background: var(--lottus-white); border-left: 4px solid var(--lottus-pink); border-radius: var(--border-radius-sm); box-shadow: var(--shadow-md); z-index: 10000; transform: translateX(150%); transition: transform 0.3s ease; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 0.95rem; }
+        .toast-alert.show { transform: translateX(0); }
+        .toast-alert.success { border-left-color: var(--lottus-success); color: var(--lottus-success); }
+        .toast-alert.error { border-left-color: var(--lottus-error); color: var(--lottus-error); }
+        .toast-alert.info { border-left-color: #3B82F6; color: #1D4ED8; }
+
+        /* ==========================================
+           ESTILOS DA SIDEBAR (Injetada via JS)
+           ========================================== */
+        .sidebar { width: var(--sidebar-width); border-right: 1px solid var(--lottus-border); display: flex; flex-direction: column; background-color: var(--lottus-white); flex-shrink: 0; z-index: 100; height: 100vh;}
+        .sidebar-header { padding: 32px 24px 16px 24px; display: flex; align-items: center; }
         .company-dropdown-container { position: relative; width: 100%; padding: 0 16px; margin-bottom: 24px; }
-        .company-selector { 
-            display: flex; align-items: center; gap: 12px; padding: 12px 16px; 
-            border-radius: var(--border-radius-md); 
-            border: 1px solid var(--lottus-border); 
-            background-color: rgba(33, 37, 41, 0.02);
-            cursor: pointer; transition: var(--transition-fast); 
-        }
+        .company-selector { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--border-radius-md); border: 1px solid var(--lottus-border); background-color: rgba(33, 37, 41, 0.02); cursor: pointer; transition: var(--transition-fast); }
         .company-selector:hover { border-color: var(--lottus-pink); background-color: var(--lottus-white); box-shadow: var(--shadow-sm); }
         .company-avatar { width: 36px; height: 36px; background-color: var(--lottus-graphite); color: var(--lottus-white); border-radius: var(--border-radius-sm); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
         .company-info { flex: 1; overflow: hidden; min-width: 0; }
@@ -116,15 +66,14 @@
         .company-info p { font-size: 0.75rem; color: var(--lottus-graphite-light); margin: 2px 0 0 0; font-family: monospace; }
         .dropdown-chevron { color: var(--lottus-graphite-light); transition: transform var(--transition-fast); flex-shrink: 0; }
         .company-dropdown-container.open .dropdown-chevron { transform: rotate(180deg); color: var(--lottus-pink); }
-        
         .company-dropdown-menu { position: absolute; top: calc(100% + 8px); left: 16px; right: 16px; background-color: var(--lottus-white); border-radius: var(--border-radius-md); border: 1px solid var(--lottus-border); box-shadow: var(--shadow-md); padding: 8px; display: none; flex-direction: column; gap: 4px; z-index: 200; }
         .company-dropdown-container.open .company-dropdown-menu { display: flex; animation: fadeIn 0.2s ease; }
         .dropdown-company-item { padding: 12px 16px; border-radius: var(--border-radius-sm); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: var(--transition-fast); }
         .dropdown-company-item:hover { background-color: var(--lottus-beige); }
+        .dropdown-company-item.active { background-color: rgba(200, 42, 96, 0.05); }
         .dropdown-company-info { min-width: 0; flex: 1; }
         .dropdown-company-info h5 { margin: 0; font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--lottus-graphite); }
         .dropdown-company-info p { margin: 0; font-size: 0.75rem; color: var(--lottus-graphite-light); font-family: monospace; }
-        
         .add-company-item { padding: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--lottus-pink); font-weight: 600; font-size: 0.9rem; cursor: pointer; border-top: 1px solid var(--lottus-border); margin-top: 4px; transition: var(--transition-fast); border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm); }
         .add-company-item:hover { background-color: rgba(200, 42, 96, 0.05); }
 
@@ -134,7 +83,6 @@
         .nav-item:hover:not(.disabled) { background-color: var(--lottus-beige); color: var(--lottus-graphite); }
         .nav-item:hover:not(.disabled) svg { transform: scale(1.1); }
         .nav-item.active { background-color: rgba(200, 42, 96, 0.08); color: var(--lottus-pink); }
-        
         .nav-item.disabled { opacity: 0.4; pointer-events: none; cursor: not-allowed; }
         
         .sidebar-footer { padding: 24px; border-top: 1px solid var(--lottus-border); display: flex; align-items: center; gap: 14px; overflow: hidden; background-color: var(--lottus-white); }
@@ -147,16 +95,25 @@
 
         /* ================= ÁREA PRINCIPAL ================= */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; position: relative; }
-        
         .topbar { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; flex-shrink: 0; background-color: transparent; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
         .breadcrumb { display: flex; align-items: center; gap: 8px; color: var(--lottus-graphite-light); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;}
         
-        .page-body { padding: 16px 40px 60px 40px; max-width: 1300px; width: 100%; margin: 0 auto; }
-        .page-header { margin-bottom: 40px; }
+        .page-body { padding: 16px 40px 60px 40px; max-width: 1400px; width: 100%; margin: 0 auto; }
+        
+        .page-header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
         .page-header h1 { font-size: clamp(2rem, 3vw, 2.5rem); font-weight: 700; margin: 0 0 8px 0; color: var(--lottus-graphite); letter-spacing: -0.03em; }
         .page-header p { margin: 0; color: var(--lottus-graphite-light); font-size: 1.05rem; }
 
-        /* ================= WIDGET ONBOARDING ================= */
+        .btn-primary { padding: 14px 24px; background: var(--lottus-pink); color: var(--lottus-white); border: none; border-radius: var(--border-radius-pill); font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: var(--transition-fast); display: inline-flex; align-items: center; gap: 8px; box-shadow: var(--shadow-sm); text-decoration: none; }
+        .btn-primary:hover { background: var(--lottus-pink-hover); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+        /* ALERTAS (INADIMPLÊNCIA) */
+        .alert-card { background: #FFF0F0; border: 1px solid var(--lottus-error); color: var(--lottus-error); padding: 16px 24px; border-radius: var(--border-radius-md); display: none; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 32px; font-weight: 600; animation: fadeIn 0.4s ease; }
+        .alert-content { display: flex; align-items: center; gap: 12px; }
+        .alert-btn { background: var(--lottus-error); color: var(--lottus-white); border: none; padding: 8px 16px; border-radius: var(--border-radius-pill); font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: var(--transition-fast); }
+        .alert-btn:hover { background: #A01F2A; }
+
+        /* WIDGET ONBOARDING */
         .onboarding-widget { background: var(--lottus-white); border: 1px solid var(--lottus-border); border-radius: var(--border-radius-lg); padding: 40px; margin-bottom: 40px; display: none; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; }
         .onboarding-widget::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: linear-gradient(90deg, var(--lottus-pink) 0%, var(--lottus-pink-hover) 100%); }
         .onboarding-widget.active { display: flex; flex-direction: column; gap: 32px; animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -173,30 +130,56 @@
         .step.done .step-label { color: var(--lottus-graphite); }
         .step.current .step-circle { background: var(--lottus-white); border-color: var(--lottus-pink); color: var(--lottus-pink); box-shadow: 0 0 0 6px rgba(200,42,96,0.1), 0 8px 16px rgba(0,0,0,0.08); transform: scale(1.05); }
         .step.current .step-label { color: var(--lottus-pink); font-weight: 700; }
-        
-        .btn-action-step { padding: 14px 28px; background: var(--lottus-pink); color: var(--lottus-white); border: none; border-radius: var(--border-radius-pill); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; font-size: 1rem; transition: var(--transition-fast); box-shadow: var(--shadow-sm); }
-        .btn-action-step:hover { background: var(--lottus-pink-hover); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
-        /* ================= CARDS DE MÉTRICAS ================= */
-        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 48px; }
-        .metric-card { background: var(--lottus-white); border: 1px solid var(--lottus-border); border-radius: var(--border-radius-md); padding: 28px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: var(--transition-fast); }
+        /* CARDS DE MÉTRICAS COM PROGRESS BAR */
+        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 40px; }
+        .metric-card { background: var(--lottus-white); border: 1px solid var(--lottus-border); border-radius: var(--border-radius-md); padding: 28px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: var(--transition-fast); }
         .metric-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: rgba(200, 42, 96, 0.2); }
-        
         .metric-header { display: flex; justify-content: space-between; align-items: center; }
         .metric-title { font-size: 0.85rem; font-weight: 700; color: var(--lottus-graphite-light); text-transform: uppercase; letter-spacing: 0.08em; }
         .icon-wrapper { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        
         .metric-card.gray .icon-wrapper { background-color: rgba(33, 37, 41, 0.04); color: var(--lottus-graphite); }
         .metric-card.green .icon-wrapper { background-color: rgba(43, 138, 62, 0.1); color: var(--lottus-success); }
         .metric-card.pink .icon-wrapper { background-color: rgba(200, 42, 96, 0.1); color: var(--lottus-pink); }
-        
         .metric-value { font-size: 2.2rem; font-weight: 800; color: var(--lottus-graphite); font-feature-settings: "tnum"; letter-spacing: -0.02em; }
-        .metric-footer { font-size: 0.85rem; color: var(--lottus-graphite-light); font-weight: 500; }
+        
+        .progress-container { width: 100%; height: 6px; background: rgba(33, 37, 41, 0.05); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+        .progress-fill { height: 100%; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .progress-fill.green { background: var(--lottus-success); }
+        .progress-fill.pink { background: var(--lottus-pink); }
+        .metric-footer { font-size: 0.8rem; color: var(--lottus-graphite-light); font-weight: 500; margin-top: 4px; display: flex; justify-content: space-between;}
 
-        /* ================= TABELA DE OPERAÇÕES ================= */
+        /* DASHBOARD GRID (NOVO LAYOUT) */
+        .dashboard-grid { display: grid; grid-template-columns: 2.2fr 1fr; gap: 32px; }
+
+        /* WIDGETS LATERAIS */
+        .widget-card { background: var(--lottus-white); border: 1px solid var(--lottus-border); border-radius: var(--border-radius-md); padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
+        .widget-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .widget-header h3 { font-size: 1.1rem; font-weight: 700; color: var(--lottus-graphite); margin: 0; }
+        .widget-header svg { color: var(--lottus-pink); }
+
+        /* Lista de Vencimentos */
+        .vencimento-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--lottus-border); }
+        .vencimento-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .vencimento-info h4 { font-size: 0.9rem; font-weight: 700; color: var(--lottus-graphite); margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;}
+        .vencimento-info p { font-size: 0.8rem; color: var(--lottus-graphite-light); margin: 0; }
+        .vencimento-valor { font-weight: 700; font-size: 0.95rem; color: var(--lottus-graphite); text-align: right; }
+        .vencimento-dias { font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: var(--border-radius-pill); background: rgba(33,37,41,0.05); color: var(--lottus-graphite-light); display: inline-block; margin-top: 4px;}
+
+        /* SEÇÃO DE BLOG */
+        .blog-list { display: flex; flex-direction: column; gap: 16px; }
+        .blog-item { display: flex; align-items: center; gap: 12px; text-decoration: none; padding: 8px; border-radius: var(--border-radius-sm); transition: var(--transition-fast); }
+        .blog-item:hover { background-color: var(--lottus-beige); }
+        .blog-item-img { width: 64px; height: 64px; border-radius: 8px; background: linear-gradient(135deg, var(--lottus-pink) 0%, var(--lottus-pink-hover) 100%); display: flex; align-items: center; justify-content: center; color: var(--lottus-white); flex-shrink: 0; }
+        
+        /* A CLASSE ABAIXO GERA O AVISO NO VS CODE, ELA É 100% CORRETA PARA TRUNCAR TEXTO EM 2 LINHAS */
+        .blog-item-content h4 { font-size: 0.9rem; font-weight: 700; color: var(--lottus-graphite); margin: 0 0 4px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .blog-item-content span { font-size: 0.8rem; color: var(--lottus-pink); font-weight: 600; }
+
+        /* TABELA DE OPERAÇÕES */
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .section-header h2 { font-size: 1.4rem; font-weight: 700; color: var(--lottus-graphite); margin: 0; letter-spacing: -0.02em; }
-        
         .filters { display: flex; gap: 8px; background-color: var(--lottus-white); padding: 4px; border-radius: var(--border-radius-pill); border: 1px solid var(--lottus-border); box-shadow: var(--shadow-sm); }
         .filter-btn { padding: 8px 16px; border: none; background: transparent; border-radius: var(--border-radius-pill); font-size: 0.85rem; font-weight: 600; color: var(--lottus-graphite-light); cursor: pointer; transition: var(--transition-fast); }
         .filter-btn:hover { color: var(--lottus-graphite); background-color: var(--lottus-beige); }
@@ -211,81 +194,41 @@
         
         .empty-state { text-align: center; padding: 60px 20px; }
         .empty-state svg { color: var(--lottus-border); margin-bottom: 16px; }
-        .empty-state p { color: var(--lottus-graphite-light); font-size: 1.05rem; margin: 0; font-weight: 500;}
+        .empty-state p { color: var(--lottus-graphite-light); font-size: 1.05rem; margin: 0 0 20px 0; font-weight: 500;}
 
-        .status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: var(--border-radius-pill); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em; }
+        .status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: var(--border-radius-pill); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
         .badge-warning { background-color: #FEF3C7; color: #B45309; }
         .badge-green { background-color: #E6FCF5; color: var(--lottus-success); }
         .badge-gray { background-color: var(--lottus-beige); color: var(--lottus-graphite-light); }
         .badge-blue { background-color: #EBFBFF; color: #0C8599; }
         .badge-red { background-color: #FFF0F0; color: var(--lottus-error); }
 
+        .actions-cell { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+        .action-icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--lottus-border); background: var(--lottus-white); display: inline-flex; align-items: center; justify-content: center; color: var(--lottus-graphite-light); cursor: pointer; transition: var(--transition-fast); padding: 0; flex-shrink: 0; }
+        .action-icon-btn svg { width: 16px; height: 16px; stroke-width: 2.2; }
+        .action-icon-btn:hover { border-color: var(--lottus-graphite); color: var(--lottus-graphite); background: var(--lottus-beige); transform: translateY(-1px); }
+        .action-icon-btn.success:hover { border-color: var(--lottus-success); color: var(--lottus-success); background: rgba(43, 138, 62, 0.05); }
+
+        @media(max-width: 992px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .metrics-grid { grid-template-columns: 1fr; }
+        }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <!-- TELA DE CARREGAMENTO GLOBAL -->
     <div id="global-loader">
         <div class="spinner"></div>
         <div class="loader-text">Sincronizando com a Lottus...</div>
     </div>
+    
+    <div id="toast" class="toast-alert">
+        <span id="toast-msg">Sucesso!</span>
+    </div>
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div>
-            <div class="sidebar-header">
-                <img src="../assets/img/Logo 1.png" alt="Lottus Finance" style="max-height: 32px; width: auto; object-fit: contain;">
-            </div>
-
-            <div class="company-dropdown-container" id="company-dropdown-container">
-                <div class="company-selector" id="company-selector-btn">
-                    <div class="company-avatar" id="sidebar-avatar">--</div>
-                    <div class="company-info">
-                        <h4 id="sidebar-company-name">Carregando...</h4>
-                        <p id="sidebar-company-cnpj">--.---.---/----.--</p>
-                    </div>
-                    <svg class="dropdown-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </div>
-                
-                <div class="company-dropdown-menu" id="company-dropdown-list">
-                    <!-- Dinâmico (Empresas + Adicionar Empresa) -->
-                </div>
-            </div>
-
-            <nav class="sidebar-nav">
-                <a href="index.html" class="nav-item active">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    Visão Geral
-                </a>
-                
-                <!-- Desabilitados por padrão no HTML. O JS remove a classe se o status for ATIVO -->
-                <a href="solicitacoes.html" class="nav-item disabled" id="nav-solicitacoes">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                    Solicitações
-                </a>
-                <a href="relatorios.html" class="nav-item disabled" id="nav-relatorios">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                    Relatórios
-                </a>
-                <a href="configuracoes.html" class="nav-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                    Configurações
-                </a>
-            </nav>
-        </div>
-
-        <div class="sidebar-footer">
-            <div class="user-avatar" id="footer-avatar">--</div>
-            <div class="user-info">
-                <p id="footer-user-name">Carregando...</p>
-                <span id="footer-user-email">--</span>
-            </div>
-            <button class="logout-btn" id="btn-logout" title="Sair da conta">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-            </button>
-        </div>
-    </aside>
+    <!-- SIDEBAR INJETADA VIA JAVASCRIPT (lottus-core.js) -->
+    <div id="lottus-sidebar-container"></div>
 
     <!-- ÁREA PRINCIPAL -->
     <main class="main-content">
@@ -298,11 +241,26 @@
         <div class="page-body">
             
             <div class="page-header">
-                <h1 id="boas-vindas">Olá!</h1>
-                <p>Acompanhe o limite de crédito e as últimas operações da sua empresa.</p>
+                <div>
+                    <h1 id="boas-vindas">Olá!</h1>
+                    <p>Acompanhe o limite de crédito e as últimas operações da sua empresa.</p>
+                </div>
+                <a href="solicitacoes.html?action=nova" class="btn-primary" id="btn-nova-antecipacao" style="display: none;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Nova Antecipação
+                </a>
             </div>
 
-            <!-- WIDGET DE ONBOARDING / SETUP (4 ETAPAS) -->
+            <!-- ALERTA DE INADIMPLÊNCIA -->
+            <div id="alert-overdue" class="alert-card">
+                <div class="alert-content">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span id="alert-overdue-msg">Atenção: Existem notas vencidas não pagas pelo sacado.</span>
+                </div>
+                <button class="alert-btn" onclick="window.location.href='solicitacoes.html?filter=EM_ATRASO'">Resolver Pendências</button>
+            </div>
+
+            <!-- WIDGET DE ONBOARDING -->
             <div class="onboarding-widget" id="onboarding-widget">
                 <div class="onboarding-header">
                     <h3><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--lottus-pink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Complete seu Cadastro</h3>
@@ -310,37 +268,21 @@
                 </div>
                 
                 <div class="steps-container">
-                    <div class="step" id="step-1">
-                        <div class="step-circle">1</div>
-                        <div class="step-label">Dados da<br>Empresa</div>
-                    </div>
-                    <div class="step" id="step-2">
-                        <div class="step-circle">2</div>
-                        <div class="step-label">Análise<br>Lottus</div>
-                    </div>
-                    <div class="step" id="step-3">
-                        <div class="step-circle">3</div>
-                        <div class="step-label">Assinatura do<br>Contrato</div>
-                    </div>
-                    <div class="step" id="step-4">
-                        <div class="step-circle">4</div>
-                        <div class="step-label">Primeira<br>Operação</div>
-                    </div>
+                    <div class="step" id="step-1"><div class="step-circle">1</div><div class="step-label">Dados da<br>Empresa</div></div>
+                    <div class="step" id="step-2"><div class="step-circle">2</div><div class="step-label">Análise<br>Lottus</div></div>
+                    <div class="step" id="step-3"><div class="step-circle">3</div><div class="step-label">Assinatura do<br>Contrato</div></div>
+                    <div class="step" id="step-4"><div class="step-circle">4</div><div class="step-label">Primeira<br>Operação</div></div>
                 </div>
 
-                <div id="onboarding-action-container" style="margin-top: 16px;">
-                    <!-- Ações Dinâmicas Inseridas via JS -->
-                </div>
+                <div id="onboarding-action-container" style="margin-top: 16px;"></div>
             </div>
 
-            <!-- MÉTRICAS -->
+            <!-- MÉTRICAS COM PROGRESS BAR -->
             <div class="metrics-grid">
                 <div class="metric-card gray">
                     <div class="metric-header">
                         <span class="metric-title">Limite Total Aprovado</span>
-                        <div class="icon-wrapper">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg>
-                        </div>
+                        <div class="icon-wrapper"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg></div>
                     </div>
                     <div class="metric-value" id="val-limite-total">R$ 0,00</div>
                     <div class="metric-footer">Definido pelo comitê de risco</div>
@@ -349,100 +291,90 @@
                 <div class="metric-card green">
                     <div class="metric-header">
                         <span class="metric-title">Limite Disponível</span>
-                        <div class="icon-wrapper">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        </div>
+                        <div class="icon-wrapper"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
                     </div>
                     <div class="metric-value" style="color: var(--lottus-success);" id="val-limite-disponivel">R$ 0,00</div>
-                    <div class="metric-footer">Pronto para antecipação</div>
+                    <div class="progress-container"><div class="progress-fill green" id="bar-disponivel" style="width: 0%;"></div></div>
+                    <div class="metric-footer"><span id="pct-disponivel">0%</span> <span>Pronto para uso</span></div>
                 </div>
 
                 <div class="metric-card pink">
                     <div class="metric-header">
                         <span class="metric-title">Limite Utilizado</span>
-                        <div class="icon-wrapper">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        </div>
+                        <div class="icon-wrapper"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
                     </div>
                     <div class="metric-value" id="val-limite-utilizado">R$ 0,00</div>
-                    <div class="metric-footer">Operações em andamento ou abertas</div>
+                    <div class="progress-container"><div class="progress-fill pink" id="bar-utilizado" style="width: 0%;"></div></div>
+                    <div class="metric-footer"><span id="pct-utilizado">0%</span> <span>Operações abertas</span></div>
                 </div>
             </div>
 
-            <!-- TABELA DE OPERAÇÕES RECENTES -->
-            <div class="section-header">
-                <h2>Últimas Operações</h2>
-                <div class="filters" id="period-filters">
-                    <button class="filter-btn active" data-days="ALL">Tudo</button>
-                    <button class="filter-btn" data-days="7">7 dias</button>
-                    <button class="filter-btn" data-days="15">15 dias</button>
-                    <button class="filter-btn" data-days="30">30 dias</button>
-                </div>
-            </div>
+            <!-- DASHBOARD GRID -->
+            <div class="dashboard-grid">
+                
+                <!-- COLUNA ESQUERDA (Tabela) -->
+                <div>
+                    <div class="section-header">
+                        <h2>Últimas Operações</h2>
+                        <div class="filters" id="period-filters">
+                            <button class="filter-btn active" data-days="ALL">Tudo</button>
+                            <button class="filter-btn" data-days="7">7 dias</button>
+                            <button class="filter-btn" data-days="15">15 dias</button>
+                        </div>
+                    </div>
 
-            <div class="table-card">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Nº da Nota</th>
-                            <th>Sacado</th>
-                            <th>Valor Líquido</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <tr>
-                            <td colspan="5">
-                                <div class="empty-state">
-                                    <p>Carregando operações...</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                    <div class="table-card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Nº NF</th>
+                                    <th>Sacado</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <tr><td colspan="5"><div class="empty-state"><p>Carregando operações...</p></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- COLUNA DIREITA (Widgets) -->
+                <div>
+                    <!-- WIDGET 1: Próximos Vencimentos -->
+                    <div class="widget-card">
+                        <div class="widget-header">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <h3>Próximos Vencimentos</h3>
+                        </div>
+                        <div id="vencimentos-container">
+                            <div style="text-align:center; padding: 20px; color: var(--lottus-graphite-light); font-size: 0.9rem;">Calculando...</div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </div>
     </main>
 
-    <!-- Supabase SDK & Scripts -->
+    <!-- Supabase e Lottus Core -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../assets/js/lottus-core.js"></script>
+    
     <script>
-        const supabaseUrl = 'https://rowhslnnlzfbhmzbylbz.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvd2hzbG5ubHpmYmhtemJ5bGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4Mjg2MTgsImV4cCI6MjEwMDQwNDYxOH0.hUvOsj_Tpf1asd7Neh4tnlLg5Vc-amcLRfbcoZKYX-0';
-        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-        let userEmpresasGlobal = [];
-        let activeEmpresaObj = null;
         let operacoesGlobal = [];
         let filterDays = 'ALL';
 
-        // ==========================================
-        // UTILITÁRIOS
-        // ==========================================
-        function formatCNPJ(v) {
-            if (!v) return '--.---.---/----.--';
-            v = v.replace(/\D/g, "");
-            if (v.length > 14) v = v.substring(0, 14);
-            return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-        }
-        
         function formatCurrency(value) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '--';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('pt-BR');
+        function formatDateBR(dateStr) { 
+            if(!dateStr) return '--';
+            const d = new Date(dateStr.includes('T') ? dateStr : dateStr + "T12:00:00Z");
+            return d.toLocaleDateString('pt-BR');
         }
-        
-        function getInitials(name) {
-            if (!name) return '--';
-            const words = name.trim().split(' ');
-            let initials = words[0].substring(0, 1).toUpperCase();
-            if (words.length > 1) initials += words[words.length - 1].substring(0, 1).toUpperCase();
-            return initials;
-        }
+        function showToast(message, type = 'success') { const toast = document.getElementById('toast'); document.getElementById('toast-msg').innerText = message; toast.className = `toast-alert show ${type}`; setTimeout(() => { toast.classList.remove('show'); }, 4000); }
 
         function getStatusBadge(status) {
             let label = "Desconhecido"; let colorClass = "badge-gray";
@@ -450,161 +382,176 @@
                 case 'RASCUNHO': label = "Rascunho"; colorClass = "badge-gray"; break;
                 case 'EM_ANALISE': label = "Análise"; colorClass = "badge-blue"; break;
                 case 'AGUARDANDO_ASSINATURA': label = "Assinatura"; colorClass = "badge-warning"; break;
-                case 'EM_ABERTO': label = "Aberto"; colorClass = "badge-green"; break;
+                case 'EM_ABERTO': label = "Em Aberto"; colorClass = "badge-green"; break;
                 case 'LIQUIDADA': label = "Finalizada"; colorClass = "badge-gray"; break;
-                case 'RECUSADA': label = "Recusada"; colorClass = "badge-red"; break;
-                case 'CANCELADA': label = "Cancelada"; colorClass = "badge-red"; break;
+                case 'VENCIDA': label = "Em Atraso"; colorClass = "badge-red"; break;
             }
             return `<span class="status-badge ${colorClass}">${label}</span>`;
         }
 
         // ==========================================
-        // WIDGET DE ONBOARDING E MENU BLOQUEADO
+        // CARREGAMENTO CENTRALIZADO VIA CORE JS
         // ==========================================
-        async function checkOnboardingStatus() {
+        
+        // 1. O GATILHO QUE FALTAVA (Inicia o sistema e a sidebar)
+        document.addEventListener('DOMContentLoaded', () => {
+            if(typeof initLottusSystem === 'function') {
+                initLottusSystem('dashboard');
+            }
+        });
+
+        // 2. Quando o Core estiver pronto, carrega os dados
+        document.addEventListener('LottusCoreReady', async () => {
+            const userName = window.authUser?.user_metadata?.nome || window.authUser?.email.split('@')[0] || 'Usuário';
+            document.getElementById('boas-vindas').innerText = `Olá, ${userName.split(' ')[0]}!`;
+            
+            await initDashboardConfig();
+            await loadDashboardData();
+        });
+
+        // ==========================================
+        // WIDGET DE ONBOARDING
+        // ==========================================
+        async function initDashboardConfig() {
             const widget = document.getElementById('onboarding-widget');
-            const statusEmpresa = activeEmpresaObj.status;
+            const statusEmpresa = window.activeEmpresaObj.status;
+            const btnNovaOp = document.getElementById('btn-nova-antecipacao');
             
-            const navSolicitacoes = document.getElementById('nav-solicitacoes');
-            const navRelatorios = document.getElementById('nav-relatorios');
-            
-            // Lógica de bloqueio: Se a empresa NÃO estiver 100% ATIVA, os menus ficam bloqueados.
             if (statusEmpresa === 'ATIVO') {
-                navSolicitacoes.classList.remove('disabled');
-                navRelatorios.classList.remove('disabled');
+                btnNovaOp.style.display = 'inline-flex';
             } else {
-                navSolicitacoes.classList.add('disabled');
-                navRelatorios.classList.add('disabled');
+                btnNovaOp.style.display = 'none';
             }
 
-            // Se a empresa está ATIVA e já fez alguma operação, remove o widget de setup
-            if (statusEmpresa === 'ATIVO' && operacoesGlobal.length > 0) {
+            if (statusEmpresa === 'ATIVO') {
                 widget.classList.remove('active');
                 widget.style.display = 'none';
                 return;
             }
 
+            widget.style.display = 'block';
             widget.classList.add('active');
 
-            const s1 = document.getElementById('step-1');
-            const s2 = document.getElementById('step-2');
-            const s3 = document.getElementById('step-3');
-            const s4 = document.getElementById('step-4');
+            const s1 = document.getElementById('step-1'); const s2 = document.getElementById('step-2');
+            const s3 = document.getElementById('step-3'); const s4 = document.getElementById('step-4');
             const actionContainer = document.getElementById('onboarding-action-container');
 
-            // --- ESTADO 1: ONBOARDING / EM_ANALISE ---
             if (statusEmpresa === 'ONBOARDING' || statusEmpresa === 'EM_ANALISE') {
                 s1.className = 'step done'; s1.querySelector('.step-circle').innerText = '✓';
-                s2.className = 'step current';
-                s3.className = 'step';
-                s4.className = 'step';
-                
-                actionContainer.innerHTML = `
-                    <div style="background: rgba(33, 37, 41, 0.02); padding: 24px; border-radius: var(--border-radius-md); border: 1px solid var(--lottus-border); display: flex; gap: 20px; align-items: flex-start;">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--lottus-pink)" stroke-width="2.2" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        <div>
-                            <p style="font-size: 1.1rem; color: var(--lottus-graphite); margin: 0; font-weight: 700;">Análise de Crédito em Andamento</p>
-                            <p style="font-size: 0.95rem; color: var(--lottus-graphite-light); margin: 6px 0 0 0; line-height:1.6;">Nossa equipe e o motor de risco estão avaliando sua conta. Assim que o limite for liberado, você poderá enviar o contrato para a assinatura do representante legal.</p>
-                        </div>
-                    </div>
-                `;
-            } 
-            // --- ESTADO 2: AGUARDANDO_ASSINATURA ---
-            else if (statusEmpresa === 'AGUARDANDO_ASSINATURA') {
+                s2.className = 'step current'; s3.className = 'step'; s4.className = 'step';
+                actionContainer.innerHTML = `<div style="background: rgba(33, 37, 41, 0.02); padding: 24px; border-radius: var(--border-radius-md); border: 1px solid var(--lottus-border); display: flex; gap: 20px; align-items: flex-start;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--lottus-pink)" stroke-width="2.2" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><div><p style="font-size: 1.1rem; color: var(--lottus-graphite); margin: 0; font-weight: 700;">Análise de Crédito em Andamento</p><p style="font-size: 0.95rem; color: var(--lottus-graphite-light); margin: 6px 0 0 0; line-height:1.6;">Nossa equipe e o motor de risco estão avaliando sua conta. Assim que o limite for liberado, você poderá enviar o contrato para a assinatura do representante legal.</p></div></div>`;
+            } else if (statusEmpresa === 'AGUARDANDO_ASSINATURA') {
                 s1.className = 'step done'; s1.querySelector('.step-circle').innerText = '✓';
                 s2.className = 'step done'; s2.querySelector('.step-circle').innerText = '✓';
-                s3.className = 'step current';
-                s4.className = 'step';
-
-                const { data: reps } = await supabaseClient.from('representantes').select('status').eq('empresa_id', activeEmpresaObj.id);
-                const pendentes = reps ? reps.filter(r => r.status === 'PENDENTE').length : 0;
-
-                if (pendentes > 0) {
-                    actionContainer.innerHTML = `
-                        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 24px; border-radius: var(--border-radius-md); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
-                            <div>
-                                <p style="font-size: 1.1rem; color: #166534; margin: 0; font-weight: 800;">🎉 Limite Pré-Aprovado!</p>
-                                <p style="font-size: 0.95rem; color: #15803D; margin: 4px 0 0 0;">Para liberar a operação, informe o contato do Sócio para enviarmos o Contrato Mãe.</p>
-                            </div>
-                            <button class="btn-action-step" onclick="window.location.href='configuracoes.html?tab=compliance'">
-                                Enviar Link de Assinatura
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    await supabaseClient.from('empresas').update({ status: 'ATIVO' }).eq('id', activeEmpresaObj.id);
-                    activeEmpresaObj.status = 'ATIVO';
-                    checkOnboardingStatus(); 
-                }
-            }
-            // --- ESTADO 3: ATIVO (Primeira Operação) ---
-            else if (statusEmpresa === 'ATIVO') {
-                s1.className = 'step done'; s1.querySelector('.step-circle').innerText = '✓';
-                s2.className = 'step done'; s2.querySelector('.step-circle').innerText = '✓';
-                s3.className = 'step done'; s3.querySelector('.step-circle').innerText = '✓';
-                s4.className = 'step current';
-
-                actionContainer.innerHTML = `
-                    <div style="background: rgba(33, 37, 41, 0.02); border: 1px solid var(--lottus-border); padding: 24px; border-radius: var(--border-radius-md); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
-                        <div>
-                            <p style="font-size: 1.1rem; color: var(--lottus-graphite); margin: 0; font-weight: 800;">Sua conta está 100% pronta!</p>
-                            <p style="font-size: 0.95rem; color: var(--lottus-graphite-light); margin: 4px 0 0 0;">Faça o upload do seu primeiro arquivo XML para simular taxas e antecipar.</p>
-                        </div>
-                        <button class="btn-action-step" onclick="window.location.href='solicitacoes.html?action=nova'">
-                            Simular Primeira Antecipação
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        </button>
-                    </div>
-                `;
+                s3.className = 'step current'; s4.className = 'step';
+                actionContainer.innerHTML = `<div style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 24px; border-radius: var(--border-radius-md); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;"><div><p style="font-size: 1.1rem; color: #166534; margin: 0; font-weight: 800;">🎉 Limite Pré-Aprovado!</p><p style="font-size: 0.95rem; color: #15803D; margin: 4px 0 0 0;">Para liberar a operação, cadastre os representantes em Configurações.</p></div><button class="btn-primary" onclick="window.location.href='configuracoes.html?tab=compliance'">Configurar Representantes <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button></div>`;
             }
         }
 
         // ==========================================
-        // DADOS DO DASHBOARD E LIMITE NO BACKEND
+        // WIDGETS E DADOS DO DASHBOARD
         // ==========================================
-        async function loadDashboardData() {
-            if (!activeEmpresaObj) return;
+        function analisarInadimplencia() {
+            const alertBox = document.getElementById('alert-overdue');
+            const msgBox = document.getElementById('alert-overdue-msg');
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            
+            const atrasadas = operacoesGlobal.filter(op => {
+                if(op.status === 'VENCIDA') return true;
+                if(op.status === 'EM_ABERTO' && op.notas && op.notas.vencimento) {
+                    const v = new Date(op.notas.vencimento + "T12:00:00Z");
+                    return v < hoje;
+                }
+                return false;
+            });
 
-            // 1. Busca Operações da Empresa
+            if (atrasadas.length > 0) {
+                const totalAtraso = atrasadas.reduce((acc, curr) => acc + (parseFloat(curr.notas?.valor) || 0), 0);
+                msgBox.innerText = `Atenção: Você possui ${atrasadas.length} nota(s) em atraso totalizando ${formatCurrency(totalAtraso)}. Regularize para liberar seu limite.`;
+                alertBox.style.display = 'flex';
+            } else { alertBox.style.display = 'none'; }
+        }
+
+        function renderizarProximosVencimentos() {
+            const container = document.getElementById('vencimentos-container');
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+            const aVencer = operacoesGlobal.filter(op => {
+                if (op.status !== 'EM_ABERTO') return false;
+                if (!op.notas || !op.notas.vencimento) return false;
+                const v = new Date(op.notas.vencimento + "T12:00:00Z");
+                return v >= hoje;
+            }).sort((a, b) => new Date(a.notas.vencimento) - new Date(b.notas.vencimento)).slice(0, 4);
+
+            if (aVencer.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding: 32px 20px; color: var(--lottus-graphite-light); font-size: 0.95rem;">Nenhum título em aberto próximo ao vencimento.</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            aVencer.forEach(op => {
+                const vDate = new Date(op.notas.vencimento + "T12:00:00Z");
+                const diffTime = Math.abs(vDate - hoje);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const sacado = op.empresas?.nome || op.empresas?.razao || 'Desconhecido';
+                
+                let labelDias = diffDays === 0 ? 'Vence Hoje' : `Em ${diffDays} dias`;
+                let corDias = diffDays <= 3 ? 'color: var(--lottus-error); background: #FFF0F0;' : '';
+
+                container.innerHTML += `
+                    <div class="vencimento-item">
+                        <div class="vencimento-info">
+                            <h4>${sacado}</h4>
+                            <p>NF: ${op.notas.numero}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="vencimento-valor">${formatCurrency(op.notas.valor)}</div>
+                            <div class="vencimento-dias" style="${corDias}">${labelDias}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function loadDashboardData() {
             const { data: operacoes, error: opsError } = await supabaseClient
                 .from('operacoes')
-                .select(`id, status, valor_liquido, created_at, notas!operacoes_nota_id_fkey(numero, valor), empresas!operacoes_sacado_id_fkey(nome, razao)`)
-                .eq('cedente_id', activeEmpresaObj.id)
+                .select(`id, status, valor_liquido, created_at, notas!inner(numero, valor, vencimento), empresas!operacoes_sacado_id_fkey(nome, razao)`)
+                .eq('cedente_id', window.activeEmpresaObj.id)
                 .order('created_at', { ascending: false });
                 
             operacoesGlobal = (!opsError && operacoes) ? operacoes : [];
 
-            // Define botões e visual do passo a passo
-            await checkOnboardingStatus();
+            analisarInadimplencia();
+            renderizarProximosVencimentos();
 
-            const isAnalisePendente = (activeEmpresaObj.status === 'ONBOARDING' || activeEmpresaObj.status === 'EM_ANALISE');
-
-            // 2. Busca e Renderiza Limites
+            const isAnalisePendente = (window.activeEmpresaObj.status === 'ONBOARDING' || window.activeEmpresaObj.status === 'EM_ANALISE');
             try {
-                const { data: limites, error: rpcError } = await supabaseClient
-                    .rpc('obter_resumo_limites', { p_empresa_id: activeEmpresaObj.id });
+                const { data: limites } = await supabaseClient.rpc('obter_resumo_limites', { p_empresa_id: window.activeEmpresaObj.id });
+                if (limites && !isAnalisePendente) {
+                    const total = parseFloat(limites.limite_total) || 1;
+                    const disponivel = parseFloat(limites.limite_disponivel) || 0;
+                    const utilizado = parseFloat(limites.limite_utilizado) || 0;
 
-                if (rpcError) throw rpcError;
+                    document.getElementById('val-limite-total').innerText = formatCurrency(total);
+                    document.getElementById('val-limite-disponivel').innerText = formatCurrency(disponivel);
+                    document.getElementById('val-limite-utilizado').innerText = formatCurrency(utilizado);
 
-                if (isAnalisePendente) {
-                    document.getElementById('val-limite-total').innerText = 'R$ 0,00';
-                    document.getElementById('val-limite-utilizado').innerText = 'R$ 0,00';
-                    document.getElementById('val-limite-disponivel').innerText = 'R$ 0,00';
-                } else {
-                    document.getElementById('val-limite-total').innerText = formatCurrency(limites.limite_total);
-                    document.getElementById('val-limite-utilizado').innerText = formatCurrency(limites.limite_utilizado);
-                    document.getElementById('val-limite-disponivel').innerText = formatCurrency(limites.limite_disponivel);
+                    const pctDisp = Math.min((disponivel / total) * 100, 100);
+                    const pctUtil = Math.min((utilizado / total) * 100, 100);
+                    
+                    document.getElementById('bar-disponivel').style.width = `${pctDisp}%`;
+                    document.getElementById('pct-disponivel').innerText = `${pctDisp.toFixed(1)}%`;
+                    document.getElementById('bar-utilizado').style.width = `${pctUtil}%`;
+                    document.getElementById('pct-utilizado').innerText = `${pctUtil.toFixed(1)}%`;
                 }
-            } catch (err) {
-                console.error("Erro ao buscar limites no banco:", err);
-            }
+            } catch (err) { console.error("Erro limite:", err); }
 
             renderTable();
         }
 
         // ==========================================
-        // FILTROS E TABELA
+        // TABELA PRINCIPAL
         // ==========================================
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -627,111 +574,26 @@
             }
 
             if (filteredOps.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg><p>Nenhuma operação encontrada neste período.</p></div></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <p>Nenhuma operação encontrada neste período.</p>
+                </div></td></tr>`;
                 return;
             }
 
-            filteredOps.forEach(op => {
-                const dataFormatada = formatDate(op.created_at);
+            filteredOps.slice(0, 10).forEach(op => {
+                const dataFormatada = formatDateBR(op.created_at);
                 const notaNum = op.notas?.numero || '--';
                 const sacado = op.empresas?.nome || op.empresas?.razao || 'Desconhecido';
-                const valor = formatCurrency(parseFloat(op.valor_liquido) || parseFloat(op.notas?.valor) || 0);
                 const badge = getStatusBadge(op.status);
+                
+                const actionBtn = `<button class="action-icon-btn" onclick="window.location.href='solicitacoes.html'" title="Visualizar na Mesa de Crédito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>`;
 
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${dataFormatada}</td><td><strong>${notaNum}</strong></td><td>${sacado}</td><td style="font-weight: 700; color: var(--lottus-graphite);">${valor}</td><td>${badge}</td>`;
+                tr.innerHTML = `<td>${dataFormatada}</td><td><strong>${notaNum}</strong></td><td>${sacado.substring(0,25)}</td><td>${badge}</td><td style="text-align:right;">${actionBtn}</td>`;
                 tbody.appendChild(tr);
             });
         }
-
-        // ==========================================
-        // SETUP INICIAL / AUTH
-        // ==========================================
-        async function selectEmpresa(empresaObj) {
-            activeEmpresaObj = empresaObj;
-            const cName = empresaObj.nome || empresaObj.razao || 'Sua Empresa';
-            
-            document.getElementById('sidebar-company-name').innerText = cName;
-            document.getElementById('sidebar-company-cnpj').innerText = formatCNPJ(empresaObj.cnpj);
-            document.getElementById('sidebar-avatar').innerText = getInitials(cName);
-            
-            const list = document.getElementById('company-dropdown-list');
-            list.querySelectorAll('.dropdown-company-item, .add-company-item').forEach(e => e.remove());
-            
-            userEmpresasGlobal.forEach(emp => {
-                const item = document.createElement('div');
-                item.className = `dropdown-company-item ${emp.id === activeEmpresaObj.id ? 'active' : ''}`;
-                item.innerHTML = `<div class="dropdown-company-info"><h5>${emp.nome || emp.razao || 'Empresa'}</h5><p>${formatCNPJ(emp.cnpj)}</p></div>${emp.id === activeEmpresaObj.id ? '<span style="color:var(--lottus-pink); font-weight:800;">✓</span>' : ''}`;
-                item.onclick = async (e) => { 
-                    e.stopPropagation(); 
-                    document.getElementById('company-dropdown-container').classList.remove('open');
-                    
-                    // Mostra o loader de novo ao trocar de empresa
-                    const loader = document.getElementById('global-loader');
-                    loader.style.visibility = 'visible';
-                    loader.style.opacity = '1';
-                    
-                    await selectEmpresa(emp); 
-                    
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.style.visibility = 'hidden', 400);
-                };
-                list.appendChild(item);
-            });
-
-            const addBtn = document.createElement('div');
-            addBtn.className = 'add-company-item';
-            addBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Adicionar nova empresa`;
-            addBtn.onclick = () => window.location.href = '../cadastro/empresa.html';
-            list.appendChild(addBtn);
-
-            // Aguarda carregar tudo dessa empresa
-            await loadDashboardData();
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session }, error: sessionErr } = await supabaseClient.auth.getSession();
-            if (!session || sessionErr) { window.location.href = '../login/index.html'; return; }
-            
-            const authUser = session.user;
-            const userEmail = authUser.email;
-            let userName = authUser.user_metadata?.nome || userEmail.split('@')[0];
-            
-            document.getElementById('footer-user-email').innerText = userEmail;
-            
-            const dropdownContainer = document.getElementById('company-dropdown-container');
-            document.getElementById('company-selector-btn').onclick = (e) => { e.stopPropagation(); dropdownContainer.classList.toggle('open'); };
-            document.addEventListener('click', () => dropdownContainer.classList.remove('open'));
-
-            try {
-                const { data: userVinculos } = await supabaseClient.from('usuarios_empresa').select('empresa_id, nome').eq('auth_user_id', authUser.id);
-                if (userVinculos && userVinculos.length > 0) {
-                    if (userVinculos[0].nome) { userName = userVinculos[0].nome; }
-                    
-                    document.getElementById('footer-user-name').innerText = userName;
-                    document.getElementById('footer-avatar').innerText = getInitials(userName);
-                    document.getElementById('boas-vindas').innerText = `Olá, ${userName.split(' ')[0]}!`;
-
-                    const empIds = userVinculos.map(v => v.empresa_id).filter(Boolean);
-                    if (empIds.length > 0) {
-                        const { data: empresas } = await supabaseClient.from('empresas').select('id, razao, nome, cnpj, status, limite_total, score').in('id', empIds);
-                        if (empresas && empresas.length > 0) {
-                            userEmpresasGlobal = empresas;
-                            await selectEmpresa(userEmpresasGlobal[0]);
-                        }
-                    }
-                }
-            } catch (error) { console.error("Erro na busca de dados:", error); }
-
-            // Tudo carregou, agora removemos a tela de loading suavemente
-            const loader = document.getElementById('global-loader');
-            loader.style.opacity = '0';
-            setTimeout(() => loader.style.visibility = 'hidden', 400);
-
-            document.getElementById('btn-logout').addEventListener('click', async (e) => {
-                e.preventDefault(); await supabaseClient.auth.signOut(); window.location.href = '../login/index.html';
-            });
-        });
     </script>
 </body>
 </html>

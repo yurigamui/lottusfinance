@@ -3,17 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lottus Finance | Investimentos em Crédito Securitizado</title>
-    <meta name="description" content="Aloque capital em operações de crédito securitizado com lastro real, garantias sólidas e rentabilidade diferenciada.">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <title>Investimentos | Lottus Finance</title>
+    <meta name="description" content="Oportunidades privadas em crédito estruturado e securitizado com lastro real e gestão rigorosa de riscos para investidores qualificados.">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="assets/img/Favicon.png">
+
+    <!-- CSS Base unificado -->
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <style>
+        /* ==========================================
+           LOTTUS "TRIO-STYLE" OVERRIDES & INVESTMENTS PAGE
+           ========================================== */
+        :root {
+            --radius-huge: 48px;
+            --radius-bento: 32px;
+            --font-hero: clamp(3rem, 6vw, 5.5rem);
+            --font-h2: clamp(2.5rem, 5vw, 4rem);
+        }
+
+        body {
+            background-color: var(--lottus-beige);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 99px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            text-transform: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: all var(--transition-fast);
+        }
+
+        /* 1. HERO SECTION */
+        .hero-trio {
+            padding: 120px 0 80px 0;
+            background-color: var(--lottus-beige);
+            min-height: 85vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-trio h1 {
+            font-size: var(--font-hero);
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+            font-weight: 700;
+            color: var(--lottus-graphite);
+            margin-bottom: 24px;
+        }
+
+        .hero-trio h1 span.highlight {
+            color: var(--lottus-pink);
+            font-style: italic;
+        }
+
+        .hero-trio p {
+            font-size: 1.25rem;
+            color: var(--lottus-graphite-light);
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 90%;
+        }
+
+        .hero-image-wrapper {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            border-radius: var(--radius-huge);
+            overflow: hidden;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.08);
+        }
+
+        .hero-image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 10s ease;
+        }
+        
+        .hero-image-wrapper:hover img {
+            transform: scale(1.05);
+        }
+
+        /* MÉTRICAS DE INVESTIMENTOS */
+        .metrics-section {
+            padding: 60px 0;
+            background-color: var(--lottus-graphite);
+            color: var(--lottus-white);
+            margin: 0 16px;
+            border-radius: var(--radius-huge);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            text-align: center;
+        }
+        
+        .metric-item h4 {
+            font-size: clamp(2.5rem, 4vw, 3.5rem);
+            font-weight: 800;
+            color: var(--lottus-pink);
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
+        }
+        
+        .metric-item p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        /* BENTO BOX SECTION (Estruturas de Investimento) */
+        .bento-section {
+            padding: 120px 0;
+            background-color: var(--lottus-beige);
+        }
+
+        .section-header-huge {
+            font-size: var(--font-h2);
+            line-height: 1.1;
+            letter-spacing: -0.04em;
+            color: var(--lottus-graphite);
+            margin-bottom: 60px;
+            max-width: 800px;
+        }
+
+        .section-header-huge span {
+            color: var(--lottus-pink);
+        }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+            grid-auto-rows: minmax(320px, auto);
+        }
+
+        .bento-card {
+            border-radius: var(--radius-bento);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+        .bento-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+
+        .bento-1 { grid-column: span 8; background: var(--lottus-white); color: var(--lottus-graphite); border: 1px solid var(--lottus-border); }
+        .bento-2 { grid-column: span 4; background: rgba(200, 42, 96, 0.05); border: 1px solid rgba(200, 42, 96, 0.1); color: var(--lottus-graphite); }
+        .bento-3 { grid-column: span 12; background: var(--lottus-graphite); color: var(--lottus-white); display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+
+        .bento-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        
+        .bento-1 .bento-icon { background: var(--lottus-beige); color: var(--lottus-graphite); }
+        .bento-2 .bento-icon { background: var(--lottus-white); color: var(--lottus-pink); box-shadow: 0 8px 16px rgba(200,42,96,0.1); }
+        .bento-3 .bento-icon { background: rgba(255,255,255,0.1); color: var(--lottus-white); }
+
+        .bento-card h3 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 16px; line-height: 1.1; }
+        .bento-card p { font-size: 1.1rem; line-height: 1.6; opacity: 0.9; margin-bottom: 32px; max-width: 90%; }
+
+        /* FORMULÁRIO DE QUALIFICAÇÃO PRIVADO */
+        .investor-form-section {
+            padding: 120px 0;
+            background-color: var(--lottus-white);
+            margin: 0 16px;
+            border-radius: var(--radius-huge);
+        }
+
+        .investor-form-card {
+            background-color: var(--lottus-beige);
+            border-radius: var(--radius-bento);
+            padding: 40px;
+            border: 1px solid var(--lottus-border);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--lottus-graphite);
+            margin-bottom: 8px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--lottus-border);
+            background: var(--lottus-white);
+            font-size: 1rem;
+            color: var(--lottus-graphite);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--lottus-pink);
+        }
+
+        /* SEÇÃO ANIMADA STICKY (EFEITO TRIO) */
+        .scroll-sequence {
+            height: 300vh;
+            background-color: var(--lottus-beige);
+            position: relative;
+        }
+
+        .sticky-container {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-color: var(--lottus-pink);
+        }
+
+        .giant-text {
+            font-size: clamp(3.5rem, 10vw, 8rem);
+            font-weight: 800;
+            color: var(--lottus-white);
+            text-align: center;
+            line-height: 1;
+            letter-spacing: -0.05em;
+            transform: scale(0.8);
+            opacity: 0.2;
+            will-change: transform, opacity;
+            max-width: 1400px;
+            padding: 0 24px;
+        }
+
+        /* CTA FINAL */
+        .cta-final-section {
+            padding: 120px 0;
+            background-color: var(--lottus-beige);
+            text-align: center;
+        }
+
+        /* RESPONSIVO */
+        @media (max-width: 991px) {
+            .hero-grid { grid-template-columns: 1fr; }
+            .metrics-grid { grid-template-columns: 1fr; gap: 32px; }
+            .bento-1, .bento-2, .bento-3 { grid-column: span 12; }
+            .bento-3 { grid-template-columns: 1fr; }
+            .giant-text { font-size: 3rem; }
+        }
+    </style>
 </head>
 <body>
-    <div id="custom-ui-alert" class="ui-alert hidden"></div>
 
+    <!-- Header Original Lottus -->
     <header class="lottus-header">
         <div class="container header-container">
             <a href="index.html" class="logo-link">
@@ -58,120 +328,188 @@
                 <a href="contato.html" class="nav-link">Contato</a>
             </nav>
             
-            <div class="header-actions" style="display: flex; align-items: center; gap: 24px;">
-                <a href="contato.html" class="btn btn-secondary">Fale conosco</a>
+            <div class="header-actions">
+                <a href="contato.html" class="btn btn-secondary" style="border: none; background: rgba(0,0,0,0.05);">Fale conosco</a>
                 <a href="contato.html" class="btn btn-primary">Criar conta agora</a>
             </div>
         </div>
     </header>
 
     <main>
-        <!-- Hero Section -->
-        <section class="hero-section floating-section light-section" style="padding-bottom: var(--space-md);">
-            <div class="container hero-container">
-                <div class="hero-content">
-                    <div class="badge-regulator">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
-                        <span>Investimento em crédito estruturado com lastro real</span>
-                    </div>
-                    <h1 class="hero-title" style="font-size: clamp(2.8rem, 5vw, 4.2rem); margin-bottom: var(--space-md);">
-                        Rentabilidade consistente com <span class="typewriter-text" style="color: var(--lottus-pink); border-bottom: 3px solid var(--lottus-pink);">garantias reais.</span><span class="cursor" style="background-color: var(--lottus-pink);"></span>
+        <!-- 1. HERO SECTION -->
+        <section class="hero-trio">
+            <div class="container hero-grid">
+                <div class="hero-text-block">
+                    <h1>
+                        Acesso a estruturas privadas de <span class="highlight">crédito securitizado.</span>
                     </h1>
-                    <p class="hero-subtitle" style="font-size: 1.2rem; max-width: 85%;">
-                        Conectamos investidores qualificados a operações securitizadas com rigoroso controle de risco, lastro documental e total transparência regulatória.
+                    <p>
+                        Conectamos investidores qualificados a teses de crédito estruturado com lastro em operações comerciais B2B, governança institucional e rigorosa gestão de risco.
                     </p>
-                    <div class="hero-cta-group" style="margin-top: var(--space-md);">
-                        <a href="#contato" class="btn btn-primary btn-large">Falar com Consultor</a>
-                        <a href="#diferenciais" class="btn btn-secondary btn-large">Conhecer a Estrutura</a>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <a href="#qualificacao" class="btn btn-primary">Solicitar Contato com RI</a>
+                        <a href="#diferenciais" class="btn btn-secondary" style="border: 2px solid var(--lottus-border);">Conhecer Nossa Tese</a>
                     </div>
+                </div>
+                
+                <div class="hero-image-wrapper">
+                    <img src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&q=80&w=1000" alt="Gestão de Investimentos Privados em Crédito Securitizado">
                 </div>
             </div>
         </section>
 
-        <!-- Diferenciais / Tese de Investimento -->
-        <section id="diferenciais" class="floating-section graphite-section">
+        <!-- 2. PILARES DA OPERAÇÃO DE INVESTIMENTO -->
+        <section class="metrics-section">
+            <div class="container metrics-grid">
+                <div class="metric-item">
+                    <h4>Emissões Privadas</h4>
+                    <p>Estruturas customizadas sob medida para alocadores e family offices</p>
+                </div>
+                <div class="metric-item">
+                    <h4>100% Lastreado</h4>
+                    <p>Títulos com duplicatas e recebíveis comerciais auditados</p>
+                </div>
+                <div class="metric-item">
+                    <h4>Segregação</h4>
+                    <p>Estrutura de Patrimônio de Afetação isolada por série emitida</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. BENTO BOX SECTION (Diferenciais da Tese) -->
+        <section class="bento-section" id="diferenciais">
             <div class="container">
-                <div class="section-header dark-mode-text" style="margin: 0 auto var(--space-lg) auto; text-align: center; max-width: 800px;">
-                    <h2 style="font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.15; letter-spacing: -0.03em;">Por que investir em crédito via Lottus?</h2>
-                    <p style="color: var(--lottus-beige); opacity: 0.9; font-size: 1.05rem; line-height: 1.6;">
-                        Combinamos análise técnica rigorosa, estruturação jurídica sólida e monitoramento constante dos ativos subjacentes.
-                    </p>
-                </div>
+                <h2 class="section-header-huge">Diferenciais da nossa tese de <span>investimento.</span></h2>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-md);">
-                    
-                    <div style="background-color: rgba(255,255,255,0.05); padding: var(--space-lg); border-radius: var(--border-radius-md); border: 1px solid rgba(255,255,255,0.1);">
-                        <div style="color: var(--lottus-pink); margin-bottom: 16px;">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <div class="bento-grid">
+                    <!-- Bento 1: Governança e Registros -->
+                    <div class="bento-card bento-1">
+                        <div>
+                            <div class="bento-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            </div>
+                            <h3>Governança e Lastro Auditado</h3>
+                            <p>Todos os direitos creditórios são checados em tempo real e registrados em câmaras autorizadas (CERC/B3), eliminando riscos de duplicidade ou falta de comprovação física da venda.</p>
                         </div>
-                        <h3 style="font-size: 1.3rem; margin-bottom: 12px; color: var(--lottus-white);">Lastro Auditado & Garantias</h3>
-                        <p style="color: var(--lottus-beige); opacity: 0.85; font-size: 0.95rem; line-height: 1.6;">
-                            Todas as operações possuem lastro em faturas comerciais e duplicatas verificadas por nossa tecnologia de compliance antes da emissão.
-                        </p>
+                        <a href="#qualificacao" class="btn btn-primary" style="background: var(--lottus-graphite); color: var(--lottus-white); width: fit-content;">Solicitar Apresentação Institucional →</a>
                     </div>
 
-                    <div style="background-color: rgba(255,255,255,0.05); padding: var(--space-lg); border-radius: var(--border-radius-md); border: 1px solid rgba(255,255,255,0.1);">
-                        <div style="color: var(--lottus-pink); margin-bottom: 16px;">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    <!-- Bento 2: Subordinação de Cotas -->
+                    <div class="bento-card bento-2">
+                        <div>
+                            <div class="bento-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            </div>
+                            <h3>Estrutura de Proteção</h3>
+                            <p>Mecanismos de subordinação de cotas e retenção de garantias para absorver eventuais oscilações e preservar o capital dos investidores.</p>
                         </div>
-                        <h3 style="font-size: 1.3rem; margin-bottom: 12px; color: var(--lottus-white);">Retorno Acima do Mercado</h3>
-                        <p style="color: var(--lottus-beige); opacity: 0.85; font-size: 0.95rem; line-height: 1.6;">
-                            Acesse taxas atrativas e retornos descorrelacionados da volatilidade do mercado acionário tradicional.
-                        </p>
+                        <a href="#qualificacao" class="btn btn-secondary" style="border: none; background: rgba(200, 42, 96, 0.1); color: var(--lottus-pink); width: fit-content;">Conhecer Mitigadores de Risco →</a>
                     </div>
 
-                    <div style="background-color: rgba(255,255,255,0.05); padding: var(--space-lg); border-radius: var(--border-radius-md); border: 1px solid rgba(255,255,255,0.1);">
-                        <div style="color: var(--lottus-pink); margin-bottom: 16px;">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <!-- Bento 3: Originação Recorrente -->
+                    <div class="bento-card bento-3">
+                        <div>
+                            <div class="bento-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+                            </div>
+                            <h3>Originação Própria e Pulverizada</h3>
+                            <p>Diversificação em centenas de cedentes e sacados de médio e grande porte, reduzindo substancialmente a exposição a um único tomador de crédito.</p>
+                            <a href="#qualificacao" class="btn btn-primary" style="background: var(--lottus-white); color: var(--lottus-graphite); width: fit-content;">Falar com time de RI →</a>
                         </div>
-                        <h3 style="font-size: 1.3rem; margin-bottom: 12px; color: var(--lottus-white);">Estrutura Regulada</h3>
-                        <p style="color: var(--lottus-beige); opacity: 0.85; font-size: 0.95rem; line-height: 1.6;">
-                            Operamos estritamente como veículo de securitização devidamente estruturado e autorizado, seguindo as diretrizes do Banco Central do Brasil.
-                        </p>
+                        <div style="border-radius: 24px; overflow: hidden; height: 100%; min-height: 250px;">
+                            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800" alt="Análise de Portfólio de Investimentos Lottus" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
                     </div>
-
                 </div>
             </div>
         </section>
 
-        <!-- Formulário de Contato para Investidores -->
-        <section id="contato" class="contact-section floating-section graphite-section">
-            <div class="container contact-container">
-                <div class="contact-content dark-mode-text">
-                    <h2>Seja um investidor qualificado</h2>
-                    <p>Preencha os dados abaixo para receber apresentações exclusivas sobre nossas emissões e oportunidades em crédito securitizado.</p>
+        <!-- 4. QUALIFICAÇÃO E CADASTRO PRIVADO DE INVESTIDOR -->
+        <section class="investor-form-section" id="qualificacao">
+            <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;">
+                <div>
+                    <h2 class="section-header-huge" style="margin-bottom: 24px;">Atendimento exclusivo para <span>investidores qualificados.</span></h2>
+                    <p style="font-size: 1.15rem; color: var(--lottus-graphite-light); line-height: 1.6; margin-bottom: 32px;">
+                        Por se tratarem de emissões privadas e restritas, o acesso às informações de estruturação e atas de emissão é disponibilizado mediante qualificação e análise prévia.
+                    </p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(200,42,96,0.1); color: var(--lottus-pink); display: flex; align-items: center; justify-content: center; font-weight: 700;">✓</div>
+                            <span style="font-size: 1.05rem; font-weight: 600; color: var(--lottus-graphite);">Atendimento direto e sigiloso via equipe de RI</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(200,42,96,0.1); color: var(--lottus-pink); display: flex; align-items: center; justify-content: center; font-weight: 700;">✓</div>
+                            <span style="font-size: 1.05rem; font-weight: 600; color: var(--lottus-graphite);">Apresentação de teses sob medida e memorandos</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(200,42,96,0.1); color: var(--lottus-pink); display: flex; align-items: center; justify-content: center; font-weight: 700;">✓</div>
+                            <span style="font-size: 1.05rem; font-weight: 600; color: var(--lottus-graphite);">Acesso restrito conforme regulação vigente</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="contact-form-wrapper">
-                    <form id="lottus-invest-form" action="https://formspree.io/f/dummy_endpoint_replace_me" method="POST">
+
+                <div class="investor-form-card">
+                    <form onsubmit="event.preventDefault(); alert('Cadastro recebido! Nossa equipe de Relações com Investidores entrará em contato em breve de forma privada.');">
                         <div class="form-group">
-                            <label for="name">Nome completo</label>
-                            <input type="text" id="name" name="name" required placeholder="Seu nome">
+                            <label for="nome">Nome Completo / Razão Social</label>
+                            <input type="text" id="nome" placeholder="Digite seu nome ou empresa" required>
                         </div>
+
                         <div class="form-group">
-                            <label for="email">E-mail corporativo ou pessoal</label>
-                            <input type="email" id="email" name="email" required placeholder="seuemail@exemplo.com.br">
+                            <label for="email-inv">E-mail Corporativo / Contato</label>
+                            <input type="email" id="email-inv" placeholder="seu@email.com" required>
                         </div>
+                        
                         <div class="form-group">
-                            <label for="phone">Telefone / WhatsApp</label>
-                            <input type="tel" id="phone" name="phone" required placeholder="(00) 00000-0000">
-                        </div>
-                        <div class="form-group">
-                            <label for="profile">Perfil de Investidor</label>
-                            <select id="profile" name="profile" required>
-                                <option value="" disabled selected>Selecione seu perfil</option>
-                                <option value="Pessoa Fisica Qualificada">Pessoa Física (Investidor Qualificado)</option>
-                                <option value="Family Office">Family Office / Asset Management</option>
-                                <option value="Empresa / Fundo">Empresa / Fundo de Investimento</option>
-                                <option value="Outros">Outros</option>
+                            <label for="perfil">Perfil do Investidor</label>
+                            <select id="perfil" required>
+                                <option value="">Selecione seu perfil</option>
+                                <option value="qualificado">Investidor Qualificado</option>
+                                <option value="profissional">Investidor Profissional</option>
+                                <option value="family">Family Office / Institucional</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-full" id="submit-btn">Receber Oportunidades</button>
+
+                        <div class="form-group">
+                            <label for="ticket">Aporte Pretendido</label>
+                            <select id="ticket" required>
+                                <option value="">Selecione a estimativa</option>
+                                <option value="1">R$ 500 mil a R$ 2 milhões</option>
+                                <option value="2">R$ 2 milhões a R$ 10 milhões</option>
+                                <option value="3">Acima de R$ 10 milhões</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 18px; font-size: 1.05rem; justify-content: center;">Solicitar Contato do Time de RI</button>
                     </form>
                 </div>
             </div>
         </section>
+
+        <!-- 5. SEÇÃO ANIMADA STICKY (EFEITO TRIO) -->
+        <section class="scroll-sequence" id="scroll-sequence">
+            <div class="sticky-container">
+                <h2 class="giant-text" id="giant-text">Segurança jurídica e transparência em ambiente privado.</h2>
+            </div>
+        </section>
+
+        <!-- 6. CTA FINAL -->
+        <section class="cta-final-section">
+            <div class="container">
+                <h2 class="section-header-huge" style="margin: 0 auto 32px; text-align: center;">Deseja conhecer nossas teses<br>em <span>crédito estruturado?</span></h2>
+                <p style="color: var(--lottus-graphite-light); font-size: 1.1rem; line-height: 1.6; margin-bottom: 48px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    Fale diretamente com o nosso time de Relações com Investidores e agende uma conversa técnica sobre nossas soluções institucionais.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+                    <a href="#qualificacao" class="btn btn-primary" style="padding: 18px 36px; font-size: 1.1rem;">Agendar reunião com RI</a>
+                </div>
+            </div>
+        </section>
+
     </main>
 
+    <!-- Footer Original Lottus -->
     <footer class="lottus-footer">
         <div class="container footer-container">
             <div class="footer-brand">
@@ -196,7 +534,7 @@
 
             <div class="footer-links">
                 <h4>Legal & Recursos</h4>
-                <a href="index.html#faq">FAQ / Ajuda</a>
+                <a href="faq.html">FAQ / Ajuda</a>
                 <a href="termos.html">Termos de Uso</a>
                 <a href="privacidade.html">Privacidade</a>
             </div>
@@ -211,6 +549,29 @@
         </div>
     </footer>
 
-    <script src="assets/js/main.js"></script>
+    <!-- SCRIPT DA ANIMAÇÃO DE SCROLL (O EFEITO DA TRIO) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sequence = document.getElementById('scroll-sequence');
+            const giantText = document.getElementById('giant-text');
+
+            if (sequence && giantText) {
+                window.addEventListener('scroll', () => {
+                    const rect = sequence.getBoundingClientRect();
+                    const windowHeight = window.innerHeight;
+                    
+                    let progress = 1 - (rect.bottom - windowHeight) / (rect.height - windowHeight);
+                    
+                    if (progress >= 0 && progress <= 1) {
+                        const scale = 0.8 + (progress * 0.4);
+                        const opacity = Math.min(0.2 + (progress * 2), 1);
+                        
+                        giantText.style.transform = `scale(${scale})`;
+                        giantText.style.opacity = opacity;
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

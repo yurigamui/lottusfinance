@@ -3,337 +3,787 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lottus Finance | Crédito Corporativo Global</title>
-    <meta name="description" content="Capital sob demanda para impulsionar sua operação internacional. Sem burocracia bancária e com liberação ágil.">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <title>Lottus Finance | Crédito Corporativo</title>
+    <meta name="description" content="Antecipação de recebíveis, capital de giro e crédito estruturado para empresas. Sem burocracia, 100% digital.">
+    <meta name="robots" content="index, follow">
+
+    <!-- Fonts & Favicon -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="assets/img/Favicon.png">
+
+    <style>
+        /* ==========================================
+           LOTTUS DESIGN SYSTEM - TONE: HUMANO & ACESSÍVEL
+           ========================================== */
+        :root {
+            --lottus-bg-body: #F4F0EA; 
+            --lottus-beige: #EAE6DF;
+            --lottus-white: #FFFFFF;
+            --lottus-graphite: #131722;
+            --lottus-graphite-light: #5A6072;
+            --lottus-pink: #C82A60;
+            --lottus-pink-light: rgba(200, 42, 96, 0.08);
+            --lottus-border: #E2DFD8;
+            
+            --radius-huge: 48px;
+            --radius-bento: 32px;
+            --radius-pill: 999px;
+            
+            --font-hero: clamp(2.8rem, 5vw, 4.6rem);
+            --font-h2: clamp(2.2rem, 4.2vw, 3.6rem);
+            --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--lottus-bg-body);
+            color: var(--lottus-graphite);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* HEADER & NAVIGATION */
+        .lottus-header {
+            position: sticky;
+            top: 0;
+            background: rgba(244, 240, 234, 0.85);
+            backdrop-filter: blur(16px);
+            z-index: 100;
+            padding: 20px 0;
+            margin-bottom: 16px;
+        }
+
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .brand-logo {
+            height: 32px;
+            width: auto;
+        }
+
+        .main-nav {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--lottus-graphite);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-link:hover {
+            color: var(--lottus-pink);
+        }
+
+        /* DROPDOWN MENU "SOLUÇÕES" */
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--lottus-white);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+            min-width: 320px;
+            z-index: 200;
+            margin-top: 16px;
+            border: 1px solid var(--lottus-border);
+        }
+
+        .dropdown-menu::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background: transparent;
+        }
+
+        .nav-dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-section {
+            margin-bottom: 16px;
+        }
+
+        .dropdown-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .dropdown-header-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--lottus-pink);
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: block;
+            letter-spacing: 0.05em;
+        }
+
+        .dropdown-item {
+            text-decoration: none;
+            display: block;
+            padding: 12px;
+            border-radius: 12px;
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: var(--lottus-beige);
+        }
+
+        .item-title {
+            font-weight: 600;
+            color: var(--lottus-graphite);
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .item-desc {
+            font-size: 0.85rem;
+            color: var(--lottus-graphite-light);
+            line-height: 1.4;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* BUTTONS */
+        .btn {
+            padding: 14px 28px;
+            border-radius: var(--radius-pill); 
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: all 0.3s var(--transition-smooth);
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--lottus-graphite);
+            color: var(--lottus-white);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--lottus-pink);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(200, 42, 96, 0.2);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--lottus-graphite);
+            border: 1px solid var(--lottus-graphite);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+
+        /* SEÇÕES ARREDONDADAS */
+        .rounded-section {
+            margin: 0 24px 24px 24px;
+            border-radius: var(--radius-huge);
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.03);
+        }
+
+        /* HERO ESPECÍFICO DE CRÉDITO */
+        .hero-credito {
+            background-color: var(--lottus-white);
+            padding: 100px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-credito-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-credito h1 {
+            font-size: var(--font-hero);
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+            font-weight: 800;
+            color: var(--lottus-graphite);
+            margin-bottom: 24px;
+        }
+
+        .hero-credito h1 span.highlight {
+            color: var(--lottus-pink);
+            font-style: italic;
+        }
+
+        .hero-credito p {
+            font-size: 1.15rem;
+            color: var(--lottus-graphite-light);
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        /* CARROSSEL DE DOIS ITENS POR VEZ */
+        .carousel-section {
+            padding: 120px 0;
+            background-color: var(--lottus-white);
+        }
+
+        .section-header-huge {
+            font-size: var(--font-h2);
+            line-height: 1.1;
+            letter-spacing: -0.04em;
+            color: var(--lottus-graphite);
+            margin-bottom: 0;
+            max-width: 800px;
+        }
+
+        .section-header-huge span {
+            color: var(--lottus-pink);
+        }
+
+        .carousel-container-dual {
+            max-width: 1100px;
+            margin: 40px auto 0 auto;
+            position: relative;
+        }
+
+        .carousel-track-wrapper {
+            overflow: hidden;
+            width: 100%;
+            border-radius: var(--radius-bento);
+            padding: 4px;
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s var(--transition-smooth);
+            width: 100%;
+        }
+
+        .carousel-card {
+            min-width: 50%; /* Cada card ocupa exatamente metade, mostrando 2 por vez */
+            flex: 0 0 50%;
+            padding: 0 16px; /* Espaçamento lateral entre os dois cards visíveis */
+        }
+
+        .carousel-card-inner {
+            background-color: var(--lottus-bg-body);
+            border-radius: var(--radius-bento);
+            padding: 48px 36px;
+            border: 1px solid var(--lottus-border);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.03);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .carousel-card-inner::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 36px;
+            right: 36px;
+            height: 4px;
+            background-color: var(--lottus-pink);
+            border-radius: 4px;
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .carousel-card-inner:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 24px 50px rgba(0,0,0,0.08);
+            background-color: var(--lottus-white);
+        }
+
+        .carousel-card-inner:hover::after {
+            transform: scaleX(1);
+        }
+
+        .carousel-card-inner h3 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--lottus-graphite);
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .carousel-card-inner p {
+            font-size: 1.05rem;
+            color: var(--lottus-graphite-light);
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .carousel-nav-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 32px;
+            padding: 0 16px;
+        }
+
+        .carousel-indicators {
+            display: flex;
+            gap: 8px;
+        }
+
+        .indicator-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--lottus-border);
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .indicator-dot.active {
+            background-color: var(--lottus-pink);
+            transform: scale(1.2);
+        }
+
+        .carousel-nav-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .carousel-btn {
+            background-color: var(--lottus-white);
+            border: 1px solid var(--lottus-border);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--lottus-graphite);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .carousel-btn:hover {
+            background-color: var(--lottus-graphite);
+            color: var(--lottus-white);
+            border-color: var(--lottus-graphite);
+        }
+
+        /* FORMULÁRIO DE SIMULAÇÃO / CONTATO */
+        .form-section {
+            padding: 120px 0;
+            background-color: var(--lottus-graphite);
+            color: var(--lottus-white);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .form-box {
+            background-color: var(--lottus-white);
+            color: var(--lottus-graphite);
+            padding: 48px;
+            border-radius: var(--radius-bento);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--lottus-graphite);
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--lottus-border);
+            background-color: var(--lottus-beige);
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            color: var(--lottus-graphite);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--lottus-pink);
+        }
+
+        /* FOOTER */
+        .lottus-footer {
+            background-color: var(--lottus-pink);
+            color: var(--lottus-white);
+            padding: 80px 0 20px;
+            margin: 0 24px 0 24px; 
+            border-radius: var(--radius-huge) var(--radius-huge) 0 0; 
+        }
+
+        .footer-container {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-brand .brand-logo {
+            margin-bottom: 1rem;
+        }
+
+        .footer-brand p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .footer-links h4 {
+            color: var(--lottus-white);
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+
+        .footer-links a {
+            display: block;
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            margin-bottom: 0.75rem;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--lottus-beige);
+        }
+
+        .footer-disclaimer {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .footer-disclaimer p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            text-align: justify;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 1.5rem;
+        }
+        
+        .footer-bottom p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        /* RESPONSIVO */
+        @media (max-width: 991px) {
+            .hero-credito-grid, .form-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            .carousel-card {
+                min-width: 100%;
+                flex: 0 0 100%; /* No mobile exibe 1 por vez para caber perfeitamente */
+                padding: 0 8px;
+            }
+            .footer-container {
+                grid-template-columns: 1fr 1fr;
+            }
+            .main-nav {
+                display: none; 
+            }
+            .rounded-section {
+                margin: 0 12px 20px 12px;
+                border-radius: 32px;
+            }
+            .lottus-footer {
+                margin: 0 12px 0 12px;
+                border-radius: 32px 32px 0 0;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="custom-ui-alert" class="ui-alert hidden"></div>
 
+    <!-- Header Lottus -->
     <header class="lottus-header">
         <div class="container header-container">
-            <a href="index.html" class="logo-link">
-                <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                <span class="logo-text" style="display: none;">Lottus</span>
+            <a href="index.html" class="logo-link" title="Página Inicial Lottus">
+                <img src="assets/img/Logo 1.png" alt="Lottus Finance" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span style="display: none; font-weight: 800; font-size: 1.4rem; color: var(--lottus-graphite);">Lottus</span>
             </a>
             
-            <nav class="main-nav">
-                <a href="index.html" class="nav-link">Home</a>
+            <nav class="main-nav" aria-label="Navegação Principal">
+                <a href="index.html" class="nav-link">Início</a>
+                
+                <!-- Dropdown Soluções -->
                 <div class="nav-dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false">
-                        Soluções 
-                        <svg class="dropdown-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <a href="#" class="nav-link">
+                        Soluções
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </a>
-                    <div class="dropdown-menu solutions-dropdown">
+                    <div class="dropdown-menu">
+                        <div class="dropdown-section">
+                            <span class="dropdown-header-title">Para Plataformas</span>
+                            <a href="credito-as-a-service.html" class="dropdown-item">
+                                <div class="item-title">Integração CaaS (API)</div>
+                                <span class="item-desc">Embarque crédito na sua plataforma de forma fácil e sem atrito.</span>
+                            </a>
+                        </div>
                         <div class="dropdown-section">
                             <span class="dropdown-header-title">Para Empresas</span>
                             <a href="credito.html" class="dropdown-item">
-                                <div class="item-title">Crédito Corporativo</div>
-                                <small class="item-desc">Antecipação de recebíveis, risco sacado e capital de giro.</small>
+                                <div class="item-title">Crédito Direto</div>
+                                <span class="item-desc">Consiga capital em poucos cliques, direto na plataforma.</span>
                             </a>
                         </div>
-                        <div class="dropdown-divider"></div>
-                        <div class="dropdown-section">
-                            <span class="dropdown-header-title">Para Parceiros</span>
-                            <a href="credito-as-a-service.html" class="dropdown-item">
-                                <div class="item-title">Credit as a Service</div>
-                                <small class="item-desc">API nativa para embutir inteligência de crédito na sua plataforma.</small>
-                            </a>
-                        </div>
-                        <div class="dropdown-divider"></div>
                         <div class="dropdown-section">
                             <span class="dropdown-header-title">Para Investidores</span>
                             <a href="investimentos.html" class="dropdown-item">
-                                <div class="item-title">Investimentos</div>
-                                <small class="item-desc">Oportunidades em crédito estruturado com lastro real.</small>
+                                <div class="item-title">Debêntures</div>
+                                <span class="item-desc">Diversifique sua carteira com boas rentabilidades.</span>
                             </a>
                         </div>
                     </div>
                 </div>
-                <a href="sobre.html" class="nav-link">Sobre Nós</a>
+
+                <a href="sobre.html" class="nav-link">Sobre</a>
                 <a href="contato.html" class="nav-link">Contato</a>
             </nav>
             
-            <div class="header-actions" style="display: flex; align-items: center; gap: 24px;">
-                <a href="contato.html" class="btn btn-secondary">Fale conosco</a>
-                <a href="contato.html" class="btn btn-primary">Criar conta agora</a>
+            <div class="header-actions">
+                <a href="login.html" class="btn btn-secondary">Entrar</a>
+                <a href="cadastro.html" class="btn btn-primary">Criar conta</a>
             </div>
         </div>
     </header>
 
     <main>
-        <!-- Hero Section -->
-        <section class="hero-section floating-section light-section" style="padding-bottom: var(--space-md);">
-            <div class="container hero-container">
-                <div class="hero-content">
-                    <div class="badge-regulator">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        <span>Estrutura de crédito ágil e sob medida</span>
-                    </div>
-                    <h1 class="hero-title" style="font-size: clamp(2.8rem, 5vw, 4.2rem); margin-bottom: var(--space-md);">
-                        O capital certo para <span class="typewriter-text" style="color: var(--lottus-pink); border-bottom: 3px solid var(--lottus-pink);">financiar sua expansão global.</span><span class="cursor" style="background-color: var(--lottus-pink);"></span>
-                    </h1>
-                    <p class="hero-subtitle" style="font-size: 1.2rem; max-width: 85%;">
-                        Esqueça a lentidão e as exigências dos bancos tradicionais. Na Lottus, estruturamos soluções de crédito sob demanda para equilibrar seu fluxo de caixa e garantir o fôlego financeiro que sua operação precisa.
-                    </p>
-                    <div class="hero-cta-group" style="margin-top: var(--space-md);">
-                        <a href="#contato" class="btn btn-primary btn-large">Falar com Especialista</a>
-                        <a href="#frentes" class="btn btn-secondary btn-large">Conhecer Linhas de Crédito</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- As 3 Frentes de Crédito (Carrossel Interativo) -->
-        <section id="frentes" class="solutions-carousel-section floating-section graphite-section">
-            <div class="container">
-                <div class="section-header dark-mode-text" style="margin: 0 auto var(--space-lg) auto; text-align: center; max-width: 800px;">
-                    <h2 style="font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.15; letter-spacing: -0.03em;">Três caminhos estratégicos para o seu fluxo de caixa</h2>
-                    <p style="color: var(--lottus-beige); opacity: 0.9; font-size: 1.05rem; line-height: 1.6; max-width: 700px; margin: 0 auto;">
-                        Desenhamos estruturas flexíveis baseadas na realidade da sua empresa, focando na agilidade que o mercado exige.
-                    </p>
-                </div>
-
-                <!-- Abas de Navegação -->
-                <div class="solutions-tabs-pills" role="tablist" aria-label="Modalidades de Crédito Lottus">
-                    <button class="solutions-tab-pill active" role="tab" aria-selected="true" data-tab="recebiveis" id="tab-recebiveis" aria-controls="panel-recebiveis">
-                        Recebíveis
-                    </button>
-                    <button class="solutions-tab-pill" role="tab" aria-selected="false" data-tab="fornecedores" id="tab-fornecedores" aria-controls="panel-fornecedores">
-                        Risco Sacado
-                    </button>
-                    <button class="solutions-tab-pill" role="tab" aria-selected="false" data-tab="giro" id="tab-giro" aria-controls="panel-giro">
-                        Giro
-                    </button>
-                </div>
-
-                <!-- Barra de Progresso do Autoplay -->
-                <div class="solutions-progress-track" aria-hidden="true">
-                    <div class="solutions-progress-fill is-running"></div>
-                </div>
-
-                <!-- Container do Carrossel (Totalmente limpo e reestruturado) -->
-                <div class="solutions-carousel" data-active="recebiveis">
-
-                    <!-- ==========================================
-                         1. ANTECIPAÇÃO DE RECEBÍVEIS
-                         ========================================== -->
-                    <article class="solution-carousel-card solution-carousel-card-side is-hidden" data-card="recebiveis" aria-hidden="true" tabindex="0">
-                        <div class="solution-side-inner">
-                            <h3>Recebíveis</h3>
-                            <p>Transforme suas vendas a prazo em liquidez imediata na conta.</p>
-                            <span class="solution-side-cta">Ver detalhes →</span>
-                        </div>
-                    </article>
-
-                    <article class="solution-carousel-card solution-carousel-card-active is-active" data-card="recebiveis" id="panel-recebiveis" role="tabpanel" aria-labelledby="tab-recebiveis">
-                        <div class="solution-active-grid">
-                            <div class="solution-active-content">
-                                <h3>Antecipação de Recebíveis</h3>
-                                <p>Transforme suas vendas a prazo e contratos futuros em capital imediato. Receba à vista os valores de exportações ou prestações de serviços sem precisar esperar pelo vencimento das faturas.</p>
-                                <a href="#contato" class="solution-active-cta">
-                                    Antecipar agora
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                </a>
-                            </div>
-                            <div class="solution-active-visual solution-active-visual-conta">
-                                <div class="visual-card-stack">
-                                    <div class="visual-mini-card" style="transform: translateX(-6px);">
-                                        <span class="mini-card-flag">📄</span>
-                                        <div class="mini-card-info">
-                                            <small>Fatura Exportação</small>
-                                            <strong>Venc. em 60 dias</strong>
-                                        </div>
-                                        <span class="mini-card-balance" style="color: var(--lottus-success);">Liquidada</span>
-                                    </div>
-                                    <div class="visual-mini-card" style="transform: translateX(6px);">
-                                        <span class="mini-card-flag">📄</span>
-                                        <div class="mini-card-info">
-                                            <small>Contrato de Serviço</small>
-                                            <strong>Venc. em 90 dias</strong>
-                                        </div>
-                                        <span class="mini-card-balance" style="color: var(--lottus-success);">Liquidada</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-
-                    <!-- ==========================================
-                         2. RISCO SACADO
-                         ========================================== -->
-                    <article class="solution-carousel-card solution-carousel-card-side is-hidden" data-card="fornecedores" aria-hidden="true" tabindex="0">
-                        <div class="solution-side-inner">
-                            <h3>Risco Sacado</h3>
-                            <p>Pagamos seus fornecedores à vista, você ganha prazo para quitar.</p>
-                            <span class="solution-side-cta">Ver detalhes →</span>
-                        </div>
-                    </article>
-
-                    <article class="solution-carousel-card solution-carousel-card-active is-hidden" data-card="fornecedores" id="panel-fornecedores" role="tabpanel" aria-labelledby="tab-fornecedores" hidden>
-                        <div class="solution-active-grid">
-                            <div class="solution-active-content">
-                                <h3>Risco Sacado</h3>
-                                <p>Otimize a relação com seus fornecedores globais. Garantimos o pagamento à vista para quem abastece a sua operação, enquanto sua empresa ganha prazos estendidos e flexíveis para realizar a liquidação do valor.</p>
-                                <a href="#contato" class="solution-active-cta">
-                                    Otimizar fornecedores
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                </a>
-                            </div>
-                            <div class="solution-active-visual solution-active-visual-cambio">
-                                <div class="visual-rate-card">
-                                    <div class="rate-card-header">
-                                        <span class="rate-pair">Fornecedor pago em</span>
-                                        <span class="rate-pulse" style="color: var(--lottus-success);">●</span>
-                                    </div>
-                                    <div class="rate-card-value">D+0</div>
-                                    <div class="rate-card-meta">
-                                        <span>Prazo para sua empresa</span>
-                                        <strong>Até 120 dias</strong>
-                                    </div>
-                                    <div class="rate-card-pill">Sem atrito na cadeia produtiva</div>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-
-                    <!-- ==========================================
-                         3. EMPRÉSTIMOS ESTRUTURADOS
-                         ========================================== -->
-                    <article class="solution-carousel-card solution-carousel-card-side is-hidden" data-card="giro" aria-hidden="true" tabindex="0">
-                        <div class="solution-side-inner">
-                            <h3>Empréstimos</h3>
-                            <p>Injeção de capital baseada na força real da sua operação.</p>
-                            <span class="solution-side-cta">Ver detalhes →</span>
-                        </div>
-                    </article>
-
-                    <article class="solution-carousel-card solution-carousel-card-active is-hidden" data-card="giro" id="panel-giro" role="tabpanel" aria-labelledby="tab-giro" hidden>
-                        <div class="solution-active-grid">
-                            <div class="solution-active-content">
-                                <h3>Empréstimos Estruturados</h3>
-                                <p>Injeção de capital de giro desenhada especificamente para investimentos de expansão ou momentos de alta demanda operacional, estruturada por meio de inteligência de mercado sob medida.</p>
-                                <a href="#contato" class="solution-active-cta">
-                                    Solicitar giro
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                </a>
-                            </div>
-                            <div class="solution-active-visual solution-active-visual-credito">
-                                <div class="visual-credit-card">
-                                    <div class="credit-card-top">
-                                        <span class="credit-card-brand">Lottus Capital</span>
-                                        <span class="credit-card-chip">◆</span>
-                                    </div>
-                                    <div class="credit-card-line">Capital de Giro</div>
-                                    <div class="credit-card-amount">R$ 500.000,00</div>
-                                    <div class="credit-card-footer">
-                                        <span>Análise baseada em faturamento</span>
-                                        <span class="credit-card-status">Pré-aprovado</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-
-                </div>
-            </div>
-        </section>
-
-        <!-- Diferenciais do Crédito Lottus -->
-        <section class="faq-section-new floating-section light-section">
-            <div class="container" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: var(--space-xl); align-items: center;">
+        <!-- 1. HERO DE CRÉDITO -->
+        <section class="hero-credito rounded-section">
+            <div class="container hero-credito-grid">
                 <div>
-                    <h2 style="font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: var(--space-sm);">Análise baseada na sua força real, não em scores engessados.</h2>
-                    <p style="color: var(--lottus-graphite-light); line-height: 1.6; margin-bottom: var(--space-md);">
-                        Olhamos para o histórico das suas operações e o faturamento real do seu negócio internacional. Menos burocracia documental significa uma tomada de decisão rápida e capital liberado sem travas desnecessárias.
+                    <span style="color: var(--lottus-pink); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em; display: block; margin-bottom: 12px;">Crédito Corporativo Lottus</span>
+                    <h1>
+                        Capital de giro e recebíveis <span class="highlight">sem burocracia.</span>
+                    </h1>
+                    <p>
+                        Descomplique o fluxo de caixa da sua empresa. Antecipe notas fiscais, consiga crédito rápido e conte com taxas justas e transparentes para o seu negócio crescer.
                     </p>
-                    <div style="display: flex; gap: var(--space-md); margin-top: var(--space-md);">
-                        <div>
-                            <strong style="font-size: 2rem; color: var(--lottus-pink); display: block; font-feature-settings: 'tnum';">48h</strong>
-                            <span style="font-size: 0.9rem; color: var(--lottus-graphite-light);">Tempo médio de resposta</span>
-                        </div>
-                        <div>
-                            <strong style="font-size: 2rem; color: var(--lottus-pink); display: block; font-feature-settings: 'tnum';">100%</strong>
-                            <span style="font-size: 0.9rem; color: var(--lottus-graphite-light);">Acompanhamento digital</span>
-                        </div>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <a href="#simular" class="btn btn-primary">Simular crédito agora</a>
                     </div>
                 </div>
                 
-                <div style="background-color: var(--lottus-graphite); border-radius: var(--border-radius-md); padding: var(--space-xl); color: var(--lottus-white); display: flex; flex-direction: column; gap: var(--space-md);">
-                    <h3 style="color: var(--lottus-white); font-size: 1.5rem; font-weight: 600;">O que sustenta a nossa operação</h3>
-                    
-                    <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: var(--space-sm);">
-                        <h4 style="color: var(--lottus-pink); font-size: 1.1rem; margin-bottom: 4px;">Análise Proprietária</h4>
-                        <p style="font-size: 0.9rem; opacity: 0.8;">Avaliamos dados reais da saúde financeira e da tração da sua operação.</p>
+                <div style="position: relative; height: 420px; border-radius: var(--radius-bento); overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.08);">
+                    <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800" alt="Gestão Financeira e Crédito para Empresas" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. SEÇÃO DE SOLUÇÕES (CARROSSEL DE DOIS ITENS) -->
+        <section class="carousel-section rounded-section">
+            <div class="container">
+                <div style="text-align: center; max-width: 700px; margin: 0 auto 40px auto;">
+                    <span style="color: var(--lottus-pink); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">Modalidades de Crédito</span>
+                    <h2 class="section-header-huge">Soluções feitas sob medida para o seu <span>fluxo de caixa.</span></h2>
+                </div>
+
+                <!-- Container do Carrossel Dual -->
+                <div class="carousel-container-dual">
+                    <div class="carousel-track-wrapper">
+                        <div class="carousel-track" id="carousel-track">
+                            <!-- Card 1 -->
+                            <div class="carousel-card">
+                                <article class="carousel-card-inner">
+                                    <div>
+                                        <span style="color: var(--lottus-pink); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 12px;">Liquidez Imediata</span>
+                                        <h3>Antecipação de Recebíveis</h3>
+                                        <p>Transforme suas vendas a prazo ou duplicatas em dinheiro na conta no mesmo dia, sem carregar o passivo indesejado do seu balanço patrimonial.</p>
+                                    </div>
+                                    <a href="#simular" class="btn btn-secondary" style="width: fit-content; border-color: var(--lottus-graphite);">Simular esta opção →</a>
+                                </article>
+                            </div>
+
+                            <!-- Card 2 -->
+                            <div class="carousel-card">
+                                <article class="carousel-card-inner">
+                                    <div>
+                                        <span style="color: var(--lottus-pink); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 12px;">Expansão & Operação</span>
+                                        <h3>Capital de Giro Ágil</h3>
+                                        <p>Linhas de crédito flexíveis desenhadas para suprir sazonalidades, honrar compromissos com fornecedores ou injetar fôlego na expansão do seu negócio.</p>
+                                    </div>
+                                    <a href="#simular" class="btn btn-secondary" style="width: fit-content; border-color: var(--lottus-graphite);">Simular esta opção →</a>
+                                </article>
+                            </div>
+
+                            <!-- Card 3 -->
+                            <div class="carousel-card">
+                                <article class="carousel-card-inner">
+                                    <div>
+                                        <span style="color: var(--lottus-pink); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 12px;">Projetos Especiais</span>
+                                        <h3>Crédito com Lastro</h3>
+                                        <p>Estruturas de dívida privada e operações customizadas para empresas de médio e grande porte que buscam taxas competitivas no mercado.</p>
+                                    </div>
+                                    <a href="#simular" class="btn btn-secondary" style="width: fit-content; border-color: var(--lottus-graphite);">Falar com especialista →</a>
+                                </article>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: var(--space-sm);">
-                        <h4 style="color: var(--lottus-pink); font-size: 1.1rem; margin-bottom: 4px;">Rastreabilidade Total</h4>
-                        <p style="font-size: 0.9rem; opacity: 0.8;">Acompanhe o lastro e o status das suas garantias diretamente pela plataforma.</p>
-                    </div>
-                    
-                    <div>
-                        <h4 style="color: var(--lottus-pink); font-size: 1.1rem; margin-bottom: 4px;">Estrutura Transparente</h4>
-                        <p style="font-size: 0.9rem; opacity: 0.8;">Condições claras e visibilidade total do custo da operação antes de assinar.</p>
+
+                    <!-- Área de Navegação Dual -->
+                    <div class="carousel-nav-area">
+                        <div class="carousel-indicators" id="carousel-indicators">
+                            <button class="indicator-dot active" data-index="0" aria-label="Slide 1"></button>
+                            <button class="indicator-dot" data-index="1" aria-label="Slide 2"></button>
+                        </div>
+
+                        <div class="carousel-nav-buttons">
+                            <button class="carousel-btn" id="prev-btn" aria-label="Anterior">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </button>
+                            <button class="carousel-btn" id="next-btn" aria-label="Próximo">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Formulário de Contato -->
-        <section id="contato" class="contact-section floating-section graphite-section">
-            <div class="container contact-container">
-                <div class="contact-content dark-mode-text">
-                    <h2>Simule sua linha de crédito</h2>
-                    <p>Preencha as informações básicas do seu negócio. Nossa equipe entrará em contato para entender a demanda de fluxo e desenhar a melhor estrutura.</p>
+        <!-- 3. FORMULÁRIO DE SIMULAÇÃO -->
+        <section id="simular" class="form-section rounded-section">
+            <div class="container form-grid">
+                <div>
+                    <h2 style="font-size: var(--font-h2); line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 24px; color: var(--lottus-white);">
+                        Faça uma simulação para a sua empresa.
+                    </h2>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 1.1rem; line-height: 1.6; margin-bottom: 32px;">
+                        Preencha os dados básicos abaixo. Nosso time de crédito fará uma análise rápida para retornar com as melhores condições e taxas para o seu CNPJ.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 16px; color: rgba(255,255,255,0.9);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="color: var(--lottus-pink); font-size: 1.2rem; font-weight: bold;">✓</span> Análise em até 24 horas úteis
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="color: var(--lottus-pink); font-size: 1.2rem; font-weight: bold;">✓</span> 100% digital, sem burocracia bancária
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="color: var(--lottus-pink); font-size: 1.2rem; font-weight: bold;">✓</span> Condições transparentes e sem letras miúdas
+                        </div>
+                    </div>
                 </div>
-                <div class="contact-form-wrapper">
-                    <form id="lottus-credit-form" action="https://formspree.io/f/dummy_endpoint_replace_me" method="POST">
+
+                <div class="form-box">
+                    <form action="#" method="POST">
                         <div class="form-group">
-                            <label for="name">Nome completo</label>
-                            <input type="text" id="name" name="name" required placeholder="Seu nome">
+                            <label for="empresa">Nome da Empresa</label>
+                            <input type="text" id="empresa" name="empresa" required placeholder="Sua Empresa Ltda">
                         </div>
                         <div class="form-group">
-                            <label for="company">Razão Social</label>
-                            <input type="text" id="company" name="company" required placeholder="Nome legal da empresa">
+                            <label for="cnpj">CNPJ</label>
+                            <input type="text" id="cnpj" name="cnpj" required placeholder="00.000.000/0001-00">
                         </div>
                         <div class="form-group">
-                            <label for="email">E-mail corporativo</label>
-                            <input type="email" id="email" name="email" required placeholder="seuemail@empresa.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="modality">Linha de maior interesse</label>
-                            <select id="modality" name="modality" required>
-                                <option value="" disabled selected>Selecione a modalidade</option>
-                                <option value="Antecipacao">Antecipação de Recebíveis</option>
-                                <option value="Risco Sacado">Risco Sacado</option>
-                                <option value="Emprestimo">Empréstimos Estruturados</option>
+                            <label for="faturamento">Faturamento Mensal Estimado</label>
+                            <select id="faturamento" name="faturamento" required>
+                                <option value="" disabled selected>Selecione uma faixa</option>
+                                <option value="ate-100k">Até R$ 100 mil</option>
+                                <option value="100k-500k">R$ 100 mil a R$ 500 mil</option>
+                                <option value="500k-2m">R$ 500 mil a R$ 2 milhões</option>
+                                <option value="acima-2m">Acima de R$ 2 milhões</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-full" id="submit-btn">Solicitar Análise de Crédito</button>
+                        <div class="form-group">
+                            <label for="whatsapp">WhatsApp Corporativo</label>
+                            <input type="tel" id="whatsapp" name="whatsapp" required placeholder="(11) 99999-9999">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; background-color: var(--lottus-graphite); color: var(--lottus-white); margin-top: 12px;">Solicitar Análise de Crédito</button>
                     </form>
                 </div>
             </div>
         </section>
     </main>
 
+    <!-- Footer Lottus -->
     <footer class="lottus-footer">
         <div class="container footer-container">
             <div class="footer-brand">
                 <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo footer-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                <span class="logo-text" style="display: none; color: white;">Lottus</span>
-                <p>Otimizando o fluxo financeiro de operações modernas através de conformidade regulatória e excelência em tecnologia de crédito.</p>
+                <span class="logo-text" style="display: none; color: var(--lottus-white);">Lottus</span>
+                <p>Nossa missão é facilitar o acesso financeiro, seja para quem precisa de crédito, quer investir ou deseja embarcar essas soluções na própria plataforma.</p>
             </div>
 
             <div class="footer-links">
                 <h4>Soluções</h4>
+                <a href="credito-as-a-service.html">CaaS para Plataformas</a>
                 <a href="credito.html">Crédito Corporativo</a>
-                <a href="credito-as-a-service.html">Credit as a Service</a>
-                <a href="investimentos.html">Investimentos</a>
+                <a href="investimentos.html">Investimentos (Debêntures)</a>
             </div>
 
             <div class="footer-links">
@@ -345,14 +795,14 @@
 
             <div class="footer-links">
                 <h4>Legal & Recursos</h4>
-                <a href="index.html#faq">FAQ / Ajuda</a>
+                <a href="faq.html">FAQ / Ajuda</a>
                 <a href="termos.html">Termos de Uso</a>
-                <a href="privacidade.html">Privacidade</a>
+                <a href="privacidade.html">Política de Privacidade</a>
             </div>
         </div>
 
         <div class="container footer-disclaimer">
-            <p>A Lottus Finance atua como veículo de securitização devidamente estruturado e autorizado, conforme as regras e resoluções vigentes do Banco Central do Brasil. A Lottus não é uma instituição financeira tradicional e não realiza captação de recursos diretamente junto ao público. Todas as operações de crédito e antecipação são estruturadas por meio de emissão de títulos de securitização com lastro real, garantindo segurança jurídica e transparência a cada transação.</p>
+            <p><strong>Para sua segurança:</strong> A Lottus Finance atua como estruturadora e veículo de securitização (CaaS), democratizando o acesso a operações financeiras. Não somos um banco tradicional. Operamos rigorosamente nos limites regulatórios do Banco Central do Brasil e da CVM, garantindo total transparência, lastro real auditável e segurança jurídica para todas as pontas da nossa operação.</p>
         </div>
 
         <div class="container footer-bottom">
@@ -360,7 +810,56 @@
         </div>
     </footer>
 
-    <!-- Apenas a importação limpa do script dinâmico principal -->
-    <script src="assets/js/main.js"></script>
+    <!-- SCRIPT DO CARROSSEL DE DOIS ITENS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const track = document.getElementById('carousel-track');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const dots = document.querySelectorAll('.indicator-dot');
+            
+            let currentIndex = 0;
+            const maxIndex = 1; // Como temos 3 cards e exibimos 2, temos 2 páginas de transição (índices 0 e 1)
+
+            function updateCarousel(index) {
+                if (index < 0) {
+                    currentIndex = maxIndex;
+                } else if (index > maxIndex) {
+                    currentIndex = 0;
+                } else {
+                    currentIndex = index;
+                }
+
+                // Move 50% por página para exibir 2 cards de cada vez em desktop
+                track.style.transform = `translateX(-${currentIndex * 50}%)`;
+
+                dots.forEach((dot, i) => {
+                    if (i === currentIndex) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+            }
+
+            if (nextBtn && prevBtn && track) {
+                nextBtn.addEventListener('click', () => {
+                    updateCarousel(currentIndex + 1);
+                });
+
+                prevBtn.addEventListener('click', () => {
+                    updateCarousel(currentIndex - 1);
+                });
+
+                dots.forEach((dot) => {
+                    dot.addEventListener('click', (e) => {
+                        const index = parseInt(e.target.getAttribute('data-index'));
+                        updateCarousel(index);
+                    });
+                });
+            }
+        });
+    </script>
+
 </body>
 </html>
