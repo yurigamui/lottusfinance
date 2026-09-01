@@ -3,851 +3,579 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lottus Finance | Crédito e Investimentos sem complicação</title>
-    <meta name="description" content="Integre crédito na sua plataforma, consiga capital em poucos cliques ou diversifique seus investimentos com boas rentabilidades. Tudo na palma da mão.">
-    <meta name="keywords" content="Credit as a Service, CaaS, API de Crédito, Securitizadora, Debêntures, Fintech, Investimentos">
-    <meta name="robots" content="index, follow">
-
-    <!-- Fonts & Favicon -->
+    
+    <!-- SEO Avançado -->
+    <title>Lottus Finance | Infraestrutura de Crédito e Investimentos</title>
+    <meta name="description" content="A Lottus Finance oferece Credit as a Service (CaaS), crédito direto e investimentos em debêntures com rentabilidade diferenciada. Infraestrutura modular e transparente.">
+    <meta name="keywords" content="CaaS, Credit as a Service, Debêntures, Crédito Direto, Securitização, Fintech, API de Crédito">
+    <meta name="author" content="Lottus Finance">
+    
+    <!-- Open Graph (Compartilhamento em Redes Sociais) -->
+    <meta property="og:title" content="Lottus Finance | Crédito e Investimentos">
+    <meta property="og:description" content="Infraestrutura financeira transparente, flexível e humanizada para acelerar o seu próximo passo.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lottusfinance.com">
+    
+    <!-- Tipografia Premium -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="assets/img/Favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Ícones (Phosphor Icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Dados Estruturados (JSON-LD) para SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FinancialService",
+      "name": "Lottus Finance",
+      "description": "Startup focada em Credit as a Service (CaaS), oferecendo API para parceiros, crédito direto e investimentos em debêntures.",
+      "areaServed": "BR",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Credit as a Service (CaaS)"
+        },
+        {
+          "@type": "Offer",
+          "name": "Investimentos em Debêntures"
+        }
+      ]
+    }
+    </script>
 
     <style>
-        /* ==========================================
-           LOTTUS DESIGN SYSTEM - TONE: HUMANO & ACESSÍVEL
-           ========================================== */
         :root {
-            --lottus-bg-body: #F4F0EA; 
-            --lottus-beige: #EAE6DF;
-            --lottus-white: #FFFFFF;
-            --lottus-graphite: #131722;
-            --lottus-graphite-light: #5A6072;
-            --lottus-pink: #C82A60;
-            --lottus-pink-light: rgba(200, 42, 96, 0.08);
-            --lottus-border: #E2DFD8;
-            
-            --radius-huge: 48px;
-            --radius-bento: 32px;
-            --radius-pill: 999px;
-            
-            --font-hero: clamp(2.8rem, 5vw, 4.6rem);
-            --font-h2: clamp(2.2rem, 4.2vw, 3.6rem);
-            --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+            --bg-dark: #0a0e17;
+            --card-bg: rgba(22, 30, 46, 0.7);
+            --accent-cyan: #00f2fe;
+            --accent-blue: #4facfe;
+            --text-main: #f0f4f8;
+            --text-muted: #94a3b8;
+            --radius-main: 24px;
+            --radius-btn: 50px;
         }
 
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
 
         body {
-            background-color: var(--lottus-bg-body);
-            color: var(--lottus-graphite);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             overflow-x: hidden;
+            line-height: 1.6;
         }
 
-        .container {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 0 24px;
+        /* Animações e Classes Utilitárias */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
         }
 
-        /* HEADER & NAVIGATION */
-        .lottus-header {
-            position: sticky;
-            top: 0;
-            background: rgba(244, 240, 234, 0.85);
-            backdrop-filter: blur(16px);
-            z-index: 100;
-            padding: 20px 0;
-            margin-bottom: 16px;
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
-        .header-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-main);
         }
 
-        .logo-link {
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
-
-        .brand-logo {
-            height: 32px;
-            width: auto;
-        }
-
-        .main-nav {
-            display: flex;
-            gap: 32px;
-            align-items: center;
-        }
-
-        .nav-link {
-            color: var(--lottus-graphite);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.95rem;
-            transition: color 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .nav-link:hover {
-            color: var(--lottus-pink);
-        }
-
-        /* DROPDOWN MENU "SOLUÇÕES" */
-        .nav-dropdown {
-            position: relative;
-        }
-
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 100%;
+        /* Navbar */
+        header {
+            position: fixed;
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: var(--lottus-white);
-            padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 16px 40px rgba(0,0,0,0.08);
-            min-width: 320px;
-            z-index: 200;
-            margin-top: 16px;
-            border: 1px solid var(--lottus-border);
-        }
-
-        .dropdown-menu::before {
-            content: '';
-            position: absolute;
-            top: -20px;
-            left: 0;
-            width: 100%;
-            height: 20px;
-            background: transparent;
-        }
-
-        .nav-dropdown:hover .dropdown-menu {
-            display: block;
-        }
-
-        .dropdown-section {
-            margin-bottom: 16px;
-        }
-
-        .dropdown-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .dropdown-header-title {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: var(--lottus-pink);
-            font-weight: 700;
-            margin-bottom: 8px;
-            display: block;
-            letter-spacing: 0.05em;
-        }
-
-        .dropdown-item {
-            text-decoration: none;
-            display: block;
-            padding: 12px;
-            border-radius: 12px;
-            transition: background 0.2s;
-        }
-
-        .dropdown-item:hover {
-            background: var(--lottus-beige);
-        }
-
-        .item-title {
-            font-weight: 600;
-            color: var(--lottus-graphite);
-            font-size: 1rem;
-            margin-bottom: 4px;
-        }
-
-        .item-desc {
-            font-size: 0.85rem;
-            color: var(--lottus-graphite-light);
-            line-height: 1.4;
-        }
-
-        .header-actions {
+            width: 90%;
+            max-width: 1200px;
+            z-index: 1000;
+            padding: 15px 30px;
             display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        /* BUTTONS */
-        .btn {
-            padding: 14px 28px;
-            border-radius: var(--radius-pill); 
-            font-weight: 600;
-            font-size: 0.95rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            transition: all 0.3s var(--transition-smooth);
-            cursor: pointer;
-            border: none;
-        }
-
-        .btn-primary {
-            background-color: var(--lottus-graphite);
-            color: var(--lottus-white);
-        }
-
-        .btn-primary:hover {
-            background-color: var(--lottus-pink);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(200, 42, 96, 0.2);
-        }
-
-        .btn-secondary {
-            background-color: transparent;
-            color: var(--lottus-graphite);
-            border: 1px solid var(--lottus-graphite);
-        }
-
-        .btn-secondary:hover {
-            background-color: rgba(0,0,0,0.03);
-        }
-
-        /* SEÇÕES ARREDONDADAS */
-        .rounded-section {
-            margin: 0 24px 24px 24px;
-            border-radius: var(--radius-huge);
-            overflow: hidden;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.03);
-        }
-
-        /* HERO SECTION */
-        .hero-trio {
-            background-color: var(--lottus-white);
-            padding-top: 80px;
-            padding-bottom: 0;
-            min-height: 72vh;
-            display: flex;
-            align-items: flex-end;
-            position: relative;
-        }
-
-        .hero-grid {
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 40px;
-            align-items: flex-end;
-            position: relative;
-            z-index: 2;
-            width: 100%;
-        }
-
-        .hero-text-content {
-            padding-bottom: 80px;
-        }
-
-        .hero-trio h1 {
-            font-size: var(--font-hero);
-            line-height: 1.05;
-            letter-spacing: -0.04em;
-            font-weight: 800;
-            color: var(--lottus-graphite);
-            margin-bottom: 24px;
-        }
-
-        .hero-trio h1 span.highlight {
-            color: var(--lottus-pink);
-            font-style: italic;
-        }
-
-        .hero-trio p {
-            font-size: 1.15rem;
-            color: var(--lottus-graphite-light);
-            line-height: 1.6;
-            margin-bottom: 40px;
-            max-width: 90%;
-        }
-
-        /* VISUAL DO HERO: Imagem aumentada e ancorada perfeitamente na base */
-        .hero-visual {
-            position: relative;
-            height: 580px; /* Aumentado para dar mais imponência */
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            align-self: flex-end;
-        }
-
-        .hero-logo-bg {
-            position: absolute;
-            top: 45%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 115%;
-            opacity: 0.04;
-            z-index: 1;
-        }
-
-        .hero-person {
-            position: relative;
-            z-index: 2;
-            height: 200%; /* Levemente maior que o container para encostar de forma perfeita na base */
-            width: auto;
-            object-fit: contain;
-            display: block;
-            filter: drop-shadow(0px -10px 30px rgba(0,0,0,0.08));
-        }
-
-        /* METRICS BAR */
-        .metrics-section {
-            padding: 64px 0;
-            background-color: var(--lottus-graphite);
-            color: var(--lottus-white);
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 40px;
-            text-align: center;
-        }
-
-        .metric-item h3 {
-            font-size: clamp(2.2rem, 3.5vw, 3.2rem);
-            font-weight: 800;
-            color: var(--lottus-pink);
-            letter-spacing: -0.03em;
-            margin-bottom: 12px;
-        }
-
-        .metric-item p {
-            font-size: 1.05rem;
-            opacity: 0.85;
-            font-weight: 400;
-            line-height: 1.5;
-            padding: 0 16px;
-        }
-
-        /* BENTO GRID (SOLUÇÕES) */
-        .bento-section {
-            padding: 120px 0;
-            background-color: var(--lottus-white);
-        }
-
-        .section-header-huge {
-            font-size: var(--font-h2);
-            line-height: 1.1;
-            letter-spacing: -0.04em;
-            color: var(--lottus-graphite);
-            margin-bottom: 60px;
-            max-width: 800px;
-        }
-
-        .section-header-huge span {
-            color: var(--lottus-pink);
-        }
-
-        .bento-grid {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 24px;
-        }
-
-        .bento-card {
-            border-radius: var(--radius-bento); 
-            padding: 48px;
-            display: flex;
-            flex-direction: column;
             justify-content: space-between;
-            transition: transform 0.3s var(--transition-smooth), box-shadow 0.3s var(--transition-smooth);
+            align-items: center;
+            transition: all 0.3s ease;
         }
 
-        .bento-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.06);
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .bento-caas {
-            grid-column: span 12;
-            background: var(--lottus-graphite);
-            color: var(--lottus-white);
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 48px;
+        nav {
+            display: flex;
+            gap: 30px;
             align-items: center;
         }
 
-        .bento-credito {
-            grid-column: span 6;
-            background: var(--lottus-bg-body); 
-            color: var(--lottus-graphite);
-            border: 1px solid var(--lottus-border);
-        }
-
-        .bento-debentures {
-            grid-column: span 6;
-            background: var(--lottus-pink-light);
-            border: 1px solid rgba(200, 42, 96, 0.15);
-            color: var(--lottus-graphite);
-        }
-
-        .bento-card h3 {
-            font-size: 2.2rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            margin-bottom: 16px;
-            line-height: 1.15;
-        }
-
-        .bento-card p {
-            font-size: 1.1rem;
-            line-height: 1.6;
-            opacity: 0.9;
-            margin-bottom: 32px;
-        }
-
-        .api-terminal {
-            background-color: #0C0F17;
-            border-radius: 20px;
-            padding: 28px;
-            font-family: 'Courier New', Courier, monospace;
-            color: #A0AAB2;
-            font-size: 0.9rem;
-            line-height: 1.6;
-            border: 1px solid rgba(255,255,255,0.08);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-
-        /* CASOS DE USO COM IMAGENS */
-        .use-cases-section {
-            padding: 120px 0;
-            background-color: var(--lottus-white);
-        }
-
-        .use-cases-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 32px;
-            margin-top: 48px;
-        }
-
-        .use-case-card {
-            background-color: var(--lottus-bg-body);
-            border-radius: var(--radius-bento);
-            overflow: hidden;
-            border: 1px solid var(--lottus-border);
-            transition: transform 0.3s var(--transition-smooth), box-shadow 0.3s var(--transition-smooth);
-        }
-
-        .use-case-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.06);
-        }
-
-        .use-case-img-wrapper {
-            width: 100%;
-            height: 240px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .use-case-img-wrapper img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.6s ease;
-        }
-
-        .use-case-card:hover .use-case-img-wrapper img {
-            transform: scale(1.05);
-        }
-
-        .use-case-content {
-            padding: 32px;
-        }
-
-        .use-case-content h4 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--lottus-graphite);
-            margin-bottom: 12px;
-        }
-
-        .use-case-content p {
-            font-size: 1.05rem;
-            color: var(--lottus-graphite-light);
-            line-height: 1.6;
-        }
-
-        /* CTA FINAL */
-        .cta-final-section {
-            padding: 120px 0;
-            text-align: center;
-            background-color: var(--lottus-white);
-        }
-        
-        /* FOOTER */
-        .lottus-footer {
-            background-color: var(--lottus-pink);
-            color: var(--lottus-white);
-            padding: 80px 0 20px;
-            margin: 0 24px 0 24px; 
-            border-radius: var(--radius-huge) var(--radius-huge) 0 0; 
-        }
-
-        .footer-container {
-            display: grid;
-            grid-template-columns: 1.5fr 1fr 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .footer-brand .brand-logo {
-            margin-bottom: 1rem;
-        }
-
-        .footer-brand p {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .footer-links h4 {
-            color: var(--lottus-white);
-            font-size: 1.1rem;
-            margin-bottom: 1.5rem;
-            font-weight: 700;
-        }
-
-        .footer-links a {
-            display: block;
-            color: rgba(255, 255, 255, 0.85);
+        nav a {
+            color: var(--text-muted);
             text-decoration: none;
-            margin-bottom: 0.75rem;
+            font-weight: 500;
             transition: color 0.3s;
         }
 
-        .footer-links a:hover {
-            color: var(--lottus-beige);
+        nav a:hover {
+            color: var(--text-main);
         }
 
-        .footer-disclaimer {
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            padding-top: 2rem;
-            margin-bottom: 2rem;
-        }
-        
-        .footer-disclaimer p {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.85rem;
-            line-height: 1.5;
-            text-align: justify;
+        .menu-toggle {
+            display: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-main);
         }
 
-        .footer-bottom {
+        .btn-primary {
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+            color: #000;
+            font-weight: 700;
+            padding: 14px 32px;
+            border-radius: var(--radius-btn);
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(79, 172, 254, 0.4);
+        }
+
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-align: center;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            padding-top: 1.5rem;
-        }
-        
-        .footer-bottom p {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9rem;
+            padding: 140px 20px 80px;
+            background: radial-gradient(circle at top center, rgba(79, 172, 254, 0.15) 0%, transparent 60%);
         }
 
-        /* RESPONSIVO */
-        @media (max-width: 991px) {
-            .hero-grid, .bento-caas {
-                grid-template-columns: 1fr;
-                gap: 40px;
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            max-width: 900px;
+            margin-bottom: 24px;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin-bottom: 40px;
+            font-weight: 400;
+        }
+
+        /* Features */
+        .features {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            padding: 40px;
+            transition: transform 0.4s ease, border-color 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at top right, rgba(0, 242, 254, 0.1), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(79, 172, 254, 0.4);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card i {
+            font-size: 2.5rem;
+            color: var(--accent-cyan);
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+        }
+
+        /* Carousel */
+        .carousel-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 20px;
+        }
+
+        .carousel-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 50px;
+        }
+
+        .carousel-container {
+            display: flex;
+            gap: 24px;
+            overflow-x: auto;
+            padding-bottom: 30px;
+            scroll-behavior: smooth;
+            scroll-snap-type: x mandatory;
+        }
+
+        .carousel-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .carousel-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        .carousel-card {
+            min-width: 350px;
+            padding: 40px;
+            flex-shrink: 0;
+            scroll-snap-align: start;
+        }
+
+        /* Modal 1-Click */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 14, 23, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: var(--bg-dark);
+            width: 90%;
+            max-width: 400px;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px; right: 20px;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 16px;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .modal-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        /* Footer Institucional */
+        footer {
+            background: #05070a;
+            padding: 80px 20px 40px;
+            margin-top: 100px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .footer-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .footer-col h4 {
+            color: var(--text-main);
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: 12px;
+        }
+
+        .footer-col ul a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .footer-col ul a:hover {
+            color: var(--text-main);
+        }
+
+        .footer-legal {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: left;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .footer-legal p {
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: var(--card-bg);
+                backdrop-filter: blur(15px);
+                flex-direction: column;
+                padding: 20px;
+                border-radius: var(--radius-main);
+                display: none;
             }
-            .hero-visual {
-                height: 420px;
+
+            nav.active {
+                display: flex;
             }
-            .hero-text-content {
-                padding-bottom: 20px;
+
+            .menu-toggle {
+                display: block;
             }
-            .metrics-grid {
-                grid-template-columns: 1fr;
-                gap: 32px;
-            }
-            .bento-credito, .bento-debentures {
-                grid-column: span 12;
-            }
-            .footer-container {
-                grid-template-columns: 1fr 1fr;
-            }
-            .main-nav {
-                display: none; 
-            }
-            .rounded-section {
-                margin: 0 12px 20px 12px;
-                border-radius: 32px;
-            }
-            .lottus-footer {
-                margin: 0 12px 0 12px;
-                border-radius: 32px 32px 0 0;
-            }
+
+            .hero h1 { font-size: 2.5rem; }
+            
+            .nav-btn { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Header Lottus -->
-    <header class="lottus-header">
-        <div class="container header-container">
-            <a href="index.html" class="logo-link" title="Página Inicial Lottus">
-                <img src="assets/img/Logo 1.png" alt="Lottus Finance" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                <span style="display: none; font-weight: 800; font-size: 1.4rem; color: var(--lottus-graphite);">Lottus</span>
-            </a>
-            
-            <nav class="main-nav" aria-label="Navegação Principal">
-                <a href="index.html" class="nav-link">Início</a>
-                
-                <!-- Dropdown Soluções -->
-                <div class="nav-dropdown">
-                    <a href="#" class="nav-link">
-                        Soluções
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </a>
-                    <div class="dropdown-menu">
-                        <div class="dropdown-section">
-                            <span class="dropdown-header-title">Para Plataformas</span>
-                            <a href="credito-as-a-service.html" class="dropdown-item">
-                                <div class="item-title">Integração CaaS (API)</div>
-                                <span class="item-desc">Embarque crédito na sua plataforma de forma fácil e sem atrito.</span>
-                            </a>
-                        </div>
-                        <div class="dropdown-section">
-                            <span class="dropdown-header-title">Para Empresas</span>
-                            <a href="credito.html" class="dropdown-item">
-                                <div class="item-title">Crédito Direto</div>
-                                <span class="item-desc">Consiga capital em poucos cliques, direto na plataforma.</span>
-                            </a>
-                        </div>
-                        <div class="dropdown-section">
-                            <span class="dropdown-header-title">Para Investidores</span>
-                            <a href="investimentos.html" class="dropdown-item">
-                                <div class="item-title">Debêntures</div>
-                                <span class="item-desc">Diversifique sua carteira com boas rentabilidades.</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <a href="sobre.html" class="nav-link">Sobre</a>
-                <a href="contato.html" class="nav-link">Contato</a>
-            </nav>
-            
-            <!-- Botões de Acesso Rápido -->
-            <div class="header-actions">
-                <a href="login.html" class="btn btn-secondary">Entrar</a>
-                <a href="cadastro.html" class="btn btn-primary">Criar conta</a>
-            </div>
-        </div>
+    <!-- Header & Nav -->
+    <header class="glass-panel">
+        <div class="logo">Lottus Finance</div>
+        <i class="ph ph-list menu-toggle" id="mobile-menu-btn"></i>
+        <nav id="nav-menu">
+            <a href="#credito">Crédito</a>
+            <a href="#investimentos">Investimentos</a>
+            <a href="#caas">CaaS</a>
+            <button class="btn-primary nav-btn" onclick="openModal()">Acessar Conta</button>
+        </nav>
     </header>
 
-    <main>
-        <!-- 1. HERO SECTION -->
-        <section class="hero-trio rounded-section">
-            <div class="container hero-grid">
-                <div class="hero-text-content">
-                    <h1>
-                        Toda a engenharia de crédito, <span class="highlight">sem complicação.</span>
-                    </h1>
-                    <p>
-                        Integre operações de crédito na sua plataforma de forma fácil, consiga limite para sua empresa em poucos cliques ou diversifique sua carteira com boas rentabilidades.
-                    </p>
-                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                        <a href="cadastro.html" class="btn btn-primary">Começar agora</a>
-                    </div>
-                </div>
-                
-                <!-- Hero Visual com Imagem Grande e Encostada na Base -->
-                <div class="hero-visual">
-                    <img src="assets/img/Favicon.png" alt="Símbolo Lottus" class="hero-logo-bg">
-                    <img src="../assets/img/Foto 2.png" alt="Profissional Lottus" class="hero-person">
-                </div>
+    <!-- Modal 1-Click -->
+    <div class="modal-overlay" id="login-modal">
+        <div class="modal-content glass-panel">
+            <i class="ph ph-x modal-close" onclick="closeModal()"></i>
+            <h2>Bem-vindo de volta</h2>
+            <p style="color: var(--text-muted); margin-top: 10px; font-size: 0.9rem;">Insira seu e-mail para acesso seguro via magic link.</p>
+            <input type="email" class="modal-input" placeholder="seu@email.com">
+            <button class="btn-primary" style="width: 100%;">Entrar com 1 Clique</button>
+        </div>
+    </div>
+
+    <!-- Hero -->
+    <section class="hero fade-in">
+        <h1>Crédito e investimentos feitos para pessoas reais.</h1>
+        <p>Infraestrutura financeira transparente, flexível e desenhada para não tomar o seu tempo. Acesse o capital que você precisa ou invista no que faz sentido.</p>
+        <button onclick="openModal()" class="btn-primary">Acessar Plataforma</button>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+        <div class="feature-card glass-panel fade-in">
+            <i class="ph ph-wallet"></i>
+            <h3>Crédito Direto</h3>
+            <p>Esqueça a burocracia bancária. Análise ágil, taxas personalizadas e um processo desenhado para você ter o dinheiro na conta quando a oportunidade surgir.</p>
+        </div>
+        <div class="feature-card glass-panel fade-in" style="transition-delay: 0.1s;">
+            <i class="ph ph-chart-line-up"></i>
+            <h3>Investimento em Debêntures</h3>
+            <p>Participe de operações estruturadas com lastro real. Rentabilidade superior à média do mercado para quem busca diversificação de portfólio com governança.</p>
+        </div>
+        <div class="feature-card glass-panel fade-in" style="transition-delay: 0.2s;">
+            <i class="ph ph-plug"></i>
+            <h3>Infraestrutura CaaS</h3>
+            <p>Seu negócio oferecendo crédito. Nossa API robusta permite que você integre soluções financeiras nativas no seu produto de forma simples e escalável.</p>
+        </div>
+    </section>
+
+    <!-- Carousel -->
+    <section class="carousel-section fade-in">
+        <h2 class="carousel-title">Como a Lottus funciona</h2>
+        <div class="carousel-container">
+            <div class="carousel-card glass-panel">
+                <i class="ph ph-eye" style="font-size: 2rem; color: var(--accent-blue); margin-bottom: 15px; display: block;"></i>
+                <h3>Papo reto, sem letras miúdas</h3>
+                <p>Nós traduzimos o 'financês'. Nosso compromisso é com uma linguagem natural para que você saiba exatamente quanto vai pagar ou quanto vai render, sem surpresas.</p>
             </div>
-        </section>
-
-        <!-- 2. MÉTRICAS -->
-        <section class="metrics-section rounded-section">
-            <div class="container metrics-grid">
-                <article class="metric-item">
-                    <h3>+ R$ 150M</h3>
-                    <p>Em volume operado (track record acumulado pelo nosso time de fundadores e especialistas).</p>
-                </article>
-                <article class="metric-item">
-                    <h3>100% Digital</h3>
-                    <p>Do onboarding ao crédito na conta, resolvemos tudo sem burocracia interminável ou papelada.</p>
-                </article>
-                <article class="metric-item">
-                    <h3>1 única API</h3>
-                    <p>Tudo o que a sua plataforma precisa para plugar nossa infraestrutura de crédito completa.</p>
-                </article>
+            <div class="carousel-card glass-panel">
+                <i class="ph ph-cursor-click" style="font-size: 2rem; color: var(--accent-blue); margin-bottom: 15px; display: block;"></i>
+                <h3>Resolva em 1 clique</h3>
+                <p>O seu tempo é o seu ativo mais valioso. Desenhamos cada etapa da nossa plataforma para ser intuitiva, rápida e focada em eliminar qualquer atrito.</p>
             </div>
-        </section>
-
-        <!-- 3. BENTO BOX: SOLUÇÕES -->
-        <section class="bento-section rounded-section">
-            <div class="container">
-                <h2 class="section-header-huge">Como podemos ajudar você <span>hoje?</span></h2>
-
-                <div class="bento-grid">
-                    <!-- Bento Card 1: CaaS -->
-                    <article class="bento-card bento-caas">
-                        <div>
-                            <span style="color: var(--lottus-pink); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em; display: block; margin-bottom: 12px;">Para Plataformas (CaaS)</span>
-                            <h3>Integre crédito na sua plataforma de forma fácil</h3>
-                            <p>Ofereça crédito com a sua marca sem precisar criar uma fintech do zero. Você foca na experiência do seu cliente enquanto a gente cuida de toda a engenharia financeira nos bastidores, e crescemos juntos via taxa sobre o AuM.</p>
-                            <a href="credito-as-a-service.html" class="btn btn-primary" style="background: var(--lottus-white); color: var(--lottus-graphite); width: fit-content;">Ver como integrar →</a>
-                        </div>
-                        <div class="api-terminal">
-                            <span style="color: #6366f1; font-weight: bold;">POST</span> /api/v1/credito/iniciar<br><br>
-                            {<br>
-                            &nbsp;&nbsp;<span style="color: #9cdcfe;">"parceiro"</span>: <span style="color: #ce9178;">"sua_plataforma"</span>,<br>
-                            &nbsp;&nbsp;<span style="color: #9cdcfe;">"acao"</span>: <span style="color: #ce9178;">"liberar_limite"</span><br>
-                            }<br><br>
-                            <span style="color: #27C93F; font-weight: bold;">200 OK</span> — Tudo pronto!
-                        </div>
-                    </article>
-
-                    <!-- Bento Card 2: Crédito Direto -->
-                    <article class="bento-card bento-credito">
-                        <div>
-                            <span style="color: var(--lottus-graphite-light); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; display: block; margin-bottom: 12px;">Para Empresas</span>
-                            <h3>Crédito em poucos cliques</h3>
-                            <p>Sem burocracia interminável. Consiga capital de giro ou antecipe recebíveis direto na nossa plataforma, de um jeito prático, com o dinheiro na palma da mão.</p>
-                        </div>
-                        <a href="credito.html" class="btn btn-primary" style="background: var(--lottus-graphite); color: var(--lottus-white); width: fit-content;">Conseguir limite →</a>
-                    </article>
-
-                    <!-- Bento Card 3: Debêntures -->
-                    <article class="bento-card bento-debentures">
-                        <div>
-                            <span style="color: var(--lottus-pink); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; display: block; margin-bottom: 12px;">Para Investidores</span>
-                            <h3>Diversifique sua carteira</h3>
-                            <p>Acesse debêntures estruturadas com lastro real e conquiste boas rentabilidades. Um jeito inteligente e seguro de fazer o seu dinheiro render mais.</p>
-                        </div>
-                        <a href="investimentos.html" class="btn btn-secondary" style="border: none; background: rgba(200, 42, 96, 0.12); color: var(--lottus-pink); width: fit-content;">Ver rentabilidades →</a>
-                    </article>
-                </div>
+            <div class="carousel-card glass-panel">
+                <i class="ph ph-shield-check" style="font-size: 2rem; color: var(--accent-blue); margin-bottom: 15px; display: block;"></i>
+                <h3>Estrutura Sólida</h3>
+                <p>Operamos com rigorosos padrões de conformidade. Toda a arquitetura jurídica e tecnológica foi montada para garantir a segurança dos seus dados e dos seus recursos.</p>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <!-- 4. CASOS DE USO / PÚBLICOS -->
-        <section class="use-cases-section rounded-section">
-            <div class="container">
-                <h2 class="section-header-huge" style="margin-bottom: 16px;">O ecossistema perfeito para <span>cada perfil.</span></h2>
-                <p style="color: var(--lottus-graphite-light); font-size: 1.15rem; max-width: 700px; line-height: 1.6;">
-                    Nossa tecnologia conecta as pontas do mercado financeiro, criando oportunidades reais de crescimento para softwares, negócios físicos e investidores.
-                </p>
-
-                <div class="use-cases-grid">
-                    <!-- Uso 1: Plataformas -->
-                    <article class="use-case-card">
-                        <div class="use-case-img-wrapper">
-                            <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80&w=600" alt="Empresas de Tecnologia e Software">
-                        </div>
-                        <div class="use-case-content">
-                            <h4>Tecnologia e ERPs</h4>
-                            <p>Softwares de gestão e marketplaces utilizam nossa API para reter clientes oferecendo crédito direto no painel, gerando novas receitas.</p>
-                        </div>
-                    </article>
-
-                    <!-- Uso 2: Empresas -->
-                    <article class="use-case-card">
-                        <div class="use-case-img-wrapper">
-                            <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=600" alt="Negócios físicos e Indústria">
-                        </div>
-                        <div class="use-case-content">
-                            <h4>Indústria e Varejo B2B</h4>
-                            <p>Empresas que precisam de fôlego no caixa antecipam suas notas fiscais de forma 100% digital, com taxas justas e dinheiro no mesmo dia.</p>
-                        </div>
-                    </article>
-
-                    <!-- Uso 3: Investidores -->
-                    <article class="use-case-card">
-                        <div class="use-case-img-wrapper">
-                            <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=600" alt="Gráficos de investimento e diversificação">
-                        </div>
-                        <div class="use-case-content">
-                            <h4>Investidores Inteligentes</h4>
-                            <p>Pessoas físicas e institucionais que buscam diversificação alocam capital em debêntures estruturadas, com lastro sólido e ótimos retornos.</p>
-                        </div>
-                    </article>
-                </div>
+    <!-- Footer Institucional -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <div class="logo" style="margin-bottom: 20px; font-size: 1.2rem;">Lottus Finance</div>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Acelerando o próximo passo através de tecnologia financeira inteligente.</p>
             </div>
-        </section>
-
-        <!-- 5. CTA FINAL -->
-        <section class="cta-final-section rounded-section">
-            <div class="container">
-                <h2 class="section-header-huge" style="margin: 0 auto 24px; text-align: center;">Pronto para dar o <span>próximo passo?</span></h2>
-                <p style="color: var(--lottus-graphite-light); font-size: 1.15rem; line-height: 1.6; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;">
-                    Criar sua conta é rápido, gratuito e 100% digital. Junte-se a nós e descubra como simplificamos o mercado financeiro.
-                </p>
-                <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
-                    <a href="cadastro.html" class="btn btn-primary" style="padding: 18px 36px; font-size: 1.05rem;">Criar minha conta grátis</a>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer Lottus -->
-    <footer class="lottus-footer">
-        <div class="container footer-container">
-            <div class="footer-brand">
-                <img src="assets/img/Logo 1.png" alt="Lottus Finance Logo" class="brand-logo footer-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                <span class="logo-text" style="display: none; color: var(--lottus-white);">Lottus</span>
-                <p>Nossa missão é facilitar o acesso financeiro, seja para quem precisa de crédito, quer investir ou deseja embarcar essas soluções na própria plataforma.</p>
-            </div>
-
-            <div class="footer-links">
+            <div class="footer-col">
                 <h4>Soluções</h4>
-                <a href="credito-as-a-service.html">CaaS para Plataformas</a>
-                <a href="credito.html">Crédito Corporativo</a>
-                <a href="investimentos.html">Investimentos (Debêntures)</a>
+                <ul>
+                    <li><a href="#credito">Tomar Crédito</a></li>
+                    <li><a href="#investimentos">Investir em Debêntures</a></li>
+                    <li><a href="#caas">API CaaS para Empresas</a></li>
+                </ul>
             </div>
-
-            <div class="footer-links">
+            <div class="footer-col">
                 <h4>Institucional</h4>
-                <a href="sobre.html">Sobre Nós</a>
-                <a href="carreiras.html">Carreiras</a>
-                <a href="contato.html">Fale Conosco</a>
+                <ul>
+                    <li><a href="#">Sobre a Lottus</a></li>
+                    <li><a href="#">Governança</a></li>
+                    <li><a href="#">Fale Conosco</a></li>
+                </ul>
             </div>
-
-            <div class="footer-links">
-                <h4>Legal & Recursos</h4>
-                <a href="faq.html">FAQ / Ajuda</a>
-                <a href="termos.html">Termos de Uso</a>
-                <a href="privacidade.html">Política de Privacidade</a>
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="#">Termos de Uso</a></li>
+                    <li><a href="#">Política de Privacidade</a></li>
+                </ul>
             </div>
         </div>
-
-        <div class="container footer-disclaimer">
-            <p><strong>Para sua segurança:</strong> A Lottus Finance atua como estruturadora e veículo de securitização (CaaS), democratizando o acesso a operações financeiras. Não somos um banco tradicional. Operamos rigorosamente nos limites regulatórios do Banco Central do Brasil e da CVM, garantindo total transparência, lastro real auditável e segurança jurídica para todas as pontas da nossa operação.</p>
-        </div>
-
-        <div class="container footer-bottom">
-            <p>&copy; 2026 Lottus Securitizadora de Créditos S/A. Todos os direitos reservados.</p>
+        
+        <div class="footer-legal">
+            <p><strong>Lottus Finance S.A.</strong> | CNPJ: 00.000.000/0001-00 | Endereço: [Inserir Endereço Físico]</p>
+            <p>A Lottus Finance não é uma instituição financeira bancária. Atuamos como correspondente bancário e na estruturação de operações financeiras, incluindo a originação e gestão de recursos via securitizadora, conforme as diretrizes do Banco Central do Brasil (Resolução CMN nº 4.935/2021) e da Comissão de Valores Mobiliários (CVM).</p>
+            <p>Os investimentos em debêntures e operações de securitização estão sujeitos a riscos de mercado e de crédito. Estes produtos não contam com a garantia do Fundo Garantidor de Créditos (FGC). Leia cuidadosamente o prospecto e os regulamentos antes de investir.</p>
         </div>
     </footer>
 
+    <!-- Scripts de Interação -->
+    <script>
+        // Menu Mobile Toggle
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const navMenu = document.getElementById('nav-menu');
+
+        menuBtn.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            menuBtn.classList.toggle('ph-list');
+            menuBtn.classList.toggle('ph-x');
+        });
+
+        // Lógica do Modal de 1-Clique
+        const modal = document.getElementById('login-modal');
+        
+        function openModal() {
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+
+        // Fechar modal ao clicar fora
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Animação de Scroll (Fade In)
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(element => {
+            observer.observe(element);
+        });
+    </script>
 </body>
 </html>
