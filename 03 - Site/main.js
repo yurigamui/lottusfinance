@@ -29,6 +29,27 @@
     $$('.nav-links a', header).forEach((a) => a.addEventListener('click', () => header.classList.remove('open')));
   }
 
+  /* ------------------------------------------------ rolagem suave */
+  // Lenis (vendor/lenis.min.js): a rolagem do mouse e do trackpad desliza com inércia,
+  // e os links do menu levam até a seção com a mesma suavidade.
+  if (window.Lenis) {
+    const lenis = new window.Lenis({ lerp: 0.09, wheelMultiplier: 0.9, smoothWheel: true });
+    window.lottusScroll = lenis;
+    document.documentElement.style.scrollBehavior = 'auto';
+    const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
+    requestAnimationFrame(raf);
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href^="#"]');
+      if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      const id = decodeURIComponent(a.getAttribute('href').slice(1));
+      const target = id === 'inicio' ? 0 : id ? document.getElementById(id) : null;
+      if (target === null) return;
+      e.preventDefault();
+      lenis.scrollTo(target, { offset: -16, duration: 1.2, easing: (t) => 1 - Math.pow(1 - t, 4) });
+      if (history.pushState) history.pushState(null, '', '#' + id);
+    });
+  }
+
   // Site só no tema claro: limpa escolhas antigas de tema
   try { localStorage.removeItem('lottus.site.theme'); } catch (e) { /* ok */ }
   document.documentElement.removeAttribute('data-theme');

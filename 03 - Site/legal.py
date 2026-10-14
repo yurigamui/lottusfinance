@@ -11,7 +11,7 @@ ROOT = pathlib.Path(__file__).parent
 
 # ------------------------------------------------------------------ dados da empresa
 EMPRESA = {
-    'razao': 'Lottus Tecnologia e Serviços Ltda.',   # razão social exatamente como no contrato social
+    'razao': 'Lottus Tecnologia LTDA',   # razão social exatamente como no contrato social
     'marca': 'Lottus Finance',
     'cnpj': '',                                        # 00.000.000/0000-00
     'endereco': '',                                    # rua, número, complemento, bairro, cidade/UF, CEP
@@ -294,6 +294,7 @@ def page(slug, title, intro, sections):
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="icon" type="image/png" href="img/mark-rosa.png">
+<link rel="stylesheet" href="vendor/lenis.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -316,6 +317,13 @@ def page(slug, title, intro, sections):
   <span>© 2026 Lottus Finance · {d('razao')} · CNPJ {d('cnpj', 'CNPJ')}</span>
   <span><a href="termos.html">Termos de Uso</a> · <a href="privacidade.html">Política de Privacidade</a></span>
 </footer>
+<script src="vendor/lenis.min.js"></script>
+<script>
+if (window.Lenis) {{ var l = new Lenis({{ lerp: 0.09, wheelMultiplier: 0.9 }}); document.documentElement.style.scrollBehavior = 'auto';
+  (function f(t) {{ l.raf(t); requestAnimationFrame(f); }})(0);
+  document.addEventListener('click', function (e) {{ var a = e.target.closest('a[href^="#"]'); if (!a) return; var t = document.getElementById(a.getAttribute('href').slice(1));
+    if (t) {{ e.preventDefault(); l.scrollTo(t, {{ offset: -16, duration: 1.1 }}); history.pushState(null, '', a.getAttribute('href')); }} }}); }}
+</script>
 </body>
 </html>
 '''

@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="icon" type="image/png" href="img/mark-rosa.png">
+<link rel="stylesheet" href="vendor/lenis.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,7 +27,7 @@
   <div class="legal-wrap">
     <nav class="legal-toc" aria-label="Índice"><b>Índice</b><ol><li><a href="#aceite">1. Aceitação destes Termos</a></li><li><a href="#definicoes">2. Definições</a></li><li><a href="#natureza">3. O que a Lottus faz e o que ela não faz</a></li><li><a href="#elegibilidade">4. Quem pode usar</a></li><li><a href="#cadastro">5. Cadastro, verificação e prevenção à lavagem de dinheiro</a></li><li><a href="#conta">6. Conta, acessos e segurança</a></li><li><a href="#operacoes">7. Notas fiscais, propostas e Operações</a></li><li><a href="#simulador">8. Simulações e conteúdos informativos</a></li><li><a href="#obrigacoes">9. Obrigações da Empresa e condutas proibidas</a></li><li><a href="#sacados">10. Comunicação com os Sacados</a></li><li><a href="#assinatura">11. Assinatura eletrônica e provas</a></li><li><a href="#disponibilidade">12. Disponibilidade e limitação de responsabilidade</a></li><li><a href="#indenizacao">13. Indenização</a></li><li><a href="#propriedade">14. Propriedade intelectual</a></li><li><a href="#terceiros">15. Links e serviços de terceiros</a></li><li><a href="#confidencialidade">16. Confidencialidade</a></li><li><a href="#encerramento">17. Suspensão e encerramento</a></li><li><a href="#alteracoes">18. Alterações destes Termos</a></li><li><a href="#comunicacoes">19. Comunicações</a></li><li><a href="#gerais">20. Disposições gerais</a></li><li><a href="#foro">21. Lei aplicável e foro</a></li></ol></nav>
     <article class="legal-doc"><h2 id="aceite">1. Aceitação destes Termos</h2>
-<p>Estes Termos de Uso ("Termos") regulam o acesso e o uso do site lottusfinance.com.br, do aplicativo Lottus e dos demais ambientes eletrônicos mantidos por Lottus Tecnologia e Serviços Ltda., inscrita no CNPJ sob o nº <span class="fill">[preencher: CNPJ]</span>, com sede em <span class="fill">[preencher: endereço da sede]</span> ("Lottus", "nós"), em conjunto chamados de "Plataforma".</p>
+<p>Estes Termos de Uso ("Termos") regulam o acesso e o uso do site lottusfinance.com.br, do aplicativo Lottus e dos demais ambientes eletrônicos mantidos por Lottus Tecnologia LTDA, inscrita no CNPJ sob o nº <span class="fill">[preencher: CNPJ]</span>, com sede em <span class="fill">[preencher: endereço da sede]</span> ("Lottus", "nós"), em conjunto chamados de "Plataforma".</p>
 <p>Ao acessar o site, criar uma conta ou usar qualquer funcionalidade da Plataforma, você declara que leu, entendeu e concorda com estes Termos e com a <a href="privacidade.html">Política de Privacidade</a>. Se não concordar, não use a Plataforma.</p>
 <p>Quando você usa a Plataforma em nome de uma empresa, declara ter poderes para vinculá-la a estes Termos, e a empresa passa a ser responsável, junto com você, pelo cumprimento deles.</p><h2 id="definicoes">2. Definições</h2>
 <ul>
@@ -107,8 +108,15 @@
   </div>
 </main>
 <footer class="legal-top" style="padding-bottom:40px;color:var(--muted);font-size:13px">
-  <span>© 2026 Lottus Finance · Lottus Tecnologia e Serviços Ltda. · CNPJ <span class="fill">[preencher: CNPJ]</span></span>
+  <span>© 2026 Lottus Finance · Lottus Tecnologia LTDA · CNPJ <span class="fill">[preencher: CNPJ]</span></span>
   <span><a href="termos.html">Termos de Uso</a> · <a href="privacidade.html">Política de Privacidade</a></span>
 </footer>
+<script src="vendor/lenis.min.js"></script>
+<script>
+if (window.Lenis) { var l = new Lenis({ lerp: 0.09, wheelMultiplier: 0.9 }); document.documentElement.style.scrollBehavior = 'auto';
+  (function f(t) { l.raf(t); requestAnimationFrame(f); })(0);
+  document.addEventListener('click', function (e) { var a = e.target.closest('a[href^="#"]'); if (!a) return; var t = document.getElementById(a.getAttribute('href').slice(1));
+    if (t) { e.preventDefault(); l.scrollTo(t, { offset: -16, duration: 1.1 }); history.pushState(null, '', a.getAttribute('href')); } }); }
+</script>
 </body>
 </html>

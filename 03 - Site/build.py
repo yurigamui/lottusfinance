@@ -42,7 +42,7 @@ I = {
 
 PAGES = [('index', 'Início'), ('solucoes', 'Soluções'), ('sobre', 'Sobre nós'), ('contato', 'Contato')]
 # Página única: o menu leva às seções
-SECTIONS = [('sobre', 'Sobre a Lottus'), ('como-funciona', 'Como funciona'), ('simulador', 'Simulador'), ('duvidas', 'Dúvidas'), ('contato', 'Contato')]
+SECTIONS = [('sobre', 'Sobre a Lottus'), ('como-funciona', 'Como funciona'), ('duvidas', 'Dúvidas'), ('contato', 'Contato')]
 
 
 # Lojas de aplicativo: troque pelos links reais do app publicado

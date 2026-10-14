@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="icon" type="image/png" href="img/mark-rosa.png">
+<link rel="stylesheet" href="vendor/lenis.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,7 +27,7 @@
   <div class="legal-wrap">
     <nav class="legal-toc" aria-label="Índice"><b>Índice</b><ol><li><a href="#intro">1. Sobre esta Política</a></li><li><a href="#controlador">2. Quem é o controlador e como falar com o encarregado</a></li><li><a href="#dados">3. Quais dados tratamos</a></li><li><a href="#finalidades">4. Para que usamos os dados e com qual base legal</a></li><li><a href="#decisoes">5. Decisões automatizadas</a></li><li><a href="#compartilhamento">6. Com quem compartilhamos</a></li><li><a href="#internacional">7. Transferência internacional</a></li><li><a href="#cookies">8. Cookies e tecnologias semelhantes</a></li><li><a href="#retencao">9. Por quanto tempo guardamos os dados</a></li><li><a href="#direitos">10. Seus direitos e como exercê-los</a></li><li><a href="#seguranca">11. Segurança e incidentes</a></li><li><a href="#terceiros-dados">12. Dados de terceiros enviados pela empresa</a></li><li><a href="#menores">13. Crianças e adolescentes</a></li><li><a href="#alteracoes">14. Alterações desta Política</a></li><li><a href="#contato">15. Fale com a gente</a></li></ol></nav>
     <article class="legal-doc"><h2 id="intro">1. Sobre esta Política</h2>
-<p>Esta Política de Privacidade explica como Lottus Tecnologia e Serviços Ltda., inscrita no CNPJ sob o nº <span class="fill">[preencher: CNPJ]</span>, com sede em <span class="fill">[preencher: endereço da sede]</span> ("Lottus", "nós") trata dados pessoais no site lottusfinance.com.br, no aplicativo Lottus e nos demais ambientes da Plataforma, em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados, "LGPD"), o Marco Civil da Internet (Lei nº 12.965/2014) e as normas da Autoridade Nacional de Proteção de Dados ("ANPD").</p>
+<p>Esta Política de Privacidade explica como Lottus Tecnologia LTDA, inscrita no CNPJ sob o nº <span class="fill">[preencher: CNPJ]</span>, com sede em <span class="fill">[preencher: endereço da sede]</span> ("Lottus", "nós") trata dados pessoais no site lottusfinance.com.br, no aplicativo Lottus e nos demais ambientes da Plataforma, em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados, "LGPD"), o Marco Civil da Internet (Lei nº 12.965/2014) e as normas da Autoridade Nacional de Proteção de Dados ("ANPD").</p>
 <p>Ela se aplica a visitantes do site, aos representantes e usuários das empresas cadastradas, aos sócios e garantidores dessas empresas e às pessoas cujos dados chegam até nós por meio das empresas, como os contatos dos clientes delas.</p><h2 id="controlador">2. Quem é o controlador e como falar com o encarregado</h2>
 <p>A Lottus é a <b>controladora</b> dos dados pessoais tratados na Plataforma. As Cessionárias que participam das Operações atuam como controladoras independentes em relação aos dados que recebem para avaliar e adquirir os créditos, conforme as políticas delas.</p>
 <p><b>Encarregado pelo tratamento de dados (DPO):</b> <span class="fill">[preencher: nome do encarregado]</span><br>
@@ -117,8 +118,15 @@ Assuntos gerais: contato@lottusfinance.com.br.</p></article>
   </div>
 </main>
 <footer class="legal-top" style="padding-bottom:40px;color:var(--muted);font-size:13px">
-  <span>© 2026 Lottus Finance · Lottus Tecnologia e Serviços Ltda. · CNPJ <span class="fill">[preencher: CNPJ]</span></span>
+  <span>© 2026 Lottus Finance · Lottus Tecnologia LTDA · CNPJ <span class="fill">[preencher: CNPJ]</span></span>
   <span><a href="termos.html">Termos de Uso</a> · <a href="privacidade.html">Política de Privacidade</a></span>
 </footer>
+<script src="vendor/lenis.min.js"></script>
+<script>
+if (window.Lenis) { var l = new Lenis({ lerp: 0.09, wheelMultiplier: 0.9 }); document.documentElement.style.scrollBehavior = 'auto';
+  (function f(t) { l.raf(t); requestAnimationFrame(f); })(0);
+  document.addEventListener('click', function (e) { var a = e.target.closest('a[href^="#"]'); if (!a) return; var t = document.getElementById(a.getAttribute('href').slice(1));
+    if (t) { e.preventDefault(); l.scrollTo(t, { offset: -16, duration: 1.1 }); history.pushState(null, '', a.getAttribute('href')); } }); }
+</script>
 </body>
 </html>
