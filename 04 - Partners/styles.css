@@ -551,3 +551,118 @@ a.list-row { text-decoration: none; color: inherit; }
 .switch-row { position: relative; }
 
 .notice-frame { width: 100%; height: 60vh; border: 1px solid var(--line); border-radius: 12px; background: #f5f2eb; }
+
+/* ===================================================== Lottus Partners: painel */
+.action-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.action-card { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: 20px; background: var(--rosa-tint);
+  border: 1px solid color-mix(in srgb, var(--rosa) 22%, transparent); color: var(--ink); text-decoration: none; transition: transform 0.12s ease, box-shadow 0.15s ease; }
+.action-card:hover { box-shadow: 0 6px 20px rgba(43, 35, 33, 0.08); transform: translateY(-1px); }
+.action-card .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.action-count { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; color: var(--rosa); min-width: 34px; }
+.action-go { font-weight: 700; font-size: 13.5px; white-space: nowrap; }
+
+.dash-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 16px; margin-bottom: 16px; }
+.hero-card { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.hero-value { font-size: 48px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+.status-line { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 10px 12px; border-radius: 14px; font-size: 13.5px; }
+.status-line.danger { background: var(--danger-tint); color: var(--danger); }
+.status-line.ok { background: var(--success-tint); color: var(--success); }
+.status-ico { width: 22px; height: 22px; border-radius: 11px; display: inline-grid; place-items: center; font-weight: 800; font-size: 12px; flex: none;
+  background: color-mix(in srgb, currentColor 16%, transparent); }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tile { display: flex; flex-direction: column; gap: 6px; padding: 18px 20px; border-radius: 20px; background: var(--soft); border: 1px solid var(--line); min-width: 0; }
+.tile-value { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; overflow-wrap: anywhere; }
+.dash-charts, .dash-conc { margin-bottom: 16px; }
+.dash-charts .card-head { margin-bottom: 8px; }
+
+/* Gráfico de colunas */
+.chart-host { position: relative; }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; overflow: visible; }
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-base { stroke: var(--line-strong); stroke-opacity: 0.5; stroke-width: 1; }
+.chart-axis { fill: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-value { fill: var(--muted); font-size: 11.5px; font-weight: 700; }
+.chart-bar { fill: var(--rosa); transition: opacity 0.12s ease; }
+.chart svg.hovering .chart-bar:not(.on) { opacity: 0.45; }
+.chart-hit { fill: transparent; cursor: default; outline: none; }
+.chart-hit:focus-visible { stroke: var(--rosa); stroke-width: 1.5; stroke-dasharray: none; }
+.chart-tip { position: absolute; z-index: 2; pointer-events: none; display: flex; flex-direction: column; gap: 1px; padding: 8px 12px; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 6px 24px rgba(43, 35, 33, 0.12); white-space: nowrap; font-size: 12.5px; }
+.chart-tip[hidden] { display: none; }
+.chart-tip strong { font-size: 15px; color: var(--ink); }
+.chart-tip span { color: var(--muted); }
+.chart-tip .chart-tip-sub { color: var(--faint); }
+.chart-table { margin-top: 6px; }
+.chart-table summary { cursor: pointer; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.chart-table table { margin-top: 8px; font-size: 13px; }
+.chart-table td, .chart-table th { padding: 6px 4px; }
+
+/* Concentração */
+.conc { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.conc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; }
+.conc-name, .conc-val { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.conc-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conc-val { text-align: right; }
+.meter { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--rosa-tint); overflow: hidden; }
+.meter span { display: block; height: 100%; border-radius: 3px; background: var(--rosa); }
+
+/* ================================================ Lottus Partners: operações */
+.ops-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.ops-table td { vertical-align: top; }
+.ops-table .ops-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ops-table td.go { color: var(--faint); font-size: 18px; width: 24px; text-align: right; vertical-align: middle; }
+.ops-table tr.link:focus-visible td { background: var(--hover); outline: none; }
+
+.pager { display: flex; align-items: center; gap: 6px; }
+.pager .btn.disabled { opacity: 0.35; pointer-events: none; }
+.decide { list-style: none; margin: 4px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.decide li { display: flex; gap: 10px; align-items: flex-start; }
+.decide li > span:last-child { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.decide .ci { width: 22px; height: 22px; border-radius: 11px; display: inline-grid; place-items: center; font-weight: 800; font-size: 12px; flex: none; }
+.decide .ok .ci { background: var(--success-tint); color: var(--success); }
+.decide .no .ci { background: var(--danger-tint); color: var(--danger); }
+.decide .info .ci { background: var(--field); color: var(--muted); }
+.pay-box { margin-top: 4px; border-top: 1px solid var(--line); padding-top: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--soft); color: var(--ink); border-radius: 999px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.chip:hover { background: var(--hover); }
+.chip.on { border-color: var(--rosa); background: var(--rosa-tint); color: var(--ink); font-weight: 600; }
+.decision-bar { display: none; }
+
+@media (max-width: 1000px) {
+  .dash-top { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .hero-value { font-size: 38px; }
+  .tile-value { font-size: 20px; }
+  .tiles { gap: 10px; }
+  .tile { padding: 14px 16px; }
+  .ops-bar .search { width: 100%; }
+  /* Lista vira cartões */
+  .ops-table thead { display: none; }
+  .ops-table, .ops-table tbody, .ops-table tr, .ops-table td { display: block; width: 100%; }
+  .ops-table tr { position: relative; padding: 14px 40px 14px 16px; border-top: 1px solid var(--line); }
+  .ops-table tbody tr:first-child { border-top: none; }
+  .ops-table td { padding: 0; border: none; text-align: left; }
+  .ops-table td.num { text-align: left; }
+  .ops-table td[data-label="Cedente"] { margin-bottom: 8px; }
+  .ops-table td[data-label="Duplicatas"], .ops-table td[data-label="Situação"] { display: inline-block; width: auto; vertical-align: top; margin-right: 14px; }
+  .ops-table td[data-label="Líquido"], .ops-table td[data-label="1º vencimento"] { display: none; }
+  .ops-table td[data-label="Pedida"] { position: absolute; top: 14px; right: 40px; width: auto; font-size: 12px; color: var(--faint); }
+  .ops-table td.go { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: auto; }
+  .pager .small { display: none; }
+  /* Barra fixa com a decisão */
+  .decision-bar { display: flex; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 20px rgba(43, 35, 33, 0.06); }
+  .detail:has(~ .decision-bar) { padding-bottom: 84px; }
+  .ops-table tr.link:hover td { background: transparent; }
+  .ops-table tr.link:hover, .ops-table tr.link:active { background: var(--hover); }
+  .page-head .tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .page-head .tabs::-webkit-scrollbar { display: none; }
+  .page-head .tabs button { white-space: nowrap; flex: none; }
+  .decision-bar .btn { flex: 1; }
+  .decision-bar .btn:last-child { flex: 1.6; }
+  #acts { display: none; }
+}

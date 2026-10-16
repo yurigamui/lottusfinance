@@ -75,8 +75,12 @@
   ];
   const NAV = NAV_GROUPS.flatMap((g) => g.items);
   // Representante de parceiro: só as cessões para aceite
-  const PARTNER_GROUPS = [{ id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] }];
-  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações']]));
+  const PARTNER_GROUPS = [
+    { id: 'painel', label: 'Painel', items: [{ id: 'painel', label: 'Painel' }] },
+    { id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] },
+  ];
+  const PARTNER_VIEWS = ['painel', 'assinar'];
+  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações'], ['painel', 'Painel']]));
   const navGroups = () => (me && me.partner ? PARTNER_GROUPS : NAV_GROUPS);
 
   /** Equipe Lottus ou representante de parceiro */
@@ -233,8 +237,14 @@
       renderLogin('Este link venceu ou não vale mais. Use “Esqueci minha senha” para receber outro, ou peça um novo convite.');
       return;
     }
-    try { sessionStorage.setItem('lottus.bo.purpose', data.purpose === 'invite' ? 'invite' : 'recovery'); } catch { /* ok */ }
+    const purpose = data.purpose === 'invite' ? 'invite' : 'recovery';
     await sb.auth.signOut({ scope: 'local' }).catch(() => null);
+    // Abre a sessão aqui mesmo: não depende do redirecionamento do Supabase
+    if (data.token_hash) {
+      const { error: vErr } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: data.otp_type || 'recovery' });
+      if (!vErr) { renderSetPassword(purpose); return; }
+    }
+    try { sessionStorage.setItem('lottus.bo.purpose', purpose); } catch { /* ok */ }
     location.replace(data.link);
   }
 
@@ -444,7 +454,7 @@
     app.innerHTML = `
       <div class="shell">
         <aside class="sidenav">
-          <a href="#/${me.partner ? 'assinar' : 'painel'}" class="sidenav-mark" aria-label="Lottus, início"></a>
+          <a href="#/painel" class="sidenav-mark" aria-label="Lottus, início"></a>
           <nav class="sidenav-items" id="nav" aria-label="Menu"></nav>
         </aside>
         <main class="frame">
@@ -479,8 +489,8 @@
     const avatar = document.getElementById('avatar'), menu = document.getElementById('profile-menu');
     avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });
-    const home = me.partner ? '#/assinar' : '#/painel';
-    if (!location.hash || location.hash === '#/' || (me.partner && !location.hash.startsWith('#/assinar'))) location.hash = home;
+    const home = '#/painel';
+    if (!location.hash || location.hash === '#/' || (me.partner && !PARTNER_VIEWS.includes(currentView()))) location.hash = home;
     route();
     refreshCounts();
   }
@@ -515,7 +525,7 @@
     const crumb = document.getElementById('crumb');
     if (crumb) crumb.textContent = (me.partner ? 'Lottus Partners · ' : 'Admin · ') + (SECTION_TITLE[view] || 'Painel');
     const el = document.getElementById('view');
-    const fn = me.partner ? window.BO.views.assinar : window.BO.views[view] || window.BO.views.painel;
+    const fn = me.partner ? window.BO.views[PARTNER_VIEWS.includes(view) ? view : 'painel'] : window.BO.views[view] || window.BO.views.painel;
     el.innerHTML = '<div class="spinner" aria-label="Carregando"></div>';
     el.scrollTop = 0;
     try {
