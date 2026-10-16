@@ -25,6 +25,7 @@
     contratos: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
     collapse: 'M11 19l-7-7 7-7m8 14l-7-7 7-7',
     mail: 'M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z',
+    motor: 'M4 19h16M7 16V9m5 7V5m5 11v-4',
     emails: 'M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z',
     lock: 'M7 11V8a5 5 0 0110 0v3M6 11h12a1 1 0 011 1v8a1 1 0 01-1 1H6a1 1 0 01-1-1v-8a1 1 0 011-1z',
     eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zm10 3a3 3 0 100-6 3 3 0 000 6z',
@@ -33,6 +34,8 @@
     partes: 'M17 20h5v-2a3 3 0 00-5.4-1.8M9 20H2v-2a3 3 0 015.4-1.8M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0zm9.6 6.2A5 5 0 007.4 16.2M9 20h8',
     crescimento: 'M3 17l6-6 4 4 8-8M15 7h6v6',
     controle: 'M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z',
+    cobrancas: 'M8 7V3m8 4V3M4 11h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zm4 10l2 2 4-4',
+    juridico: 'M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 006 0zm12 0l-3 7a3 3 0 006 0z',
     sun: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
     moon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
     system: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
@@ -49,11 +52,13 @@
       { id: 'identidade', label: 'Identidade', count: 'identity' },
       { id: 'documentos', label: 'Documentos', count: 'documents' },
       { id: 'credito', label: 'Crédito', count: 'credit' },
+      { id: 'motor', label: 'Motor de crédito' },
     ] },
-    { id: 'operacoes', label: 'Operações', items: [
-      { id: 'operacoes', label: 'Operações', count: 'ops' },
-      { id: 'agendamentos', label: 'Agendamentos' },
-      { id: 'quitacoes', label: 'Quitações', count: 'settlements' },
+    { id: 'operacoes', label: 'Operações', items: [{ id: 'operacoes', label: 'Operações' }] },
+    { id: 'cobrancas', label: 'Cobranças', items: [{ id: 'cobrancas', label: 'Cobranças', count: 'billing' }] },
+    { id: 'juridico', label: 'Jurídico', items: [
+      { id: 'juridico', label: 'Documentos assinados', count: 'legal' },
+      { id: 'contratos', label: 'Modelos de contrato' },
     ] },
     { id: 'partes', label: 'Partes', items: [
       { id: 'empresas', label: 'Cedentes' },
@@ -61,29 +66,31 @@
       { id: 'representantes', label: 'Representantes' },
       { id: 'parceiros', label: 'Fundos' },
     ] },
-    { id: 'crescimento', label: 'Crescimento', items: [{ id: 'indicacoes', label: 'Indicações' }] },
     { id: 'controle', label: 'Controle', items: [
-      { id: 'contratos', label: 'Contratos' },
       { id: 'auditoria', label: 'Auditoria' },
       { id: 'equipe', label: 'Equipe Lottus', admin: true },
       { id: 'emails', label: 'E-mails', admin: true },
     ] },
+    { id: 'crescimento', label: 'Crescimento', items: [{ id: 'indicacoes', label: 'Indicações' }] },
   ];
   const NAV = NAV_GROUPS.flatMap((g) => g.items);
   // Representante de parceiro: só as cessões para aceite
-  const PARTNER_GROUPS = [{ id: 'assinar', label: 'Cessões para aceite', items: [{ id: 'assinar', label: 'Cessões para aceite', count: 'sign' }] }];
-  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Cessões para aceite']]));
+  const PARTNER_GROUPS = [{ id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] }];
+  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações']]));
   const navGroups = () => (me && me.partner ? PARTNER_GROUPS : NAV_GROUPS);
 
   /** Equipe Lottus ou representante de parceiro */
+  const PARTNERS = window.LOTTUS_CONFIG.surface === 'partners';
+  document.title = PARTNERS ? 'Lottus Partners' : 'Lottus · Admin';
+
+  /** admin.: só a equipe Lottus · partners.: só representantes dos fundos */
   async function whoami() {
-    try {
-      return await rpc('bo_me');
-    } catch (e) {
-      if (!/forbidden/.test(e.message || '')) throw e;
-      const p = await rpc('partner_me');
-      return { ...p, partner: true, level: 'partner' };
+    if (PARTNERS) {
+      try { return { ...(await rpc('partner_me')), partner: true, level: 'partner' }; }
+      catch (e) { if (/forbidden/.test(e.message || '')) throw new Error('wrong_surface_partners'); throw e; }
     }
+    try { return await rpc('bo_me'); }
+    catch (e) { if (/forbidden/.test(e.message || '')) throw new Error('wrong_surface_admin'); throw e; }
   }
 
   /* ---------------------------------------------------------------- tema */
@@ -103,20 +110,15 @@
         <aside class="auth-side" aria-hidden="true">
           <span class="auth-logo"></span>
           <div class="auth-side-copy">
-            <h2>Backoffice</h2>
-            <p>Análises, operações, partes e contratos da Lottus em um só lugar.</p>
+            <h2>${PARTNERS ? 'Lottus Partners' : 'Admin'}</h2>
+            <p>${PARTNERS ? 'Aprove e pague as operações enviadas ao seu fundo.' : 'Acompanhamento das operações e da carteira da Lottus.'}</p>
           </div>
-          <ul class="auth-points">
-            <li>${icon('identidade')} Cadastros e documentos para análise</li>
-            <li>${icon('operacoes')} Operações, quitações e agendamentos</li>
-            <li>${icon('auditoria')} Acesso com autenticador e trilha de auditoria</li>
-          </ul>
           <div class="auth-blob"></div>
         </aside>
         <main class="auth-main">
           <span class="auth-logo-sm" role="img" aria-label="Lottus"></span>
           ${inner}
-          <p class="auth-foot">Acesso restrito à equipe Lottus e a representantes de parceiros.</p>
+          <p class="auth-foot">${PARTNERS ? 'Acesso restrito a representantes dos fundos parceiros.' : 'Acesso restrito à equipe Lottus.'}</p>
         </main>
       </div>`;
   }
@@ -124,7 +126,7 @@
   function renderLogin(error) {
     app.innerHTML = authShell(`
         <form class="auth-card" id="login" novalidate>
-          <div class="auth-head"><h1 class="auth-title">Entrar</h1><p class="muted">Use o e-mail e a senha do seu acesso ao backoffice.</p></div>
+          <div class="auth-head"><h1 class="auth-title">Entrar</h1><p class="muted">Use o e-mail e a senha do seu acesso.</p></div>
           <div class="field"><label for="email">E-mail</label>
             <div class="input-ico">${icon('mail')}<input id="email" class="input" type="email" autocomplete="username" placeholder="voce@lottusfinance.com.br" required /></div></div>
           <div class="field"><label for="password">Senha</label>
@@ -166,7 +168,7 @@
     app.innerHTML = authShell(done ? `
         <div class="auth-card">
           <div class="auth-head"><span class="auth-badge">${icon('mail')}</span><h1 class="auth-title">Confira seu e-mail</h1>
-            <p class="muted">Se <b>${esc(done)}</b> tiver acesso ao backoffice ou ao portal de parceiros, você vai receber um link para criar uma nova senha em instantes. Ele vale por 2 horas. Confira também a caixa de spam.</p></div>
+            <p class="muted">Se <b>${esc(done)}</b> tiver acesso, você vai receber um link para criar uma nova senha em instantes. Ele vale por 2 horas. Confira também a caixa de spam.</p></div>
           <button class="btn secondary block lg" id="back">Voltar para entrar</button>
         </div>` : `
         <form class="auth-card" id="forgot-f" novalidate>
@@ -320,7 +322,7 @@
     if (!verified) {
       // Remove cadastros de autenticador que não foram concluídos
       for (const f of data.all || []) if (f.status === 'unverified') await sb.auth.mfa.unenroll({ factorId: f.id });
-      const { data: en, error: enErr } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Lottus Backoffice' });
+      const { data: en, error: enErr } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: PARTNERS ? 'Lottus Partners' : 'Lottus Admin' });
       if (enErr) {
         renderLogin('Não foi possível ativar o segundo fator: ' + message(enErr) + ' (confira se o MFA TOTP está ligado no Supabase).');
         return;
@@ -450,7 +452,7 @@
             <header class="topbar">
               <div class="org">
                 ${me.partner ? `<div class="org-mark">${esc((me.funder.trade_name || me.funder.legal_name || 'P').trim()[0].toUpperCase())}</div>` : '<div class="org-mark logo"></div>'}
-                <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Portal do parceiro' : 'Backoffice'}</div></div>
+                <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
               </div>
               <div class="topbar-right">
                 <div class="theme-toggle" role="group" aria-label="Aparência">
@@ -496,6 +498,7 @@
       counts = {
         identity: d.identity, documents: d.documents, credit: d.credit,
         ops: d.operations_review + d.operations_to_pay, settlements: d.settlements,
+        billing: Number(d.overdue || 0) + Number(d.settlements || 0), legal: Number(d.documents_missing || 0) + Number(d.notices_problem || 0),
       };
       window.BO.dashboard = d;
       paintNav(currentView());
@@ -510,7 +513,7 @@
     const [view, ...params] = location.hash.replace(/^#\//, '').split('/');
     paintNav(view);
     const crumb = document.getElementById('crumb');
-    if (crumb) crumb.textContent = (me.partner ? 'Portal do parceiro · ' : 'Backoffice · ') + (SECTION_TITLE[view] || 'Painel');
+    if (crumb) crumb.textContent = (me.partner ? 'Lottus Partners · ' : 'Admin · ') + (SECTION_TITLE[view] || 'Painel');
     const el = document.getElementById('view');
     const fn = me.partner ? window.BO.views.assinar : window.BO.views[view] || window.BO.views.painel;
     el.innerHTML = '<div class="spinner" aria-label="Carregando"></div>';

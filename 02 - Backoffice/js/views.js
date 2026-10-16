@@ -3,33 +3,8 @@
   'use strict';
   const B = window.BO;
   const { rpc, esc, brl, pct, date, dateTime, ago, cnpj, cpf, tag, check, run, toast, confirmAction, modal, closeModal } = B;
-  const views = (B.views = {});
-  const can = (me, level) => ({ analyst: 1, approver: 2, admin: 3 })[me.level] >= ({ analyst: 1, approver: 2, admin: 3 })[level];
-
-  function head(title, sub, right) {
-    return `<div class="page-head"><div><h1>${esc(title)}</h1>${sub ? `<div class="page-sub">${esc(sub)}</div>` : ''}</div>${right || ''}</div>`;
-  }
-  function tabs(options, value) {
-    return `<div class="tabs" role="tablist">${options
-      .map(([v, l]) => `<button role="tab" data-tab="${esc(v)}" class="${v === value ? 'active' : ''}" aria-selected="${v === value}">${esc(l)}</button>`)
-      .join('')}</div>`;
-  }
-  function onTabs(el, fn) {
-    el.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => fn(b.dataset.tab)));
-  }
-  const empty = (text) => `<div class="empty">${esc(text)}</div>`;
-  /* "Todas": junta as filas de cada situação, da mais recente para a mais antiga */
-  async function mergeAll(fetchOne, statuses) {
-    const parts = await Promise.all(statuses.map(fetchOne));
-    return parts.flat().sort((a, b) => (String(a.created_at || '') < String(b.created_at || '') ? 1 : -1));
-  }
-  /* Ao entrar numa seção sem nada em aberto, mostra direto a aba "Todas" */
-  function skipEmpty(arg, list, base, allKey) {
-    if (arg !== undefined || list.length) return false;
-    history.replaceState(null, '', `#/${base}/${allKey}`);
-    return true;
-  }
-  B.ui = { head, tabs, onTabs, empty, can, mergeAll, skipEmpty };
+  const views = B.views;
+  const { head, tabs, onTabs, empty, can, mergeAll, skipEmpty } = B.ui;
 
   /* =============================================================== Painel */
   views.painel = async (el, _p, me) => {
@@ -41,10 +16,10 @@
       ['identidade', d.identity, 'Identidade para analisar', 'Identidades para analisar'],
       ['documentos', d.documents, 'Documento para analisar', 'Documentos para analisar'],
       ['credito', d.credit, 'Limite para decidir', 'Limites para decidir'],
-      ['operacoes/analisar', d.operations_review, 'Operação para analisar', 'Operações para analisar'],
-      ['operacoes/pagar', d.operations_to_pay, 'Operação aprovada a pagar', 'Operações aprovadas a pagar'],
-      ['quitacoes', d.settlements, 'Quitação aguardando Pix', 'Quitações aguardando Pix'],
-      ['operacoes/pagas', d.overdue, 'Duplicata vencida', 'Duplicatas vencidas'],
+      ['cobrancas', d.settlements, 'Quitação aguardando Pix', 'Quitações aguardando Pix'],
+      ['cobrancas/overdue', d.overdue, 'Duplicata vencida', 'Duplicatas vencidas'],
+      ['juridico', d.documents_missing, 'Operação com documento faltando', 'Operações com documento faltando'],
+      ['juridico', d.notices_problem, 'Notificação de cessão sem entrega', 'Notificações de cessão sem entrega'],
     ];
     const open = queues.filter((q) => q[1] > 0);
     const kpi = (label, value, href, alert) =>
@@ -53,8 +28,8 @@
     el.innerHTML = `
       ${head(`Visão geral, ${me.name.split(' ')[0]}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}
       <div class="kpis">
-        ${kpi('Carteira em aberto', d.portfolio, 'operacoes/pagas')}
-        ${kpi('Vencido e não pago', d.overdue_amount, 'operacoes/pagas', true)}
+        ${kpi('Carteira em aberto', d.portfolio, 'cobrancas/open')}
+        ${kpi('Vencido e não pago', d.overdue_amount, 'cobrancas/overdue', true)}
         ${kpi('Desembolsado em 30 dias', d.volume_30d, 'operacoes/liquidadas')}
         ${kpi('Limites aprovados', d.approved_limits, 'credito/aprovados')}
       </div>
@@ -187,7 +162,8 @@
   };
 
   /* ============================================================ Empresas */
-  views.empresas = async (el, [id]) => {
+  views.empresas = async (el, [id, sub], me) => {
+    if (id && sub === 'credito') return B.creditPage(el, id, me || await rpc('bo_me'));
     if (id) return companyDetail(el, id);
     el.innerHTML = `${head('Empresas', null, `<input class="input search" id="q" type="search" placeholder="Buscar por nome ou CNPJ" aria-label="Buscar empresa">`)}
       <div class="card flush"><div class="table-wrap" id="list"><div class="spinner"></div></div></div>`;
@@ -235,7 +211,7 @@
               <dt>Rating</dt><dd>${esc(cr.rating || '—')}</dd>
               <dt>Notas no app</dt><dd>${esc(inv.count || 0)} · ${esc(inv.eligible || 0)} disponíveis (${brl(inv.eligible_amount)}) · ${esc(inv.debtors || 0)} clientes</dd>
             </dl>
-            <div style="margin-top:12px"><a class="btn secondary sm" href="#/credito/${cr.status === 'approved' ? 'aprovados' : cr.status === 'rejected' ? 'recusados' : 'analise'}">Ver em Crédito</a></div></div>
+            <div class="row" style="margin-top:12px;gap:8px;justify-content:flex-start"><a class="btn sm" href="#/empresas/${esc(c.id)}/credito">Motor de crédito</a><a class="btn secondary sm" href="#/credito/${cr.status === 'approved' ? 'aprovados' : cr.status === 'rejected' ? 'recusados' : 'analise'}">Ver em Crédito</a></div></div>
         </div>
 
         <div class="card flush"><div class="card-pad-head"><h2>Pessoas</h2></div><div class="table-wrap"><table>
@@ -329,7 +305,9 @@
                 <dt>Prazo médio</dt><dd>${x.avg_days ? esc(x.avg_days) + ' dias' : '—'}</dd>
                 <dt>Atividade</dt><dd>${esc(x.activity || '—')}</dd>
                 <dt>Notas disponíveis</dt><dd>${brl(x.eligible_amount)}</dd>
-                <dt>Sugestão do motor</dt><dd>${brl(x.suggested_limit)} · ${pct(x.suggested_rate)} a.m. · rating ${esc(x.suggested_rating || '—')}</dd>
+                <dt>Motor de crédito</dt><dd>${B.tierTag ? B.tierTag(x.suggested_rating) : esc(x.suggested_rating || '—')} ${brl(x.suggested_limit)} a ${pct(x.suggested_rate)} a.m.
+                  ${x.engine_score != null ? `<span class="small muted">· nota ${Math.round(x.engine_score)} · dados ${Math.round(Number(x.engine_coverage || 0) * 100)}%</span>` : ''}
+                  <a class="small" href="#/empresas/${esc(x.company_id)}/credito">ver análise</a></dd>
                 ${x.status !== 'in_review' ? `<dt>Decidido</dt><dd>${dateTime(x.decided_at)} · ${brl(x.limit_amount)} a ${pct(x.monthly_rate)}${x.notes ? ' · ' + esc(x.notes) : ''}</dd>` : ''}
               </dl>
             </div>
@@ -339,7 +317,7 @@
                 <div class="field"><label>Taxa (% a.m.)</label><input class="input" name="rate" inputmode="decimal" value="${esc(rateInput(x.status === 'approved' ? x.monthly_rate : x.suggested_rate))}"></div>
               </div>
               <div class="form-row">
-                <div class="field"><label>Rating</label><select class="input" name="rating">${['A', 'B', 'C', 'D', 'E'].map((r) =>
+                <div class="field"><label>Rating</label><select class="input" name="rating">${(B.CREDIT_TIERS || ['A', 'B', 'C', 'D', 'E']).map((r) =>
                   `<option ${r === (x.rating || x.suggested_rating) ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
                 <div class="field"><label>Prazo máximo (dias)</label><input class="input" name="days" inputmode="numeric" value="${esc(x.max_days || 120)}"></div>
                 <div class="field"><label>Tarifa por operação (R$)</label><input class="input" name="fee" inputmode="decimal" value="${esc(x.fee_amount || 0)}"></div>

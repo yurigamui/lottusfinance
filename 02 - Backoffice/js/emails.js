@@ -9,7 +9,7 @@
 
   const KIND = {
     convite_parceiro: 'Convite · fundo', convite_equipe: 'Convite · equipe', acesso: 'Link de acesso', nova_senha: 'Nova senha',
-    assinatura: 'Confirmação de assinatura', teste: 'Teste', app: 'Código do app',
+    assinatura: 'Confirmação de assinatura', teste: 'Teste', app: 'Código do app', notificacao_cessao: 'Notificação de cessão',
   };
   const STATUS = {
     queued: ['Na fila', ''], sent: ['Enviado', 'brand'], delivered: ['Entregue', 'success'], opened: ['Aberto', 'success'],
@@ -31,8 +31,9 @@
     box.querySelector('[data-close-btn]').onclick = () => { B.closeModal(); B.reload(); };
   };
 
-  B.views.emails = async (el) => {
-    const d = await rpc('bo_emails', { p_limit: 80 });
+  B.views.emails = async (el, _p, me) => {
+    const [d, pv] = await Promise.all([rpc('bo_emails', { p_limit: 80 }), rpc('bo_debtor_notice_preview').catch(() => null)]);
+    const admin = B.ui.can(me, 'admin');
     const hook = `${window.LOTTUS_CONFIG.supabaseUrl}/functions/v1/email-events?token=${d.webhook_token || ''}`;
     const st = d.stats || {};
     el.innerHTML = `
@@ -63,6 +64,13 @@
           </form>
         </div>
 
+        <div class="card"><div class="card-head"><div><h2>Notificação de cessão aos sacados</h2>
+            <div class="small muted">Sai sozinha quando a operação é paga, com lembrete depois de 3 dias sem ciência.</div></div>
+            ${pv ? '<button class="btn secondary sm" id="npv">Ver exemplo</button>' : ''}</div>
+          <label class="switch-row" style="margin-top:8px"><input type="checkbox" id="nmkt" ${!pv || pv.marketing ? 'checked' : ''} ${admin ? '' : 'disabled'}><span class="switch" aria-hidden="true"></span>
+            <span><b>Apresentação da Lottus no fim do e-mail</b><small>"Sua empresa também vende a prazo? Saiba como funciona", com link para o site.</small></span></label>
+        </div>
+
         <div class="card"><h2>Situação da entrega</h2>
           <p class="muted small">Para saber se cada e-mail chegou, cadastre esta URL no Postmark (seu servidor → Webhooks) marcando <b>Delivery</b>, <b>Bounce</b> e <b>Spam complaint</b>.</p>
           <div class="copy-row" style="margin-top:10px"><span>URL</span><code>${esc(hook)}</code><button class="btn ghost sm" type="button" data-copy="${esc(hook)}">Copiar</button></div>
@@ -81,6 +89,16 @@
       </div>`;
 
     el.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = () => B.copy(b.dataset.copy)));
+    const nm = el.querySelector('#nmkt');
+    if (nm) nm.onchange = () => run(null, () => rpc('bo_set_notice_marketing', { p_on: nm.checked }), nm.checked ? 'Apresentação ligada' : 'Apresentação desligada');
+    const npv = el.querySelector('#npv');
+    if (npv) npv.onclick = async () => {
+      const x = await rpc('bo_debtor_notice_preview').catch(() => pv);
+      const box = B.modal({ title: 'Exemplo da notificação', wide: true, subtitle: 'Com os dados da operação mais recente',
+        body: '<iframe class="notice-frame" sandbox="" title="Exemplo"></iframe>', foot: '<button class="btn" data-close-btn>Fechar</button>' });
+      box.querySelector('.notice-frame').srcdoc = x.html;
+      box.querySelector('[data-close-btn]').onclick = () => B.closeModal();
+    };
     const f = el.querySelector('#f');
     f.onsubmit = (e) => {
       e.preventDefault();

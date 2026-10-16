@@ -55,6 +55,7 @@
   const KIND = {
     terms: 'Termos de uso e privacidade', master_agreement: 'Contrato normativo (contrato-mãe)', assignment_terms: 'Termo de cessão',
     request_terms: 'Pedido de antecipação', schedule_terms: 'Cessão agendada', delegation_terms: 'Delegação de alçada',
+    debtor_notice: 'Notificação de cessão ao sacado',
   };
   B.views.contratos = async (el, _p, me) => {
     const d = await rpc('bo_contract_settings');

@@ -1,7 +1,16 @@
-# Lottus · Backoffice
+# Lottus · Admin
 
-Site da equipe Lottus para analisar cadastros, decidir crédito e operar a carteira.
+Site da equipe Lottus, publicado em **admin.lottusfinance.com.br**: cadastros, crédito, acompanhamento das operações (só para ver: quem aprova e paga é o fundo, no Lottus Partners), jurídico, controle e crescimento.
+
+O site dos fundos fica na pasta `lottus-partners`, publicado em partners.lottusfinance.com.br. Representante de fundo que tenta entrar aqui é recusado com o aviso do endereço certo.
+
 HTML, CSS e JavaScript puro, sem build. Usa o mesmo projeto Supabase do app.
+
+## Publicar
+
+1. Publique esta pasta como site estático (Vercel, Netlify, Cloudflare Pages…) com o domínio `admin.lottusfinance.com.br`.
+2. No DNS, crie `admin` como CNAME para o endereço que a hospedagem indicar.
+3. No Supabase → Authentication → URL Configuration, acrescente `https://admin.lottusfinance.com.br/**` em Redirect URLs.
 
 ## O que tem
 

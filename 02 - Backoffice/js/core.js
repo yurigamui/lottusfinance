@@ -22,6 +22,10 @@
     user_not_found: 'Não há login com este e-mail. Use o convite pelo backoffice.',
     cannot_demote_self: 'Você não pode tirar o próprio acesso de administrador.',
     funder_signature_required: 'O parceiro ainda não assinou o aceite desta cessão.',
+    documents_missing: 'Faltam documentos assinados',
+    wrong_surface_partners: 'Este endereço é dos fundos parceiros. A equipe Lottus entra em admin.lottusfinance.com.br.',
+    wrong_surface_admin: 'Este endereço é da equipe Lottus. Fundos parceiros entram em partners.lottusfinance.com.br.',
+    contract_not_found: 'O texto integral deste termo não foi guardado (operação anterior à versão atual dos contratos).',
     funder_required: 'Escolha o parceiro (cessionária) da operação antes de aprovar.',
     funder_declined: 'O parceiro recusou esta cessão. Escolha outro parceiro.',
     funder_inactive: 'Este parceiro está inativo.',
@@ -31,16 +35,17 @@
   };
   function message(err) {
     const raw = (err && (err.message || err.error_description || err.msg)) || String(err || '');
-    if (ERRORS[raw]) return ERRORS[raw];
+    const extra = err && err.detail ? `: ${err.detail}` : '';
+    if (ERRORS[raw]) return ERRORS[raw] + extra;
     const key = Object.keys(ERRORS).find((k) => raw.includes(k));
-    if (key) return ERRORS[key];
+    if (key) return ERRORS[key] + extra;
     if (/Failed to fetch|NetworkError/i.test(raw)) return 'Sem conexão com o servidor.';
     return raw || 'Algo deu errado.';
   }
 
   async function rpc(fn, args) {
     const { data, error } = await sb.rpc(fn, args || {});
-    if (error) throw new Error(error.message);
+    if (error) { const e = new Error(error.message); e.detail = error.details || null; throw e; }
     return data;
   }
 

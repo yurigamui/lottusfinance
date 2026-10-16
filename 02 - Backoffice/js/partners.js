@@ -1,4 +1,4 @@
-/* Lottus · Backoffice — parceiros (financiadores), parceiro na operação e portal do parceiro */
+/* Lottus · Admin — fundos parceiros (cadastro, condições, roteamento) e fundo na operação */
 (function () {
   'use strict';
   const B = window.BO;
@@ -246,6 +246,7 @@
         require_signature: String(x.require_signature.checked), iof_applies: String(x.iof_applies.checked),
         payout_notes: x.payout_notes.value, notes: x.notes.value,
       }));
+      routingCard(host, id, admin, { inp, pctIn, pctOut, numIn, numOut });
     }
 
     if (tab === 'cobranca') {
@@ -495,84 +496,81 @@
       });
     };
     B._funderReady = !!(f && f.billing_ready);
+    payoutInfo(host.querySelector('.rail-card'), o, me);
   };
 
-  /* ===================================================== Portal do parceiro */
-  B.views.assinar = async (el, [raw], me) => {
-    const arg = raw || 'pending';
-    if (!['pending', 'signed', 'all'].includes(arg)) return partnerDetail(el, arg, me);
-    const list = await rpc('partner_operations', { p_tab: arg });
-    if (skipEmpty(raw, list, 'assinar', 'all')) return B.views.assinar(el, ['all'], me);
-    el.innerHTML = `
-      ${head('Cessões para aceite', me.funder ? me.funder.legal_name : null, tabs([['pending', 'Para assinar'], ['signed', 'Assinadas'], ['all', 'Todas']], arg))}
-      <div class="card flush"><div class="table-wrap">
-        ${list.length === 0 ? empty(arg === 'pending' ? 'Nenhuma cessão esperando o seu aceite.' : 'Nada por aqui.') : `<table>
-          <thead><tr><th>Pedida</th><th>Cedente</th><th class="num">Duplicatas</th><th class="num">Líquido ao cedente</th><th>1º vencimento</th><th>Aceite</th></tr></thead>
-          <tbody>${list.map((o) => `<tr class="link" data-id="${esc(o.id)}">
-            <td class="nowrap">${dateTime(o.created_at)}</td>
-            <td><b>${esc(o.legal_name)}</b><div class="small muted">${esc(cnpj(o.cnpj))}</div></td>
-            <td class="num">${brl(o.gross)}<div class="small muted">${esc(o.items)} parcela(s)</div></td>
-            <td class="num"><b>${brl(o.net)}</b><div class="small muted">${pct(o.monthly_rate)} a.m.</div></td>
-            <td class="nowrap">${date(o.first_due)}</td>
-            <td>${o.signed_at ? `<span class="tag success">Assinado</span>` : o.declined_at ? '<span class="tag danger">Recusado</span>' : '<span class="tag warning">Pendente</span>'}</td>
-          </tr>`).join('')}</tbody></table>`}
-      </div></div>`;
-    onTabs(el, (t) => (location.hash = `#/assinar/${t}`));
-    el.querySelectorAll('[data-id]').forEach((r) => (r.onclick = () => (location.hash = `#/assinar/${r.dataset.id}`)));
-  };
+  /** Por que este parceiro (roteamento) e o pagamento ao cedente */
+  async function payoutInfo(card, o, me) {
+    if (!card) return;
+    const x = await rpc('bo_operation_payout', { p_id: o.id }).catch(() => null);
+    if (!x) return;
+    const r = x.routing, p = x.payout;
+    const box = document.createElement('div');
+    box.className = 'stack-sm';
+    let html = '';
+    if (r && Array.isArray(r.offers) && r.offers.length) {
+      html += `<details><summary class="small"><b>Por que este parceiro</b>${r.fallback ? ' · nenhum aceitou, ficou com o padrão' : ''}</summary>
+        <div class="stack-sm" style="margin-top:8px">${r.offers.slice().sort((a, b) => (b.ok - a.ok) || (a.base_rate - b.base_rate)).map((f) => `<div class="small">
+          <b>${esc(f.name)}</b> · ${f.base_rate != null ? pct(f.base_rate) + ' a.m.' : '—'} ${f.funder_id === r.funder_id ? '<span class="tag success">escolhido</span>' : f.ok ? '' : '<span class="tag">fora</span>'}
+          ${f.issues && f.issues.length ? `<div class="muted">${f.issues.map(esc).join(' · ')}</div>` : ''}</div>`).join('')}</div></details>`;
+    }
+    const auto = x.payout_mode && x.payout_mode !== 'manual';
+    if (p || (auto && ['approved', 'paid'].includes(o.status))) {
+      const [l, t] = p ? PAYOUT[p.status] || [p.status, ''] : ['Não enviado', 'warning'];
+      html += `<dl class="lines"><dt>Pagamento ao cedente</dt><dd><span class="tag ${t}">${esc(l)}</span></dd>
+        ${p ? `<dt>Via</dt><dd>${esc({ asaas: 'Asaas do parceiro', http: 'API do parceiro', manual: 'Registro manual' }[p.provider] || p.provider)}</dd>` : ''}
+        ${p && p.amount ? `<dt>Valor</dt><dd>${brl(p.amount)}</dd>` : ''}</dl>
+        ${p && p.error ? `<div class="note-box">${esc(p.error)}</div>` : ''}
+        ${p && p.receipt_url ? `<a class="btn ghost sm block" href="${esc(p.receipt_url)}" target="_blank" rel="noopener">Comprovante do pagamento</a>` : ''}
+        ${auto && o.status === 'approved' && (!p || p.status === 'failed') && can(me, 'approver') ? `<button class="btn sm block" id="po-run">${p ? 'Tentar pagar de novo' : 'Pagar pela API do parceiro'}</button>` : ''}`;
+    }
+    if (!html) return;
+    box.innerHTML = html;
+    card.appendChild(box);
+    const b = box.querySelector('#po-run');
+    if (b) b.onclick = () => run(b, async () => {
+      const { data, error } = await sb.functions.invoke('charges', { body: { action: 'payout', operation_id: o.id } });
+      if (error || (data && data.error)) throw new Error((data && data.error) || error.message);
+      return data;
+    }, 'Pagamento enviado').then(B.reload);
+  }
 
-  async function partnerDetail(el, id, me) {
-    const d = await rpc('partner_operation', { p_id: id });
-    const o = d.operation, c = d.company;
-    el.innerHTML = `
-      <div class="page-head"><div><a class="back" href="#/assinar">‹ Cessões</a>
-        <h1>${esc(c.legal_name)}</h1><div class="page-sub">${esc(cnpj(c.cnpj))} · pedida em ${dateTime(o.created_at)}</div></div></div>
-      <div class="detail">
-        <aside class="rail"><div class="card rail-card">
-          ${o.signed_at ? '<span class="tag success">Aceite assinado</span>' : o.declined_at ? '<span class="tag danger">Recusada</span>' : '<span class="tag warning">Aguardando seu aceite</span>'}
-          <div class="rail-amount">${brl(o.gross)}</div><div class="rail-amount-label">em duplicatas cedidas</div>
-          <dl class="lines">
-            <dt>Líquido ao cedente</dt><dd>${brl(o.net)}</dd>
-            <dt>Deságio</dt><dd>${brl(o.discount)}</dd>
-            ${Number(o.fee) ? `<dt>Tarifa</dt><dd>${brl(o.fee)}</dd>` : ''}
-            <dt>Taxa</dt><dd>${pct(o.monthly_rate)} a.m.</dd>
-          </dl>
-          ${d.can_sign ? `<p class="small" style="margin:8px 0">${esc(d.statement)}</p>
-            <div class="rail-actions"><button class="btn block" id="sign">Assinar o aceite</button><button class="btn danger block" id="decline">Recusar</button></div>` : ''}
-          ${o.decline_note ? `<div class="note-box">${esc(o.decline_note)}</div>` : ''}
-          ${d.my_signature ? `<div class="small muted">Assinado por ${esc(d.my_signature.signer_name)} em ${dateTime(d.my_signature.signed_at)}</div>
-            <div class="mono small" style="word-break:break-all;margin-top:6px">${esc(d.my_signature.document_hash)}</div>` : ''}
-        </div></aside>
-        <div class="stack">
-          <div class="card"><h2>Duplicatas</h2><div class="list">${d.items.map((i) => `<div class="list-row">
-            <div class="grow"><b>NF-e ${esc(i.nfe_number || '—')}, parcela ${esc(i.installment)}</b>
-              <div class="small muted">${esc(i.debtor_name || '')} · ${esc(cnpj(i.debtor_cnpj))}</div>
-              <div class="mono small muted">${esc(i.nfe_key)}</div></div>
-            <div>${date(i.due_date)}<div class="small muted">${esc(i.days)} dias</div></div>
-            <div class="num"><b>${brl(i.amount)}</b></div></div>`).join('')}</div></div>
-          <div class="card"><h2>Assinaturas do cedente</h2>
-            ${d.assignor_signatures.length === 0 ? '<p class="muted">Nenhuma assinatura do cedente ainda.</p>' : `<div class="stack-sm" style="margin-top:12px">${d.assignor_signatures.map((s) => `<div>
-              <b>${esc(s.signer_name)}</b> <span class="muted">${dateTime(s.signed_at)}${s.summary && s.summary.confirmation ? ' · ' + esc(s.summary.confirmation) : ''}</span>
-              <div class="mono small muted" style="word-break:break-all">${esc(s.document_hash)}</div></div>`).join('')}</div>`}
-          </div>
-          ${d.contract_text ? `<div class="card"><h2>Termo de cessão</h2><p class="small muted" style="margin:4px 0 12px">Texto assinado pelo cedente. O seu aceite vale para este termo.</p>
-            <div class="contract-box">${B.contractHtml(d.contract_text)}</div></div>` : ''}
-          <details class="card"><summary><b>Dados técnicos do documento</b></summary><pre class="json" style="margin-top:12px">${esc(JSON.stringify(d.document, null, 2))}</pre></details>
-        </div>
-      </div>`;
-    const sign = el.querySelector('#sign');
-    if (sign) sign.onclick = async () => {
-      const ok = await confirmAction({ title: 'Assinar o aceite da cessão', confirmLabel: 'Assinar',
-        text: `${esc(d.statement)}<br><br><b>${brl(o.gross)}</b> em duplicatas de ${esc(c.legal_name)}.` });
-      if (ok == null) return;
-      run(sign, () => rpc('partner_sign', { p_id: id }), 'Aceite assinado').then(B.reload);
-    };
-    const dec = el.querySelector('#decline');
-    if (dec) dec.onclick = async () => {
-      const note = await confirmAction({ title: 'Recusar a cessão', confirmLabel: 'Recusar', danger: true, note: true, noteRequired: true,
-        notePlaceholder: 'Ex.: sacado fora da política do fundo.' });
-      if (note == null) return;
-      run(dec, () => rpc('partner_decline', { p_id: id, p_note: note }), 'Cessão recusada').then(B.reload);
+  /** Roteamento (taxa e política) e pagamento ao cedente pela API */
+  async function routingCard(host, id, admin, h) {
+    const r = await rpc('bo_funder_routing', { p_id: id }).catch(() => null);
+    if (!r) return;
+    const ro = admin ? '' : 'disabled';
+    const tiers = B.CREDIT_TIERS || ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'CC', 'C', 'DDD', 'DD', 'D'];
+    const base = r.funding_monthly_rate != null ? Number(r.funding_monthly_rate) + Number(r.lottus_spread || 0) : null;
+    const card = document.createElement('form');
+    card.className = 'card stack'; card.style.marginTop = '16px'; card.noValidate = true;
+    card.innerHTML = `<div><h2>Roteamento e pagamento</h2>
+        <p class="small muted" style="margin:4px 0 0">Cada pedido vai para o parceiro elegível com a menor taxa. Taxa-base deste parceiro = custo do dinheiro + remuneração da Lottus${base != null ? ` = <b>${pct(base)} a.m.</b>` : ''} (nunca abaixo da taxa de risco do cedente).</p></div>
+      <label class="switch-row"><input type="checkbox" name="routing" ${r.routing ? 'checked' : ''} ${ro}><span class="switch" aria-hidden="true"></span>
+        <span><b>Recebe operações pelo roteamento</b><small>Desligado, o parceiro só recebe operações enviadas pela equipe.</small></span></label>
+      <div class="grid-3">
+        ${h.inp('lottus_spread', 'Remuneração da Lottus (% ao mês)', h.pctIn(r.lottus_spread), 'inputmode="decimal" placeholder="0,80"')}
+        ${h.inp('min_ticket', 'Operação mínima (R$)', h.numIn(r.min_ticket), 'inputmode="decimal" placeholder="Sem mínimo"')}
+        ${h.inp('max_ticket', 'Operação máxima (R$)', h.numIn(r.max_ticket), 'inputmode="decimal" placeholder="Sem máximo"')}
+      </div>
+      <div class="grid-3">
+        <div class="field"><label>Rating mínimo do cedente</label><select class="input" name="min_cedente_tier" ${ro}><option value="">Qualquer</option>${tiers.map((t) => `<option ${r.min_cedente_tier === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+        <div class="field"><label>Pagamento ao cedente</label><select class="input" name="payout_mode" ${ro}>
+          <option value="manual" ${r.payout_mode === 'manual' ? 'selected' : ''}>O fundo paga e registra no Partners</option>
+          <option value="asaas" ${r.payout_mode === 'asaas' ? 'selected' : ''}>Automático pela conta Asaas do fundo</option>
+          <option value="http" ${r.payout_mode === 'http' ? 'selected' : ''}>Automático pela API do fundo</option></select></div>
+        <div class="field"><label>Forma</label><select class="input" name="payout_operation" ${ro}>
+          <option ${r.payout_operation === 'PIX' ? 'selected' : ''}>PIX</option><option ${r.payout_operation === 'TED' ? 'selected' : ''}>TED</option></select></div>
+      </div>
+      <p class="small muted" style="margin:0">O pagamento automático usa a mesma chave de API e o mesmo webhook da aba Cobrança.</p>
+      ${admin ? '<div class="save-bar" style="gap:12px"><span class="small muted">Vale para os próximos pedidos.</span><button class="btn" type="submit">Salvar</button></div>' : ''}`;
+    host.appendChild(card);
+    card.onsubmit = (e) => {
+      e.preventDefault();
+      run(card.querySelector('[type=submit]'), () => rpc('bo_save_funder_routing', { p_id: id, p: {
+        routing: card.routing.checked, lottus_spread: h.pctOut(card.lottus_spread.value), min_ticket: h.numOut(card.min_ticket.value),
+        max_ticket: h.numOut(card.max_ticket.value), min_cedente_tier: card.min_cedente_tier.value,
+        payout_mode: card.payout_mode.value, payout_operation: card.payout_operation.value } }), 'Roteamento salvo').then(B.reload);
     };
   }
 })();
