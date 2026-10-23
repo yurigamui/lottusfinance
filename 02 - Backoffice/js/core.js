@@ -10,6 +10,7 @@
 
   /* ---------------------------------------------------------------- erros */
   const ERRORS = {
+    buyback_overdue: 'O cedente tem recompra vencida: novas antecipações ficam suspensas até o pagamento.',
     forbidden: 'Este login não faz parte da equipe Lottus.',
     mfa_required: 'Confirme o código do autenticador para continuar.',
     insufficient_level: 'Seu nível de acesso não permite esta ação.',
@@ -32,6 +33,8 @@
     funder_exists: 'Já existe um fundo com este CNPJ.',
     unavailable: 'Não foi possível concluir agora. Tente de novo em instantes.',
     not_authenticated: 'Sua sessão expirou. Entre de novo.',
+    org_in_use: 'Esta organização da Trio já está ligada a outro fundo.',
+    trio_not_configured: 'O fundo ainda não conectou a Conta Trio (Partners → Configurações → Banco).',
   };
   function message(err) {
     const raw = (err && (err.message || err.error_description || err.msg)) || String(err || '');
@@ -86,8 +89,10 @@
     bank: { pending_validation: ['A validar', 'warning'], validated: ['Validada', 'success'], rejected: ['Recusada', 'danger'] },
     credit: { in_review: ['Em análise', 'warning'], approved: ['Aprovado', 'success'], rejected: ['Recusado', 'danger'] },
     op: {
-      requested: ['Pedida', 'brand'], in_review: ['Em análise', 'warning'], approved: ['Aprovada · a pagar', 'warning'],
-      paid: ['Paga · em cobrança', 'success'], settled: ['Liquidada', ''], rejected: ['Recusada', 'danger'], cancelled: ['Cancelada', 'danger'],
+      // As mesmas etapas do app e do quadro do fundo (Solicitação, Análise, Pagamento, Ativo, Vencido, Liquidado, Reprovado)
+      requested: ['Solicitação', 'brand'], in_review: ['Análise', 'warning'], approved: ['Pagamento', 'warning'],
+      paid: ['Ativo', 'success'], settled: ['Liquidado', ''], rejected: ['Reprovado', 'danger'], cancelled: ['Reprovado', 'danger'],
+      vencido: ['Vencido', 'danger'],
     },
     charge: { open: ['Em aberto', ''], paid: ['Paga', 'success'], cancelled: ['Cancelada', 'danger'] },
     schedule: { scheduled: ['Agendado', 'brand'], done: ['Feito', 'success'], failed: ['Não feito', 'danger'], cancelled: ['Cancelado', ''] },

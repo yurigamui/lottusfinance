@@ -32,7 +32,7 @@
       { tab: 'condicoes', label: 'Custo do dinheiro', ok: f.funding_monthly_rate != null, hint: 'Taxa ao mês que o fundo cobra' },
       { tab: 'acesso', label: 'Quem assina o aceite', ok: !f.require_signature || (f.signers ?? (f.members || []).filter((m) => m.active && m.can_sign).length) > 0,
         hint: f.require_signature ? 'Pelo menos um representante que assina' : 'Aceite não exigido' },
-      { tab: 'cobranca', label: 'Cobrança', ok: f.billing_mode === 'manual' || f.api_key_set, hint: f.billing_mode === 'manual' ? 'Boletos emitidos pelo fundo' : f.api_key_set ? `${MODE[f.billing_mode]} · chave configurada` : 'Falta a chave da API' },
+      { tab: 'condicoes', label: 'Conta Trio', ok: !!f.trio_ready, hint: f.trio_ready ? 'Pix pela conta do fundo' : 'O fundo conecta no Partners → Configurações → Banco, com as chaves da API da Trio' },
     ];
     return { items, ok: items.every((i) => i.ok), missing: items.filter((i) => !i.ok) };
   }
@@ -128,9 +128,11 @@
     };
   }
 
-  const TABS = [['cadastro', 'Cadastro'], ['condicoes', 'Condições'], ['cobranca', 'Cobrança'], ['acesso', 'Acesso'], ['operacoes', 'Operações']];
+  // A cobrança é a conta Trio do fundo (Condições → Conta Trio); a aba antiga de cobrança saiu
+  const TABS = [['cadastro', 'Cadastro'], ['condicoes', 'Condições'], ['acesso', 'Acesso'], ['operacoes', 'Operações']];
 
   async function funderDetail(el, id, tab, me) {
+    if (tab === 'cobranca') tab = 'condicoes';
     const f = await rpc('bo_funder', { p_id: id });
     const admin = can(me, 'admin');
     const r = readiness(f);
@@ -247,6 +249,8 @@
         payout_notes: x.payout_notes.value, notes: x.notes.value,
       }));
       routingCard(host, id, admin, { inp, pctIn, pctOut, numIn, numOut });
+      policyCard(host, id);
+      bankCard(host, id, admin);
     }
 
     if (tab === 'cobranca') {
@@ -271,8 +275,8 @@
           </div>
         </div>
         <div class="grid-2">
-          ${inp('fine_percent', 'Multa por atraso (%)', numIn(f.fine_percent), 'inputmode="decimal" placeholder="2"')}
-          ${inp('interest_monthly_percent', 'Juros por atraso (% ao mês)', numIn(f.interest_monthly_percent), 'inputmode="decimal" placeholder="1"')}
+          ${inp('fine_percent', 'Multa padrão (%), para notas sem regra', numIn(f.fine_percent), 'inputmode="decimal" placeholder="2"')}
+          ${inp('interest_monthly_percent', 'Juros padrão (% ao mês), para notas sem regra', numIn(f.interest_monthly_percent), 'inputmode="decimal" placeholder="1"')}
         </div>
         ${saveBar}</form>
       <div class="mode-auto" ${f.billing_mode === 'manual' ? 'hidden' : ''}>
@@ -418,14 +422,14 @@
       try { code = (await error.context.json()).error || code; } catch { /* sem corpo */ }
       const msg = {
         billing_manual: 'Este parceiro está com cobrança manual.', billing_not_configured: 'Falta a chave da API do parceiro.',
-        funder_required: 'Escolha o parceiro da operação.', invalid_status: 'Os boletos saem depois da aprovação.',
+        funder_required: 'Escolha o parceiro da operação.', invalid_status: 'As cobranças saem depois que o fundo paga o cedente.',
       }[code] || B.message(code);
       if (!quiet || !['billing_manual', 'billing_not_configured'].includes(code)) toast(msg, true);
       return null;
     }
     const r = data.results || [];
     const ok = r.filter((x) => x.ok).length;
-    toast(ok === r.length ? `${ok} boleto(s) registrados no parceiro` : `${ok} de ${r.length} boletos registrados. Veja os erros no card do parceiro.`, ok !== r.length);
+    toast(ok === r.length ? `${ok} cobrança(s) Pix emitidas` : `${ok} de ${r.length} cobranças emitidas. Veja os erros no card do fundo.`, ok !== r.length);
     return r;
   }
   B.issueCharges = issueCharges;
@@ -453,8 +457,8 @@
           ${f.funding_monthly_rate != null ? `<dt>Custo do parceiro</dt><dd>${pct(f.funding_monthly_rate)} a.m.</dd>` : ''}
           ${f.fit && f.fit.spread_monthly != null ? `<dt>Spread Lottus</dt><dd>${pct(f.fit.spread_monthly)} a.m.</dd>` : ''}
           <dt>Aceite</dt><dd>${d.signed_at ? `<span class="tag success">Assinado</span>` : d.declined_at ? '<span class="tag danger">Recusado</span>' : f.require_signature ? '<span class="tag warning">Aguardando</span>' : 'Não exigido'}</dd>
-          <dt>Cobrança</dt><dd>${esc(MODE[f.billing_mode])}${f.billing_mode !== 'manual' && !f.billing_ready ? ' · sem chave' : ''}</dd>
-          ${charges.length ? `<dt>Boletos</dt><dd>${regs} de ${o._items} registrados</dd>` : ''}
+          <dt>Conta Trio</dt><dd>${f.trio_ready || f.billing_mode === 'trio' ? 'Conectada' : '<span style="color:var(--danger)">não conectada</span>'}</dd>
+          ${charges.length ? `<dt>Cobranças Pix</dt><dd>${regs} de ${o._items} emitidas</dd>` : ''}
         </dl>
         ${d.signed_at ? `<div class="small muted">Por ${esc(d.signed_by || ev?.signer_name || '')} em ${dateTime(d.signed_at)}</div>` : ''}
         ${d.declined_at ? `<div class="note-box">${esc(d.decline_note || '')}</div>` : ''}
@@ -465,7 +469,7 @@
           <option value="">Escolha…</option>
           ${d.options.map((x) => `<option value="${esc(x.id)}" ${f && f.id === x.id ? 'selected' : ''}>${esc(x.legal_name)}${x.funding_monthly_rate != null ? ' · ' + pct(x.funding_monthly_rate) : ''}${x.fit.ok ? '' : ' · não cabe'}</option>`).join('')}
         </select></div><button class="btn secondary sm block" id="f-set">Usar este parceiro</button>` : ''}
-      ${f && f.billing_ready && ['approved', 'paid'].includes(o.status) && can(me, 'approver') ? `<button class="btn sm block" id="f-issue">${regs ? 'Emitir boletos que faltam' : 'Emitir boletos'}</button>` : ''}
+      ${f && f.billing_ready && o.status === 'paid' && can(me, 'approver') ? `<button class="btn sm block" id="f-issue">${regs ? 'Emitir as cobranças que faltam' : 'Emitir cobranças Pix'}</button>` : ''}
     </div>`;
     const set = host.querySelector('#f-set');
     if (set) set.onclick = async () => {
@@ -509,10 +513,10 @@
     box.className = 'stack-sm';
     let html = '';
     if (r && Array.isArray(r.offers) && r.offers.length) {
-      html += `<details><summary class="small"><b>Por que este parceiro</b>${r.fallback ? ' · nenhum aceitou, ficou com o padrão' : ''}</summary>
-        <div class="stack-sm" style="margin-top:8px">${r.offers.slice().sort((a, b) => (b.ok - a.ok) || (a.base_rate - b.base_rate)).map((f) => `<div class="small">
-          <b>${esc(f.name)}</b> · ${f.base_rate != null ? pct(f.base_rate) + ' a.m.' : '—'} ${f.funder_id === r.funder_id ? '<span class="tag success">escolhido</span>' : f.ok ? '' : '<span class="tag">fora</span>'}
-          ${f.issues && f.issues.length ? `<div class="muted">${f.issues.map(esc).join(' · ')}</div>` : ''}</div>`).join('')}</div></details>`;
+      html += `<details><summary class="small"><b>Por que este fundo</b>${r.fallback ? ' · nenhum aceitou, ficou com o padrão' : ' · o mais compatível com a operação'}</summary>
+        <div class="stack-sm" style="margin-top:8px">${r.offers.slice().sort((a, b) => (b.ok - a.ok) || ((b.score || 0) - (a.score || 0)) || (a.base_rate - b.base_rate)).map((f) => `<div class="small">
+          <b>${esc(f.name)}</b> · ${f.ok && f.score != null ? `compatibilidade ${esc(Math.round(f.score))}/100 · ` : ''}${f.base_rate != null ? pct(f.base_rate) + ' a.m.' : '—'} ${f.funder_id === r.funder_id ? '<span class="tag success">escolhido</span>' : f.ok ? '' : '<span class="tag">fora</span>'}
+          ${f.issues && f.issues.length ? `<div class="muted">${f.issues.map(esc).join(' · ')}</div>` : f.ok && f.reasons && f.reasons.length ? `<div class="muted">${f.reasons.map(esc).join(' · ')}</div>` : ''}</div>`).join('')}</div></details>`;
     }
     const auto = x.payout_mode && x.payout_mode !== 'manual';
     if (p || (auto && ['approved', 'paid'].includes(o.status))) {
@@ -535,6 +539,53 @@
     }, 'Pagamento enviado').then(B.reload);
   }
 
+  /** Política de crédito definida pelo fundo no Lottus Partners (só leitura aqui) */
+  async function policyCard(host, id) {
+    const p = await rpc('bo_funder_policy', { p_id: id }).catch(() => null);
+    if (!p) return;
+    const ced = (p.cedente || []).filter((r) => !r.accepts || r.monthly_rate != null || r.limit_amount != null || r.fine_percent != null || r.interest_monthly_percent != null || r.buyback_days != null);
+    const dv = p.defaults || {};
+    const dec = (v) => String(Number(v).toFixed(2)).replace('.', ',');
+    const cob = (r) => [r.fine_percent != null ? `multa ${dec(r.fine_percent)}%` : null, r.interest_monthly_percent != null ? `juros ${dec(r.interest_monthly_percent)}% a.m.` : null,
+      r.buyback_days != null ? `recompra ${r.buyback_days} d` : null].filter(Boolean).join(' · ');
+    const sac = (p.sacado || []).filter((r) => !r.accepts || r.limit_amount != null);
+    const card = document.createElement('div');
+    card.className = 'card stack'; card.style.marginTop = '16px';
+    const line = (r, rate) => `<div class="row between small" style="padding:6px 0;border-top:1px solid var(--line)"><b>${esc(r.rating)}</b>
+      <span>${r.accepts ? [rate && r.monthly_rate != null ? `${pct(r.monthly_rate)} a.m.` : null, r.limit_amount != null ? `limite ${brl(r.limit_amount)}` : null, rate ? cob(r) || null : null].filter(Boolean).join(' · ') || 'padrão' : '<span style="color:var(--danger)">não aceita</span>'}</span></div>`;
+    card.innerHTML = `<div><h2>Política do fundo</h2><p class="small muted" style="margin:4px 0 0">Definida pelo fundo no Lottus Partners, sobre as notas da Lottus. Notas não listadas seguem o padrão: taxa acima${dv.fine_percent != null ? `, multa ${dec(dv.fine_percent)}%, juros ${dec(dv.interest_monthly_percent)}% a.m. e recompra após ${dv.buyback_days} dias` : ''}.</p></div>
+      ${ced.length || sac.length ? `<div class="grid-2">
+        <div><b class="small">Cedentes</b>${ced.map((r) => line(r, true)).join('') || '<div class="small muted">Padrão em todas as notas</div>'}</div>
+        <div><b class="small">Sacados</b>${sac.map((r) => line(r, false)).join('') || '<div class="small muted">Padrão em todas as notas</div>'}</div></div>`
+        : '<p class="small muted" style="margin:0">O fundo ainda não definiu política por nota.</p>'}`;
+    host.appendChild(card);
+  }
+
+  /** Conta Trio e equipe do fundo (o fundo conecta no Partners com as chaves da API; aqui só leitura) */
+  async function bankCard(host, id) {
+    const b = await rpc('bo_funder_bank', { p_id: id }).catch(() => null);
+    if (!b) return;
+    const team = b.team || [];
+    const card = document.createElement('div');
+    card.className = 'card stack'; card.style.marginTop = '16px';
+    const t = b.trio || {};
+    const ST = { none: 'Não conectada', linking: 'Conectando', active: 'Conectada', error: 'Não conectou' };
+    card.innerHTML = `<div><h2>Conta Trio e equipe do fundo</h2><p class="small muted" style="margin:4px 0 0">O fundo abre a conta na Trio e conecta no Partners → Configurações → Banco, com as chaves da API da conta. As chaves ficam no cofre e não aparecem aqui.</p></div>
+      <dl class="lines small" style="margin:0">
+        <dt>Conta Trio</dt><dd><b>${esc(ST[t.status] || 'Não conectada')}</b>${t.has_keys && t.env === 'sandbox' ? ' <span class="tag">testes</span>' : ''}</dd>
+        ${t.has_keys ? `<dt>Chave</dt><dd>Client ID terminado em ${esc(t.key_hint || '—')}${t.connected_by ? ` · ${esc(t.connected_by)}, ${B.dateTime(t.connected_at)}` : ''}</dd>` : ''}
+        ${t.account && t.account.number ? `<dt>Agência · conta</dt><dd>${esc(t.account.branch || '')} · ${esc(t.account.number)}${t.account.digit ? `-${esc(t.account.digit)}` : ''}</dd>` : ''}
+        ${t.status === 'active' ? `<dt>Aviso de pagamento</dt><dd>${t.webhook_ok ? 'cadastrado' : `<span style="color:var(--danger)">não cadastrado${t.webhook_error ? `: ${esc(t.webhook_error)}` : ''}</span>`}</dd>
+          <dt>Chave Pix</dt><dd>${t.pix_key ? esc(cnpj(t.pix_key)) : '<span style="color:var(--danger)">sem chave CNPJ na conta</span>'}</dd>` : ''}
+        ${t.internal_reason || t.reason ? `<dt>Situação</dt><dd>${esc(t.internal_reason || t.reason)}</dd>` : ''}
+        <dt>Regras de cobrança</dt><dd>Por nota do cedente, na política do fundo</dd>
+      </dl>
+      <div><b class="small">Equipe (${team.filter((m) => m.active).length})</b>${team.map((m) => `<div class="row between small" style="padding:6px 0;border-top:1px solid var(--line);${m.active ? '' : 'opacity:.5'}">
+        <span>${esc(m.name)} <span class="muted">· ${esc(m.email || '')}</span></span>
+        <span>${m.is_admin ? 'Administrador' : m.can_sign ? `Aprovador${m.approval_limit ? ` até ${brl(m.approval_limit)}` : ''}` : 'Consulta'}${m.active ? (m.confirmed ? '' : ' · convite pendente') : ' · sem acesso'}</span></div>`).join('') || '<div class="small muted">Ninguém ainda.</div>'}</div>`;
+    host.appendChild(card);
+  }
+
   /** Roteamento (taxa e política) e pagamento ao cedente pela API */
   async function routingCard(host, id, admin, h) {
     const r = await rpc('bo_funder_routing', { p_id: id }).catch(() => null);
@@ -545,7 +596,7 @@
     const card = document.createElement('form');
     card.className = 'card stack'; card.style.marginTop = '16px'; card.noValidate = true;
     card.innerHTML = `<div><h2>Roteamento e pagamento</h2>
-        <p class="small muted" style="margin:4px 0 0">Cada pedido vai para o parceiro elegível com a menor taxa. Taxa-base deste parceiro = custo do dinheiro + remuneração da Lottus${base != null ? ` = <b>${pct(base)} a.m.</b>` : ''} (nunca abaixo da taxa de risco do cedente).</p></div>
+        <p class="small muted" style="margin:4px 0 0">Cada pedido vai para um só fundo: o elegível mais compatível com a operação (chance de aprovar; empate, menor taxa). Taxa-base deste parceiro = custo do dinheiro + remuneração da Lottus${base != null ? ` = <b>${pct(base)} a.m.</b>` : ''} (nunca abaixo da taxa de risco do cedente).</p></div>
       <label class="switch-row"><input type="checkbox" name="routing" ${r.routing ? 'checked' : ''} ${ro}><span class="switch" aria-hidden="true"></span>
         <span><b>Recebe operações pelo roteamento</b><small>Desligado, o parceiro só recebe operações enviadas pela equipe.</small></span></label>
       <div class="grid-3">

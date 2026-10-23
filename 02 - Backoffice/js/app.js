@@ -52,31 +52,34 @@
       { id: 'identidade', label: 'Identidade', count: 'identity' },
       { id: 'documentos', label: 'Documentos', count: 'documents' },
       { id: 'credito', label: 'Crédito', count: 'credit' },
-      { id: 'motor', label: 'Motor de crédito' },
     ] },
-    { id: 'operacoes', label: 'Operações', items: [{ id: 'operacoes', label: 'Operações' }] },
-    { id: 'cobrancas', label: 'Cobranças', items: [{ id: 'cobrancas', label: 'Cobranças', count: 'billing' }] },
+    { id: 'operacoes', label: 'Operações', items: [
+      { id: 'operacoes', label: 'Operações' },
+      { id: 'cobrancas', label: 'Cobranças', count: 'billing' },
+    ] },
+    { id: 'partes', label: 'Cadastros', items: [
+      { id: 'empresas', label: 'Cedentes' },
+      { id: 'sacados', label: 'Sacados' },
+      { id: 'parceiros', label: 'Fundos' },
+    ] },
     { id: 'juridico', label: 'Jurídico', items: [
       { id: 'juridico', label: 'Documentos assinados', count: 'legal' },
       { id: 'contratos', label: 'Modelos de contrato' },
     ] },
-    { id: 'partes', label: 'Partes', items: [
-      { id: 'empresas', label: 'Cedentes' },
-      { id: 'sacados', label: 'Sacados' },
-      { id: 'representantes', label: 'Representantes' },
-      { id: 'parceiros', label: 'Fundos' },
-    ] },
-    { id: 'controle', label: 'Controle', items: [
-      { id: 'auditoria', label: 'Auditoria' },
+    { id: 'controle', label: 'Configurações', items: [
+      { id: 'motor', label: 'Motor de crédito' },
       { id: 'equipe', label: 'Equipe Lottus', admin: true },
       { id: 'emails', label: 'E-mails', admin: true },
+      { id: 'auditoria', label: 'Auditoria' },
+      { id: 'indicacoes', label: 'Indicações' },
     ] },
-    { id: 'crescimento', label: 'Crescimento', items: [{ id: 'indicacoes', label: 'Indicações' }] },
   ];
+  // Páginas que continuam abrindo por link, fora do menu
+  const EXTRA_TITLES = [['representantes', 'Representantes']];
   const NAV = NAV_GROUPS.flatMap((g) => g.items);
   // Representante de parceiro: só as cessões para aceite
   const PARTNER_GROUPS = [{ id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] }];
-  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações']]));
+  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações']], EXTRA_TITLES));
   const navGroups = () => (me && me.partner ? PARTNER_GROUPS : NAV_GROUPS);
 
   /** Equipe Lottus ou representante de parceiro */
@@ -95,7 +98,8 @@
 
   /* ---------------------------------------------------------------- tema */
   const THEME_KEY = 'lottus.bo.theme';
-  const getTheme = () => { try { return localStorage.getItem(THEME_KEY) || 'light'; } catch { return 'light'; } };
+  // Só o tema claro
+  const getTheme = () => 'light';
   function setTheme(t) {
     document.documentElement.dataset.theme = t;
     try { localStorage.setItem(THEME_KEY, t); } catch { /* sem armazenamento: vale só nesta aba */ }
@@ -233,8 +237,14 @@
       renderLogin('Este link venceu ou não vale mais. Use “Esqueci minha senha” para receber outro, ou peça um novo convite.');
       return;
     }
-    try { sessionStorage.setItem('lottus.bo.purpose', data.purpose === 'invite' ? 'invite' : 'recovery'); } catch { /* ok */ }
+    const purpose = data.purpose === 'invite' ? 'invite' : 'recovery';
     await sb.auth.signOut({ scope: 'local' }).catch(() => null);
+    // Abre a sessão aqui mesmo: não depende do redirecionamento do Supabase
+    if (data.token_hash) {
+      const { error: vErr } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: data.otp_type || 'recovery' });
+      if (!vErr) { renderSetPassword(purpose); return; }
+    }
+    try { sessionStorage.setItem('lottus.bo.purpose', purpose); } catch { /* ok */ }
     location.replace(data.link);
   }
 
@@ -455,11 +465,6 @@
                 <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
               </div>
               <div class="topbar-right">
-                <div class="theme-toggle" role="group" aria-label="Aparência">
-                  <button data-theme-opt="light" aria-pressed="${theme === 'light'}" title="Modo claro">${icon('sun')}</button>
-                  <button data-theme-opt="dark" aria-pressed="${theme === 'dark'}" title="Modo escuro">${icon('moon')}</button>
-                  <button data-theme-opt="system" aria-pressed="${theme === 'system'}" title="Sistema">${icon('system')}</button>
-                </div>
                 <div class="profile">
                   <button class="avatar" id="avatar" aria-haspopup="true" aria-expanded="false" aria-label="Perfil">${esc(initials)}</button>
                   <div class="menu" id="profile-menu" hidden>
@@ -475,7 +480,6 @@
         </main>
       </div>`;
     document.getElementById('logout').onclick = signOut;
-    document.querySelectorAll('[data-theme-opt]').forEach((b) => (b.onclick = () => setTheme(b.dataset.themeOpt)));
     const avatar = document.getElementById('avatar'), menu = document.getElementById('profile-menu');
     avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });

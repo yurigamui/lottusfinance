@@ -86,8 +86,8 @@
       '<h1>' + esc(n.assignor && n.assignor.name) + ' cedeu duplicatas emitidas contra a sua empresa</h1>' + text +
       '<table><thead><tr><th>Duplicata</th><th>Vencimento</th><th class="num">Valor</th></tr></thead><tbody>' + rows +
       '<tr><td colspan="2"><b>Total</b></td><td class="num"><b>' + brl(n.total) + '</b></td></tr></tbody></table>' +
-      '<div class="pay"><b>Confira sempre o beneficiário dos boletos:</b> ' + esc(n.beneficiary && n.beneficiary.name) + ', CNPJ ' + esc(doc(n.beneficiary && n.beneficiary.document)) +
-      '. Não pague boletos com outro beneficiário nem faça depósitos para o Cedente referentes a estas duplicatas.</div>' +
+      '<div class="pay"><b>Confira sempre o beneficiário do Pix:</b> ' + esc(n.beneficiary && n.beneficiary.name) + ', CNPJ ' + esc(doc(n.beneficiary && n.beneficiary.document)) +
+      '. Não pague Pix ou boletos com outro beneficiário nem faça depósitos para o Cedente referentes a estas duplicatas.</div>' +
       '<div id="ack"></div><p class="muted" style="margin-top:16px">Código da notificação: ' + esc(n.code) + '</p>';
     var ack = document.getElementById('ack');
     var paintDone = function (at, name) {

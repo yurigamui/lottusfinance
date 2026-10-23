@@ -12,8 +12,8 @@
   <link rel="stylesheet" href="styles.css" />
   <script>
     /* Tema antes de desenhar a página: claro (padrão), escuro ou do sistema */
-    try { document.documentElement.dataset.theme = localStorage.getItem('lottus.bo.theme') || 'light'; }
-    catch (e) { document.documentElement.dataset.theme = 'light'; }
+    document.documentElement.dataset.theme = 'light';
+    try { localStorage.removeItem('lottus.bo.theme'); } catch (e) { /* sem armazenamento */ }
   </script>
 </head>
 <body>
@@ -25,6 +25,7 @@
   <script src="js/config.js"></script>
   <script src="js/core.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/doc.js"></script>
   <script src="js/views.js"></script>
   <script src="js/operations.js"></script>
   <script src="js/growth.js"></script>

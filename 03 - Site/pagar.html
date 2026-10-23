@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pagamento · Lottus</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="icon" type="image/png" href="img/mark-rosa.png">
+<script src="vendor/qrcode.js"></script>
+<style>
+  :root { --tinta: #231c1a; --tinta-2: #4a403b; --muted: #8a7d74; --papel: #f5f2eb; --card: #fffdf9; --linha: #e6dccf; --rosa: #c73053; --rosa-tint: #fdf0f3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--papel); color: var(--tinta); font-family: Inter, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 28px 16px 48px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .top img { height: 30px; }
+  .card { background: var(--card); border: 1px solid var(--linha); border-radius: 20px; padding: 26px 24px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  h1 { font-size: 30px; line-height: 1.15; letter-spacing: -0.03em; margin: 8px 0 6px; font-variant-numeric: tabular-nums; }
+  .sub { font-size: 15px; color: var(--tinta-2); margin: 0 0 18px; line-height: 1.5; }
+  .qr { display: grid; place-items: center; background: #fff; border: 1px solid var(--linha); border-radius: 16px; padding: 14px; margin: 6px 0 14px; }
+  .qr svg { width: 220px; height: 220px; display: block; }
+  .code { font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; background: #f7f3ec; border-radius: 12px; padding: 12px; color: var(--tinta-2); }
+  button, .btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; border: 0; border-radius: 999px; background: var(--tinta); color: #fff; font: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer; text-decoration: none; margin-top: 12px; }
+  .btn.ghost { background: transparent; color: var(--tinta); border: 1px solid var(--linha); }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 18px 0 0; font-size: 14px; }
+  dt { color: var(--muted); } dd { margin: 0; text-align: right; font-weight: 600; }
+  dd .muted { white-space: nowrap; }
+  .note { margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: var(--rosa-tint); border: 1px solid #f3cbd5; font-size: 14px; line-height: 1.55; color: var(--tinta-2); }
+  .done { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 14px; background: #e3f1ea; color: #2f6b4f; font-size: 15px; line-height: 1.5; }
+  .done b { color: #1f5139; }
+  .warn { color: #9b2c22; font-weight: 700; }
+  .err { padding: 14px 16px; border-radius: 14px; background: #f7e1df; color: #9b2c22; font-size: 14.5px; }
+  .muted { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .split { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 14px; margin: 12px 0 4px; }
+  .split span:nth-child(even) { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--linha); border-top-color: var(--rosa); animation: s 0.8s linear infinite; margin: 24px auto; }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="index.html"><img src="img/logo-rosa.png" alt="Lottus"></a><span class="muted" id="kind">Pagamento</span></div>
+  <div class="card" id="box"><div class="spinner" aria-label="Carregando"></div></div>
+  <p class="muted" style="text-align:center;margin-top:16px">Dúvidas? contato@lottusfinance.com.br</p>
+</div>
+<script>
+(function () {
+  // Função pública da Lottus (não precisa de login; o link é a credencial)
+  var FN = 'https://rowhslnnlzfbhmzbylbz.supabase.co/functions/v1/pix-charge';
+  var box = document.getElementById('box');
+  var qs = new URLSearchParams(location.search);
+  var token = qs.get('t') || qs.get('e') || qs.get('q') || '';
+  var mode = qs.get('e') ? 'e' : qs.get('q') ? 'q' : 't';
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var brl = function (v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
+  var date = function (v) { if (!v) return '—'; var p = String(v).slice(0, 10).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; };
+  var doc = function (v) { var s = String(v || '').replace(/\D/g, ''); return s.length === 14 ? s.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : s; };
+  var pctTxt = function (v) { return Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%'; };
+  function fail(msg) { box.innerHTML = '<div class="err">' + esc(msg) + '</div>'; }
+  function qrSvg(text) {
+    if (!window.qrcode) return '';
+    var q = qrcode(0, 'M'); q.addData(text); q.make();
+    var n = q.getModuleCount(), d = '';
+    for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + c + ' ' + r + 'h1v1h-1z';
+    return '<svg viewBox="-2 -2 ' + (n + 4) + ' ' + (n + 4) + '" role="img" aria-label="QR Code do Pix"><rect x="-2" y="-2" width="' + (n + 4) + '" height="' + (n + 4) + '" fill="#fff"/><path d="' + d + '" fill="#231c1a"/></svg>';
+  }
+  function pixBlock(pix) {
+    return '<div class="qr">' + qrSvg(pix) + '</div>' +
+      '<div class="code" id="code">' + esc(pix) + '</div>' +
+      '<button id="copy" type="button">Copiar Pix copia e cola</button>' +
+      '<p class="muted" style="margin:10px 0 0">No app do banco: Pix → Pagar com QR Code ou Pix copia e cola.</p>';
+  }
+  function wireCopy(pix) {
+    var b = document.getElementById('copy'); if (!b) return;
+    b.onclick = function () {
+      var ok = function () { b.textContent = 'Copiado'; setTimeout(function () { b.textContent = 'Copiar Pix copia e cola'; }, 2000); };
+      if (navigator.clipboard) navigator.clipboard.writeText(pix).then(ok, function () { prompt('Copie o código:', pix); });
+      else prompt('Copie o código:', pix);
+    };
+  }
+  if (!/^[0-9a-f]{64}$/.test(token)) return fail('Este link não é válido. Use o link ou o QR Code da cobrança mais recente.');
+  fetch(FN + '?format=json&' + mode + '=' + token, { cache: 'no-store' })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'erro'); return j; }); })
+    .then(function (c) {
+      var benef = '<dl><dt>Beneficiário</dt><dd>' + esc(c.beneficiary_name) + '<br><span class="muted">CNPJ ' + esc(doc(c.beneficiary_cnpj)) + '</span></dd>' +
+        '<dt>Duplicata</dt><dd>NF-e ' + esc(c.nfe || '—') + ' · parcela ' + esc(c.installment || '') + '</dd>' +
+        '<dt>Vencimento</dt><dd>' + date(c.due_date) + '</dd>';
+      if (c.kind === 'quitacao') {
+        document.getElementById('kind').textContent = 'Quitação antecipada';
+        var who = '<dl><dt>Beneficiário</dt><dd>' + esc(c.beneficiary_name) + '<br><span class="muted">CNPJ ' + esc(doc(c.beneficiary_cnpj)) + '</span></dd>';
+        if (c.status === 'paid') {
+          box.innerHTML = '<div class="done"><span aria-hidden="true">✓</span><div><b>Operação quitada</b><br>Pagamento registrado em ' + date(c.paid_at) + '. Não pague de novo.</div></div>' + who + '</dl>';
+          return;
+        }
+        if (c.status !== 'open') { fail('Não há valor em aberto para quitar nesta operação.'); return; }
+        var qt = c.quote || {}, its = qt.items || [];
+        var rows = its.map(function (i) {
+          return '<span>NF-e ' + esc(i.invoice_number || '—') + ' · ' + esc(i.number || '') + (i.overdue_days > 0 ? ' <span class="warn">· vencida há ' + i.overdue_days + ' dias</span>' : ' · vence ' + date(i.due_date)) + '</span><span>' + brl(i.present_value) + '</span>';
+        }).join('');
+        box.innerHTML = '<div class="eyebrow">Quitação antecipada · ' + esc(c.assignor_name) + '</div>' +
+          '<h1>' + brl(c.amount) + '</h1>' +
+          '<p class="sub">Valor de hoje, ' + date(qt.as_of) + '. Este Pix vale até 23h59; amanhã o link mostra o valor novo.</p>' +
+          (c.pix ? pixBlock(c.pix) : '<div class="note">O Pix ainda não está disponível. Fale com o fundo.</div>') +
+          (rows ? '<div class="split">' + rows + '</div>' : '') +
+          who + (Number(qt.savings) > 0 ? '<dt>Desconto pela antecipação</dt><dd>' + brl(qt.savings) + '</dd>' : '') +
+          (Number(qt.late_fees) > 0 ? '<dt>Multa e juros incluídos</dt><dd>' + brl(qt.late_fees) + '</dd>' : '') + '</dl>' +
+          '<div class="note">As duplicatas a vencer entram pelo valor presente, com desconto pela taxa da operação. As vencidas entram pelo valor cheio com a multa e os juros de mora de hoje. Confira o nome e o CNPJ do beneficiário no app do banco antes de confirmar.</div>';
+        if (c.pix) wireCopy(c.pix);
+        return;
+      }
+      if (c.kind === 'cedente') {
+        document.getElementById('kind').textContent = 'Encargos do atraso';
+        if (c.status === 'paid') {
+          box.innerHTML = '<div class="done"><span aria-hidden="true">✓</span><div><b>Encargos pagos</b><br>Recebidos pelo fundo em ' + date(c.paid_at) + '. Obrigado!</div></div>' + benef + '</dl>';
+          return;
+        }
+        box.innerHTML = '<div class="eyebrow">Encargos do atraso · ' + esc(c.assignor_name) + '</div>' +
+          '<h1>' + brl(c.total) + '</h1>' +
+          '<p class="sub">Valor de hoje. ' + (c.running ? 'O cliente ainda não pagou: os juros correm até o pagamento.' : 'O cliente pagou com ' + c.days + ' dias de atraso.') + '</p>' +
+          '<div class="split"><span>Multa (' + pctTxt(c.fine_percent) + ')</span><span>' + brl(c.fine) + '</span>' +
+          '<span>Juros de mora (' + pctTxt(c.interest_monthly_percent) + ' ao mês · ' + c.days + ' dias)</span><span>' + brl(c.interest) + '</span></div>' +
+          (c.pix ? pixBlock(c.pix) : '<div class="note">O Pix ainda não está disponível. Fale com o fundo.</div>') +
+          benef + '<dt>Valor da duplicata</dt><dd>' + brl(c.face) + '</dd></dl>' +
+          '<div class="note">Depois do vencimento, a multa e os juros de mora da duplicata são do cedente. Confira o nome e o CNPJ do beneficiário no app do banco antes de confirmar.</div>';
+        if (c.pix) wireCopy(c.pix);
+        return;
+      }
+      document.getElementById('kind').textContent = 'Cobrança da duplicata';
+      if (c.status === 'paid') {
+        box.innerHTML = '<div class="done"><span aria-hidden="true">✓</span><div><b>Esta duplicata já foi paga</b><br>Pagamento registrado em ' + date(c.paid_at) + '. Não pague de novo.</div></div>' + benef + '<dt>Valor</dt><dd>' + brl(c.amount) + '</dd></dl>';
+        return;
+      }
+      if (c.status === 'cancelled') { fail('Esta cobrança foi cancelada. Fale com o beneficiário antes de pagar.'); return; }
+      var late = c.status === 'overdue';
+      box.innerHTML = '<div class="eyebrow">Cobrança Pix · vendida por ' + esc(c.assignor_name) + '</div>' +
+        '<h1>' + brl(c.amount) + '</h1>' +
+        '<p class="sub">' + (late ? '<span class="warn">Venceu em ' + date(c.due_date) + '.</span> Pague hoje o valor da duplicata.' : 'Vence em ' + date(c.due_date) + '.') + '</p>' +
+        (c.pix ? pixBlock(c.pix) : '') +
+        benef + '<dt>Pagador</dt><dd>' + esc(c.payer_name || '') + '</dd></dl>' +
+        '<div class="note"><b>Pague somente a este beneficiário.</b> Esta duplicata foi cedida a ' + esc(c.beneficiary_name) + '; pagamento a outra pessoa, inclusive ao vendedor, não quita o título. Confira o nome no app do banco antes de confirmar.</div>' +
+        (c.pdf_url ? '<a class="btn ghost" href="' + esc(c.pdf_url) + '" target="_blank" rel="noopener">Baixar a cobrança em PDF</a>' : '');
+      if (c.pix) wireCopy(c.pix);
+    })
+    .catch(function (e) { fail(e.message === 'not_found' ? 'Não encontramos esta cobrança. Use o link ou o QR Code mais recente.' : 'Não conseguimos abrir a cobrança agora. Tente de novo em instantes.'); });
+})();
+</script>
+</body>
+</html>

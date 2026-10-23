@@ -57,12 +57,26 @@
         <div class="kpi"><div class="kpi-label">Qualificadas</div><div class="kpi-value">${n('qualified')}</div></div>
         <div class="kpi"><div class="kpi-label">Bônus usados</div><div class="kpi-value">${n('credited')}</div></div>
       </div>
+      <div class="card stack" style="margin-bottom:16px">
+        <div class="card-head"><div><h2>Códigos de divulgação</h2><p class="small muted" style="margin:4px 0 0">Para influenciadores, parceiros e campanhas. A empresa informa o código ao criar a conta no app e ganha o desconto no primeiro pedido. Aqui você acompanha cadastros e primeiros saques de cada código. O bônus por indicação (acima) vale só para códigos de empresas clientes.</p></div>
+          ${admin ? '<button class="btn sm" id="new-code">Novo código</button>' : ''}</div>
+        ${(d.codes || []).length ? `<div class="table-wrap"><table>
+          <thead><tr><th>Código</th><th>De quem</th><th>Situação</th><th class="num">Desconto no 1º pedido</th><th class="num">Cadastros</th><th class="num">Com 1º saque</th><th></th></tr></thead>
+          <tbody>${d.codes.map((k, i) => `<tr>
+            <td class="mono"><b>${esc(k.code)}</b></td>
+            <td>${esc(k.owner_name)} <span class="small muted">· ${esc({ influencer: 'Influenciador', partner: 'Parceiro', campaign: 'Campanha' }[k.owner_kind] || k.owner_kind)}</span>${k.contact ? `<div class="small muted">${esc(k.contact)}</div>` : ''}</td>
+            <td>${!k.active ? '<span class="tag">Desativado</span>' : k.expires_at && k.expires_at < new Date().toISOString().slice(0, 10) ? '<span class="tag warning">Vencido</span>' : k.max_uses && k.signups >= k.max_uses ? '<span class="tag warning">Esgotado</span>' : '<span class="tag success">Ativo</span>'}
+              ${k.expires_at ? `<div class="small muted">até ${date(k.expires_at)}</div>` : ''}${k.max_uses ? `<div class="small muted">limite ${k.max_uses}</div>` : ''}</td>
+            <td class="num">${Number(k.welcome_bonus) ? brl(k.welcome_bonus) : '—'}</td><td class="num">${k.signups}</td><td class="num">${k.converted}</td>
+            <td class="num">${admin ? `<button class="btn ghost sm" data-code="${i}">Editar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+          : '<p class="small muted" style="margin:0">Nenhum código ainda.</p>'}
+      </div>
       <div class="card flush"><div class="table-wrap">
         ${items.length === 0 ? empty('Nenhuma indicação ainda.') : `<table>
           <thead><tr><th>Data</th><th>Quem indicou</th><th>Empresa indicada</th><th>Código</th><th>Situação</th><th class="num">Bônus</th><th></th></tr></thead>
           <tbody>${items.map((r, i) => `<tr>
             <td class="nowrap">${dateTime(r.created_at)}</td>
-            <td><a href="#/empresas/${esc(r.referrer_id)}">${esc(r.referrer)}</a></td>
+            <td>${r.source === 'promo' ? `${esc(r.referrer)} <span class="tag">divulgação</span>` : `<a href="#/empresas/${esc(r.referrer_id)}">${esc(r.referrer)}</a>`}</td>
             <td><a href="#/empresas/${esc(r.referred_id)}">${esc(r.referred)}</a>${r.qualified_at ? `<div class="small muted">1º saque pago ${date(r.qualified_at)}</div>` : ''}</td>
             <td class="mono">${esc(r.code || '')}</td>
             <td>${refTag(r.status)}</td>
@@ -86,6 +100,37 @@
       if (!Number.isFinite(v) || v < 0) return toast('Informe um valor válido.', true);
       run(sb, () => rpc('bo_set_referral_bonus', { p_amount: v }), 'Bônus atualizado').then(B.reload);
     };
+    const codeForm = async (k, btn) => {
+      const r = await confirmAction({
+        title: k ? `Código ${k.code}` : 'Novo código de divulgação', confirmLabel: 'Salvar',
+        text: k ? '' : 'Use um código fácil de lembrar, como JOAO10. Letras e números, sem espaços.',
+        extra: `<div class="stack">
+          <div class="grid-2">
+            <div class="field"><label>Código</label><input class="input" data-field="code" value="${esc(k ? k.code : '')}" ${k ? 'readonly' : ''} maxlength="20" style="text-transform:uppercase"></div>
+            <div class="field"><label>Tipo</label><select class="input" data-field="owner_kind">${[['influencer', 'Influenciador'], ['partner', 'Parceiro'], ['campaign', 'Campanha']].map(([v, l]) => `<option value="${v}" ${(k ? k.owner_kind : 'influencer') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+          </div>
+          <div class="field"><label>De quem é</label><input class="input" data-field="owner_name" value="${esc(k ? k.owner_name : '')}" placeholder="Nome do influenciador, parceiro ou campanha"></div>
+          <div class="field"><label>Desconto no primeiro pedido (R$)</label><input class="input" inputmode="decimal" data-field="welcome_bonus" value="${esc(String(k ? k.welcome_bonus ?? 50 : 50).replace('.', ','))}"><div class="help">Entra como bônus no valor líquido do primeiro pedido, até o custo da operação. Use 0 para não dar desconto.</div></div>
+          <div class="field"><label>Contato (opcional)</label><input class="input" data-field="contact" value="${esc(k ? k.contact || '' : '')}" placeholder="@perfil, e-mail ou telefone"></div>
+          <div class="grid-2">
+            <div class="field"><label>Válido até (opcional)</label><input class="input" type="date" data-field="expires_at" value="${esc(k ? k.expires_at || '' : '')}"></div>
+            <div class="field"><label>Limite de cadastros (opcional)</label><input class="input" inputmode="numeric" data-field="max_uses" value="${esc(k && k.max_uses ? String(k.max_uses) : '')}"></div>
+          </div>
+          <div class="field"><label>Situação</label><select class="input" data-field="active"><option value="true" ${!k || k.active ? 'selected' : ''}>Ativo</option><option value="false" ${k && !k.active ? 'selected' : ''}>Desativado</option></select></div>
+          <div class="field"><label>Observação (opcional)</label><input class="input" data-field="note" value="${esc(k ? k.note || '' : '')}" placeholder="Ex.: contrato de divulgação de outubro"></div>
+        </div>`,
+      });
+      if (r == null) return;
+      const v = r.values;
+      const p = { code: String(v.code || '').toUpperCase().replace(/\s/g, ''), owner_kind: v.owner_kind, owner_name: v.owner_name, contact: v.contact,
+        welcome_bonus: Number(String(v.welcome_bonus ?? '').replace(/\./g, '').replace(',', '.')) || 0, expires_at: v.expires_at || null, max_uses: v.max_uses ? Number(String(v.max_uses).replace(/\D/g, '')) : null, active: v.active !== 'false', note: v.note };
+      if (!/^[A-Z0-9]{3,20}$/.test(p.code)) return toast('Código com 3 a 20 letras ou números, sem espaços.', true);
+      if (!String(p.owner_name || '').trim()) return toast('Informe de quem é o código.', true);
+      run(btn, () => rpc('bo_save_promo_code', { p }), 'Código salvo').then(B.reload).catch(() => null);
+    };
+    const nc = el.querySelector('#new-code');
+    if (nc) nc.onclick = () => codeForm(null, nc);
+    el.querySelectorAll('[data-code]').forEach((b) => (b.onclick = () => codeForm(d.codes[b.dataset.code], b)));
     el.querySelectorAll('[data-cancel]').forEach((b) => (b.onclick = async () => {
       const r = items[b.dataset.cancel];
       const ok = await confirmAction({ title: 'Cancelar indicação', confirmLabel: 'Cancelar indicação', danger: true,

@@ -205,7 +205,7 @@ b { font-weight: 600; }
 .list-row:first-child { border-top: none; padding-top: 0; }
 
 /* Indicadores do painel */
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
 .kpi { display: flex; flex-direction: column; gap: 8px; padding: 20px; border-radius: 24px; background: var(--soft); border: 1px solid var(--line); text-decoration: none; transition: box-shadow 0.15s ease; }
 .kpi:hover { box-shadow: 0 6px 20px rgba(43, 35, 33, 0.06); }
 .kpi-label { font-weight: 700; font-size: 13.5px; }
@@ -405,6 +405,14 @@ details summary { cursor: pointer; font-weight: 700; }
 .contract .contract-title { font-size: 16px; line-height: 1.35; }
 .contract h4 { font-size: 13.5px; font-weight: 700; margin-top: 8px; }
 .contract p { margin: 0; }
+.contract .doc-title { font-size: 16px; line-height: 1.35; margin: 0; text-align: center; }
+.contract .doc-lead { text-align: center; color: var(--muted); font-size: 12.5px; }
+.contract .doc-sec { font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; margin: 10px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.contract .doc-cl { display: grid; grid-template-columns: 38px 1fr; gap: 6px; }
+.contract .doc-cl .n { font-weight: 700; color: var(--rosa); font-variant-numeric: tabular-nums; }
+.contract .doc-list { margin: 0 0 0 44px; padding: 0; display: grid; gap: 4px; }
+.contract .doc-kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
+.contract .doc-kv dt { color: var(--muted); } .contract .doc-kv dd { margin: 0; font-weight: 600; }
 .contract mark { background: var(--rosa-tint); color: var(--rosa); border-radius: 4px; padding: 0 3px; font-size: 12px; }
 button.list-row { width: 100%; text-align: left; background: none; border: 0; font: inherit; color: inherit; cursor: pointer; }
 pre.json { background: var(--soft); border: 1px solid var(--line); padding: 14px; border-radius: 12px; overflow-x: auto; font-size: 12px; max-height: 360px; }
@@ -551,3 +559,14 @@ a.list-row { text-decoration: none; color: inherit; }
 .switch-row { position: relative; }
 
 .notice-frame { width: 100%; height: 60vh; border: 1px solid var(--line); border-radius: 12px; background: #f5f2eb; }
+
+/* ---------- Ajustes de celular (revisão de lançamento) ---------- */
+@media (max-width: 640px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .kpi { padding: 14px; border-radius: 18px; min-width: 0; }
+  .kpi-value { font-size: clamp(17px, 5.2vw, 24px); overflow-wrap: anywhere; }
+  .tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; border-radius: 16px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: 0 0 auto; white-space: nowrap; }
+  .fund-card .tag, .fund-card [class*="warn"] { white-space: normal; max-width: 100%; }
+}

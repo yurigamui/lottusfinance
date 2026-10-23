@@ -35,6 +35,7 @@
     crescimento: 'M3 17l6-6 4 4 8-8M15 7h6v6',
     controle: 'M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z',
     cobrancas: 'M8 7V3m8 4V3M4 11h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zm4 10l2 2 4-4',
+    recebimentos: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
     juridico: 'M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 006 0zm12 0l-3 7a3 3 0 006 0z',
     sun: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
     moon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
@@ -78,9 +79,10 @@
   const PARTNER_GROUPS = [
     { id: 'painel', label: 'Painel', items: [{ id: 'painel', label: 'Painel' }] },
     { id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] },
+    { id: 'config', label: 'Configurações', items: [{ id: 'config', label: 'Configurações' }] },
   ];
-  const PARTNER_VIEWS = ['painel', 'assinar'];
-  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações'], ['painel', 'Painel']]));
+  const PARTNER_VIEWS = ['painel', 'assinar', 'config'];
+  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações'], ['painel', 'Painel'], ['config', 'Configurações']]));
   const navGroups = () => (me && me.partner ? PARTNER_GROUPS : NAV_GROUPS);
 
   /** Equipe Lottus ou representante de parceiro */
@@ -99,7 +101,8 @@
 
   /* ---------------------------------------------------------------- tema */
   const THEME_KEY = 'lottus.bo.theme';
-  const getTheme = () => { try { return localStorage.getItem(THEME_KEY) || 'light'; } catch { return 'light'; } };
+  // Só o tema claro
+  const getTheme = () => 'light';
   function setTheme(t) {
     document.documentElement.dataset.theme = t;
     try { localStorage.setItem(THEME_KEY, t); } catch { /* sem armazenamento: vale só nesta aba */ }
@@ -417,7 +420,7 @@
           </div>`;
         return `<div class="nav-sec ${on ? 'on' : ''}${single ? ' single' : ''}" data-group="${g.id}">
           <a href="#/${g.items[0].id}" class="nav-btn ${on ? 'active' : ''}" aria-label="${esc(g.label)}${total ? ` (${total})` : ''}" aria-haspopup="${single ? 'false' : 'true'}"${single && on ? ' aria-current="page"' : ''}>
-            ${icon(g.id === 'assinar' ? 'assinar' : g.id)}${badge(total)}</a>
+            ${icon(g.id === 'assinar' ? 'operacoes' : g.id === 'config' ? 'equipe' : g.id)}${badge(total)}</a>
           ${fly}
         </div>`;
       })
@@ -465,11 +468,6 @@
                 <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
               </div>
               <div class="topbar-right">
-                <div class="theme-toggle" role="group" aria-label="Aparência">
-                  <button data-theme-opt="light" aria-pressed="${theme === 'light'}" title="Modo claro">${icon('sun')}</button>
-                  <button data-theme-opt="dark" aria-pressed="${theme === 'dark'}" title="Modo escuro">${icon('moon')}</button>
-                  <button data-theme-opt="system" aria-pressed="${theme === 'system'}" title="Sistema">${icon('system')}</button>
-                </div>
                 <div class="profile">
                   <button class="avatar" id="avatar" aria-haspopup="true" aria-expanded="false" aria-label="Perfil">${esc(initials)}</button>
                   <div class="menu" id="profile-menu" hidden>
@@ -485,7 +483,6 @@
         </main>
       </div>`;
     document.getElementById('logout').onclick = signOut;
-    document.querySelectorAll('[data-theme-opt]').forEach((b) => (b.onclick = () => setTheme(b.dataset.themeOpt)));
     const avatar = document.getElementById('avatar'), menu = document.getElementById('profile-menu');
     avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });
@@ -498,7 +495,8 @@
   async function refreshCounts() {
     if (me && me.partner) {
       try {
-        counts = { sign: (await rpc('partner_operations', { p_tab: 'pending' })).length };
+        const pend = await rpc('partner_operations', { p_tab: 'pending' });
+        counts = { sign: pend.length };
         paintNav(currentView());
       } catch { /* a tela mostra o erro */ }
       return;

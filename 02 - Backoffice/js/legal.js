@@ -8,34 +8,22 @@
   const debounce = (fn, ms = 300) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
   /* ------------------------------------------------ contrato em PDF (impressão) */
-  function contractPage(c) {
-    const body = B.contractHtml ? B.contractHtml(c.text) : `<pre>${esc(c.text)}</pre>`;
+  function contractPage(c, logo) {
+    const body = B.contractHtml(c.text);
     const sigs = (c.signatures || []).map((s) => `<tr><td>${esc(s.kind === 'funder_acceptance' ? 'Aceite da cessionária' : s.kind === 'scheduled_withdrawal' ? 'Cedente (agendamento)' : 'Cedente')}</td>
       <td>${esc(s.signer_name)}</td><td>${esc(dateTime(s.signed_at))}</td><td class="mono">${esc(String(s.record_hash || '').slice(0, 24))}…</td></tr>`).join('');
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(c.title)}</title>
-<style>
-  @page { margin: 18mm 16mm; }
-  body { font-family: Inter, Helvetica, Arial, sans-serif; color: #231c1a; font-size: 11.5pt; line-height: 1.55; margin: 0; }
-  .brand { color: #c73053; font-weight: 800; font-size: 20pt; letter-spacing: -0.02em; }
-  .meta { color: #6b5f57; font-size: 9.5pt; margin: 4px 0 18px; }
-  .contract-title { font-size: 15pt; margin: 18px 0 10px; }
-  h4 { font-size: 11.5pt; margin: 16px 0 6px; }
-  p { margin: 0 0 8px; text-align: justify; }
-  mark { background: none; }
-  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 8px; }
-  td, th { border-bottom: 1px solid #e6dccf; padding: 6px 4px; text-align: left; vertical-align: top; }
-  .box { border: 1px solid #e6dccf; border-radius: 10px; padding: 12px 14px; margin-top: 22px; page-break-inside: avoid; }
-  .mono { font-family: Menlo, Consolas, monospace; font-size: 8.5pt; word-break: break-all; }
-</style></head><body>
-  <div class="brand">Lottus</div>
-  <div class="meta">${esc(c.company || '')} · CNPJ ${esc(cnpj(c.cnpj || ''))}${c.version ? ` · versão ${esc(c.version)}` : ''}</div>
+<style>${B.DOC_CSS}</style></head><body>
+  ${B.docHead(logo, c.title || 'Documento assinado')}
+  <div class="muted">${esc(c.company || '')} · CNPJ ${esc(cnpj(c.cnpj || ''))}${c.version ? ` · versão ${esc(c.version)}` : ''}</div>
   ${body}
-  <div class="box"><b>Assinaturas eletrônicas</b>
+  <h2 class="box-title">Assinaturas eletrônicas</h2>
+  <div class="sig">
     <table><thead><tr><th>Parte</th><th>Assinado por</th><th>Quando</th><th>Registro</th></tr></thead><tbody>${sigs ||
       `<tr><td>Cedente</td><td>${esc(c.signer_name)}</td><td>${esc(dateTime(c.signed_at))}</td><td class="mono">${esc(String(c.record_hash || '').slice(0, 24))}…</td></tr>`}</tbody></table>
-    <p style="margin-top:10px;font-size:9pt;color:#6b5f57">Código do documento (SHA-256): <span class="mono">${esc(c.sha256 || c.document_hash || '')}</span><br>
-    Assinatura eletrônica nos termos da MP 2.200-2/2001 e da Lei 14.063/2020. A trilha completa está no comprovante da operação.</p>
+    <p class="muted" style="margin:8px 0 0;font-size:8.5pt">Código do documento (SHA-256): <span class="mono">${esc(c.sha256 || c.document_hash || '')}</span></p>
   </div>
+  <div class="foot">Assinatura eletrônica nos termos da MP 2.200-2/2001 e da Lei 14.063/2020. A trilha completa está no comprovante da operação. Gerado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}.</div>
 </body></html>`;
   }
   function printHtml(html, title) {
@@ -54,7 +42,8 @@
     try {
       if (btn) btn.disabled = true;
       const c = await rpc('bo_operation_contract', { p_id: opId });
-      w.document.open(); w.document.write(contractPage(c)); w.document.close();
+      const logo = await B.logoData();
+      w.document.open(); w.document.write(contractPage(c, logo)); w.document.close();
       w.document.title = `Contrato ${String(opId).slice(0, 8)}`;
       setTimeout(() => { try { w.focus(); w.print(); } catch { /* fechada */ } }, 400);
     } catch (e) {
@@ -89,73 +78,91 @@
       foot: `${d.text ? '<button class="btn secondary" id="pdf">Baixar PDF</button>' : ''}<button class="btn" data-close-btn>Fechar</button>`,
     });
     const pdf = box.querySelector('#pdf');
-    if (pdf) pdf.onclick = () => printHtml(contractPage({ ...d, sha256: d.document_hash, signatures: [] }), d.title);
+    if (pdf) pdf.onclick = async () => printHtml(contractPage({ ...d, sha256: d.document_hash, signatures: [] }, await B.logoData()), d.title);
     box.querySelector('[data-close-btn]').onclick = () => B.closeModal();
   };
 
   /* ============================================================ Cobranças */
-  const RECV_TABS = [['open', 'Em aberto'], ['overdue', 'Vencidas'], ['next7', 'Próximos 7 dias'], ['next30', 'Próximos 30 dias'], ['paid', 'Pagas'], ['all', 'Todas']];
+  // Só acompanhamento: a baixa, as devoluções e os repasses são automáticos pela Conta Trio
+  const RECV_TABS = [['open', 'Em aberto'], ['overdue', 'Vencidas'], ['paid', 'Encerradas'], ['recompras', 'Recompras'], ['excecoes', 'Exceções']];
   const RECV_TAG = {
-    open: ['A vencer', ''], today: ['Vence hoje', 'warning'], overdue: ['Vencida', 'danger'], paid: ['Paga', 'success'], cancelled: ['Cancelada', ''],
+    open: ['A vencer', ''], today: ['Vence hoje', 'warning'], overdue: ['Vencida', 'danger'], paid: ['Paga', 'success'], cancelled: ['Encerrada', ''],
   };
-  const when = (r) => r.status === 'paid' ? (r.paid_at ? `paga em ${date(r.paid_at)}` : 'paga')
+  const CLOSED = { sacado: 'paga pelo sacado', cedente: 'paga pelo cedente', repasse: 'repassada pelo cedente', settlement: 'quitada pelo cedente', buyback: 'recomprada pelo cedente', manual: 'baixa manual do fundo' };
+  const CASE_KIND = { paid_to_assignor: 'Sacado pagou ao cedente', duplicate: 'Pagamento em duplicidade', overpaid: 'Pagamento a mais', after_close: 'Pago depois de encerrada' };
+  const CASE_DIR = { to_fund: 'cedente repassa ao fundo', to_payer: 'fundo devolve a quem pagou', to_assignor: 'fundo repassa ao cedente' };
+  const when = (r) => r.status === 'paid' || r.status === 'cancelled' ? (r.paid_at ? `${CLOSED[r.closed_reason] || 'encerrada'} ${date(r.paid_at)}` : CLOSED[r.closed_reason] || 'encerrada')
     : r.days === 0 ? 'hoje' : r.days > 0 ? `em ${r.days} dia${r.days > 1 ? 's' : ''}` : `há ${-r.days} dia${r.days < -1 ? 's' : ''}`;
 
   B.views.cobrancas = async (el, [arg], me) => {
-    const view = RECV_TABS.some(([k]) => k === arg) ? arg : 'open';
-    const [d, settle] = await Promise.all([
-      rpc('bo_receivables', { p_view: view }),
-      rpc('bo_settlements', { p_status: 'awaiting_payment' }).catch(() => []),
-    ]);
-    if (skipEmpty(arg, d.items, 'cobrancas', 'all')) return B.views.cobrancas(el, ['all'], me);
-    const approver = can(me, 'approver');
-    const t = d.totals || {};
+    const LEG = { ocorrencias: 'excecoes', naoident: 'excecoes', next7: 'open', next30: 'open', all: 'open' };
+    const view = RECV_TABS.some(([k]) => k === arg) ? arg : LEG[arg] || 'open';
+    const special = ['recompras', 'excecoes'].includes(view);
+    const d = await rpc('bo_receivables', { p_view: special ? 'open' : view, p_limit: special ? 1 : 300 });
+
+    const t = d.totals || {}, col = d.collections || {};
     const kpi = (label, value, href, alert) => `<a class="kpi ${alert && Number(value) > 0 ? 'alert' : ''}" href="#/cobrancas/${href}"><span class="kpi-label">${esc(label)}</span><span class="kpi-value">${brl(value)}</span></a>`;
+    const kn = (label, value, href, alert) => `<a class="kpi ${alert && Number(value) > 0 ? 'alert' : ''}" href="#/cobrancas/${href}"><span class="kpi-label">${esc(label)}</span><span class="kpi-value">${esc(value || 0)}</span></a>`;
     el.innerHTML = `
-      ${head('Cobranças', 'Vencimentos das duplicatas cedidas', `<input class="input search" id="q" type="search" placeholder="Buscar sacado ou cedente" aria-label="Buscar">`)}
+      ${head('Cobranças', 'Vencimentos das duplicatas cedidas. A baixa é automática pela Conta Trio dos fundos.', special ? '' : `<input class="input search" id="q" type="search" placeholder="Buscar sacado, cedente ou fundo" aria-label="Buscar">`)}
       <div class="kpis">
         ${kpi('Em aberto', t.open, 'open')}
         ${kpi(`Vencido${t.overdue_count ? ` (${t.overdue_count})` : ''}`, t.overdue, 'overdue', true)}
-        ${kpi('Próximos 7 dias', t.next7, 'next7')}
-        ${kpi('Próximos 30 dias', t.next30, 'next30')}
+        ${kn(`Recompras${col.buybacks_late ? ` · ${col.buybacks_late} vencidas` : ''}`, col.buybacks, 'recompras', col.buybacks_late)}
+        ${kn('Exceções', Number(col.cases || 0) + Number(col.unidentified || 0), 'excecoes', true)}
       </div>
-      ${settle.length ? `<div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Quitações antecipadas aguardando Pix</h2><span class="tag warning">${settle.length}</span></div>
-        <div class="list">${settle.map((s, i) => `<div class="list-row">
-          <div class="grow"><b>${esc(s.legal_name)}</b><div class="small muted">txid <span class="mono">${esc(s.txid)}</span> · vale até ${dateTime(s.expires_at)}</div></div>
-          <b class="num">${brl(s.amount)}</b>
-          <a class="btn ghost sm" href="#/operacoes/${esc(s.operation_id)}">Operação</a>
-          ${approver ? `<button class="btn sm" data-settle="${i}">Confirmar Pix</button>` : ''}</div>`).join('')}</div></div>` : ''}
       <div class="row between" style="margin-bottom:12px">${tabs(RECV_TABS, view)}</div>
-      <div class="card flush"><div class="table-wrap" id="list"></div></div>`;
+      <div class="card flush"><div class="table-wrap" id="list"><div class="spinner" aria-label="Carregando"></div></div></div>`;
+    onTabs(el, (k) => (location.hash = `#/cobrancas/${k}`));
+    const box = el.querySelector('#list');
+
+    if (view === 'recompras') {
+      const list = await rpc('bo_collections', { p_kind: 'buybacks' });
+      box.innerHTML = list.length === 0 ? empty('Nenhuma recompra.') : `<table>
+        <thead><tr><th>Cedente</th><th>Fundo</th><th>Duplicata</th><th>Prazo</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead>
+        <tbody>${list.map((b) => `<tr><td><a href="#/empresas/${esc(b.company_id)}"><b>${esc(b.company)}</b></a></td><td>${esc(b.funder || '—')}</td>
+          <td>NF-e ${esc(b.nfe || '—')}<div class="small muted">${esc(b.payer_name || '')} · venceu ${date(b.due_date)}</div></td>
+          <td class="nowrap">${date(b.deadline)}${b.late ? ' <span class="tag danger">vencido</span>' : ''}</td>
+          <td class="num"><b>${brl(b.amount)}</b></td>
+          <td>${b.status === 'open' ? '<span class="tag warning">Em aberto</span>' : b.status === 'paid' ? `<span class="tag success">Paga ${date(b.paid_at)}</span>` : '<span class="tag">Encerrada</span>'}</td>
+          <td class="num"><a class="btn ghost sm" href="#/operacoes/${esc(b.operation_id)}">Operação</a></td></tr>`).join('')}</tbody></table>`;
+      return;
+    }
+    if (view === 'excecoes') {
+      const [cases, pays] = await Promise.all([rpc('bo_collections', { p_kind: 'cases' }), rpc('bo_collections', { p_kind: 'payments' })]);
+      const AUTO = { pending: ['Em andamento', 'warning'], done: ['Feito', 'success'], failed: ['Falhou · a rotina tenta de novo', 'danger'] };
+      box.innerHTML = cases.length === 0 && pays.length === 0 ? empty('Nenhuma exceção. Pagamentos em dobro, a mais ou depois de encerrada aparecem aqui, já com a devolução ou o repasse automático.') : `
+        ${cases.length ? `<table>
+        <thead><tr><th>Quando</th><th>O que houve</th><th>Cedente</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead>
+        <tbody>${cases.map((k) => `<tr><td class="nowrap">${dateTime(k.created_at)}</td>
+          <td><b>${esc(CASE_KIND[k.kind] || k.kind)}</b><div class="small muted">${esc(CASE_DIR[k.direction] || '')}${k.nfe ? ` · NF-e ${esc(k.nfe)}` : ''}${k.funder ? ` · ${esc(k.funder)}` : ''}</div></td>
+          <td>${esc(k.company)}</td><td class="num"><b>${brl(k.amount)}</b></td>
+          <td>${k.status === 'resolved' ? '<span class="tag success">Resolvida</span>' : k.status === 'cancelled' ? '<span class="tag">Cancelada</span>' : k.auto_status ? `<span class="tag ${AUTO[k.auto_status][1]}">${AUTO[k.auto_status][0]}</span>` : '<span class="tag warning">Em aberto</span>'}${k.auto_error ? `<div class="small" style="color:var(--danger)">${esc(k.auto_error)}</div>` : ''}</td>
+          <td class="num">${k.operation_id ? `<a class="btn ghost sm" href="#/operacoes/${esc(k.operation_id)}">Operação</a>` : ''}</td></tr>`).join('')}</tbody></table>` : ''}
+        ${pays.length ? `<div class="card-head" style="padding:16px 20px 0"><h3 style="margin:0">Pix sem cobrança</h3></div><table>
+        <thead><tr><th>Data</th><th>Fundo</th><th class="num">Valor</th><th>De quem</th></tr></thead>
+        <tbody>${pays.map((p) => `<tr><td class="nowrap">${date(p.received_on)}</td><td>${esc(p.funder || '—')}</td><td class="num"><b>${brl(p.amount)}</b></td>
+          <td><div class="small">${esc(p.payer_name || '—')}</div>${p.payer_doc ? `<div class="small muted">${esc(cnpj(p.payer_doc))}</div>` : ''}</td></tr>`).join('')}</tbody></table>` : ''}`;
+      return;
+    }
 
     const paint = () => {
       const q = el.querySelector('#q').value.trim().toLowerCase();
-      const rows = d.items.filter((r) => !q || `${r.debtor_name} ${r.debtor_cnpj} ${r.company}`.toLowerCase().includes(q));
-      el.querySelector('#list').innerHTML = rows.length === 0 ? empty('Nenhum vencimento aqui.') : `<table>
+      const rows = d.items.filter((r) => !q || `${r.debtor_name} ${r.debtor_cnpj} ${r.company} ${r.funder || ''}`.toLowerCase().includes(q));
+      box.innerHTML = rows.length === 0 ? empty('Nenhum vencimento aqui.') : `<table>
         <thead><tr><th>Vencimento</th><th>Sacado</th><th>Cedente</th><th>Duplicata</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead>
-        <tbody>${rows.map((r) => { const [l, tone] = RECV_TAG[r.status] || [r.status, '']; const i = d.items.indexOf(r); return `<tr>
+        <tbody>${rows.map((r) => { const [l, tone] = RECV_TAG[r.status] || [r.status, '']; return `<tr>
           <td class="nowrap"><b>${date(r.due_date)}</b><div class="small muted">${esc(when(r))}</div></td>
           <td><b>${esc(r.debtor_name || cnpj(r.debtor_cnpj))}</b><div class="small muted">${esc(cnpj(r.debtor_cnpj))}</div></td>
           <td><a href="#/empresas/${esc(r.company_id)}">${esc(r.company)}</a>${r.funder ? `<div class="small muted">${esc(r.funder)}</div>` : ''}</td>
-          <td>NF-e ${esc(r.nfe_number || '—')} · parc. ${esc(r.installment)}<div class="small muted">${r.boleto ? 'Boleto emitido' : r.charge_error ? `<span style="color:var(--danger)">${esc(r.charge_error)}</span>` : 'Sem boleto'}</div></td>
+          <td>NF-e ${esc(r.nfe_number || '—')} · parc. ${esc(r.installment)}<div class="small muted">${r.charge === 'pix' ? 'Cobrança Pix' : r.charge === 'boleto' ? 'Boleto' : r.charge_error ? `<span style="color:var(--danger)">${esc(r.charge_error)}</span>` : 'Sem cobrança emitida'}</div></td>
           <td class="num"><b>${brl(r.amount)}</b></td>
-          <td><span class="tag ${tone}">${esc(l)}</span></td>
-          <td class="num"><div class="row" style="justify-content:flex-end">
-            <a class="btn ghost sm" href="#/operacoes/${esc(r.operation_id)}">Operação</a>
-            ${approver && ['open', 'today', 'overdue'].includes(r.status) ? `<button class="btn sm" data-paid="${i}">Dar baixa</button>` : ''}</div></td>
+          <td><span class="tag ${tone}">${esc(l)}</span>${r.buyback === 'open' ? '<div class="small" style="color:var(--danger)">recompra aberta</div>' : ''}${r.cases ? `<div class="small" style="color:var(--warning)">${r.cases} ocorrência${r.cases === 1 ? '' : 's'}</div>` : ''}</td>
+          <td class="num"><a class="btn ghost sm" href="#/operacoes/${esc(r.operation_id)}">Operação</a></td>
         </tr>`; }).join('')}</tbody></table>`;
-      el.querySelectorAll('[data-paid]').forEach((b) => (b.onclick = async () => {
-        const r = d.items[b.dataset.paid];
-        const ok = await confirmAction({ title: 'Dar baixa na duplicata', confirmLabel: 'Dar baixa',
-          text: `${esc(r.debtor_name || '')}: ${brl(r.amount)}, vencimento ${date(r.due_date)}.` });
-        if (ok == null) return;
-        run(b, () => rpc('bo_mark_installment_paid', { p_installment: r.installment_id }), 'Baixa registrada').then(B.reload);
-      }));
     };
     paint();
     el.querySelector('#q').addEventListener('input', debounce(paint, 150));
-    onTabs(el, (k) => (location.hash = `#/cobrancas/${k}`));
-    el.querySelectorAll('[data-settle]').forEach((b) => (b.onclick = () => B.confirmSettlement(settle[b.dataset.settle], b)));
   };
 
   /* ============================================================== Jurídico */

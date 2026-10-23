@@ -32,6 +32,37 @@
     funder_exists: 'Já existe um fundo com este CNPJ.',
     unavailable: 'Não foi possível concluir agora. Tente de novo em instantes.',
     not_authenticated: 'Sua sessão expirou. Entre de novo.',
+    above_approval_limit: 'Acima da sua alçada de aprovação',
+    credentials_missing: 'Falta preencher a credencial',
+    provider_cannot: 'Este banco não faz isso pela integração',
+    invalid_pem: 'Certificado ou chave fora do formato PEM',
+    invalid_rules: 'Confira as regras de cobrança',
+    invalid_url: 'O endereço precisa começar com https://',
+    invalid_provider: 'Escolha um banco da lista.',
+    member_elsewhere: 'Esta pessoa já tem acesso em outro fundo ou na equipe Lottus.',
+    cannot_demote_self: 'Você não pode tirar o seu próprio acesso de administrador.',
+    user_not_found: 'Não encontramos este e-mail.',
+    payout_failed: 'O Pix não saiu',
+    trio_not_ready: 'Conecte a Conta Trio do fundo em Configurações → Banco',
+    invalid_keys: 'Confira o Client ID e a Secret Key.',
+    trio_not_configured: 'Cole as chaves da API da Trio em Configurações → Banco.',
+    trio_error: 'Não deu para concluir agora',
+    manual_disabled: 'O pagamento sai pela Conta Trio do fundo; não há registro manual.',
+    invalid_phone: 'Confira os celulares dos representantes, com DDD.',
+    not_pdf: 'Envie o documento em PDF.',
+    file_too_large: 'O arquivo passa de 10 MB.',
+    consent_required: 'Marque a autorização para abrir a conta.',
+    boleto_required: 'Envie o boleto de cada duplicata',
+    invalid_digitable_line: 'Confira a linha digitável: 47 números (ou 48, nas contas de consumo).',
+    reference_required: 'Informe a identificação do pagamento.',
+    pix_key_required: 'Cadastre a chave Pix e a cidade do fundo em Configurações → Banco.',
+    items_required: 'Marque pelo menos uma duplicata.',
+    invalid_e2e: 'O ID do Pix não está no formato do Banco Central (começa com E e tem 32 caracteres).',
+    e2e_reused: 'Este ID do Pix já foi usado em outra operação.',
+    e2e_date: 'A data do ID do Pix não bate com esta operação',
+    e2e_other_bank: 'Este Pix saiu de outro banco, não do banco cadastrado do fundo.',
+    doc_failed: 'Não deu para enviar o documento agora. Tente de novo.',
+    buyback_overdue: 'O cedente tem recompra vencida: novas antecipações ficam suspensas até o pagamento.',
   };
   function message(err) {
     const raw = (err && (err.message || err.error_description || err.msg)) || String(err || '');
@@ -225,6 +256,27 @@
       toast('Não conseguimos abrir o arquivo: ' + message(e), true);
     }
   }
+  /** QR Code em SVG (biblioteca qrcode-generator, em js/qrcode.js) */
+  function qrSvg(text) {
+    if (!window.qrcode) return '';
+    const q = window.qrcode(0, 'M'); q.addData(text); q.make();
+    const n = q.getModuleCount(); let d = '';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
+    return `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" role="img" aria-label="QR Code do Pix"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><path d="${d}" fill="#2b2321"/></svg>`;
+  }
+
+  /** Baixa o arquivo (em vez de abrir), com o nome indicado */
+  async function downloadFile(bucket, path, name) {
+    try {
+      const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 300, { download: name || true });
+      if (error) throw new Error(error.message);
+      const a = document.createElement('a');
+      a.href = data.signedUrl; a.rel = 'noopener'; if (name) a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) {
+      toast('Não conseguimos baixar o arquivo: ' + message(e), true);
+    }
+  }
   const isImage = (path, mime) => /^image\//.test(mime || '') || /\.(jpe?g|png|webp|heic)$/i.test(path || '');
 
   async function copy(text) {
@@ -236,6 +288,6 @@
   window.BO = {
     sb, rpc, message, esc, brl, pct, date, dateTime, ago, cnpj, cpf, yearsSince, tag, check,
     DOC_KIND, ACCESS, ROLE, LEVEL, REVENUE, toast, modal, closeModal, confirmAction, run,
-    signedUrl, openFile, isImage, copy,
+    signedUrl, openFile, downloadFile, qrSvg, isImage, copy,
   };
 })();

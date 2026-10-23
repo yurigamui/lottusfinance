@@ -5,29 +5,39 @@
   const { rpc, esc, brl, pct, date, dateTime, ago, cnpj, tag, run, confirmAction } = B;
   const { head, tabs, onTabs, empty, can, mergeAll, skipEmpty } = B.ui;
 
+  // As etapas do sistema (as mesmas do app e do quadro do fundo)
+  const ALL = ['requested', 'in_review', 'approved', 'paid', 'settled', 'rejected', 'cancelled'];
   const FILTERS = {
-    analisar: ['Com o fundo', ['requested', 'in_review']],
-    pagar: ['Aprovadas', ['approved']],
-    pagas: ['Pagas · em cobrança', ['paid']],
-    liquidadas: ['Liquidadas', ['settled']],
-    recusadas: ['Recusadas e canceladas', ['rejected', 'cancelled']],
-    todas: ['Todas', ['requested', 'in_review', 'approved', 'paid', 'settled', 'rejected', 'cancelled']],
+    solicitacao: 'Solicitação', analise: 'Análise', pagamento: 'Pagamento', ativo: 'Ativo', vencido: 'Vencido',
+    liquidado: 'Liquidado', reprovado: 'Reprovado', todas: 'Todas',
   };
+  const STAGE = {
+    solicitacao: ['Solicitação', 'brand'], analise: ['Análise', 'warning'], pagamento: ['Pagamento', 'warning'], ativo: ['Ativo', 'success'],
+    vencido: ['Vencido', 'danger'], liquidado: ['Liquidado', ''], reprovado: ['Reprovado', 'danger'],
+  };
+  const stageTag = (s) => { const [l, t] = STAGE[s] || [s, '']; return `<span class="tag ${t}">${esc(l)}</span>`; };
+  const LEGACY = { analisar: 'analise', pagar: 'pagamento', pagas: 'ativo', liquidadas: 'liquidado', recusadas: 'reprovado' };
   const today = () => new Date().toISOString().slice(0, 10);
-  B.views.operacoes = async (el, [raw]) => {
-    const arg = raw || 'analisar';
+  B.views.operacoes = async (el, [rawIn]) => {
+    const raw = LEGACY[rawIn] || rawIn;
+    const arg = raw || 'solicitacao';
     if (!FILTERS[arg]) return detail(el, arg);
-    const list = await rpc('bo_operations', { p_status: FILTERS[arg][1] });
-    if (skipEmpty(raw, list, 'operacoes', 'todas')) return B.views.operacoes(el, ['todas']);
+    const all = await rpc('bo_operations', { p_status: ALL });
+    const count = (k) => all.filter((o) => o.stage === k).length;
+    const list = arg === 'todas' ? all : all.filter((o) => o.stage === arg);
+    if (!raw && !list.length) { history.replaceState(null, '', '#/operacoes/todas'); return B.views.operacoes(el, ['todas']); }
     el.innerHTML = `
-      ${head('Operações', null, tabs(Object.entries(FILTERS).map(([k, v]) => [k, v[0]]), arg))}
+      ${head('Operações', 'As mesmas etapas do app e do quadro dos fundos. Quem aprova, paga e dá baixa é o fundo, no Lottus Partners.',
+        tabs(Object.entries(FILTERS).map(([k, v]) => [k, k === 'todas' ? v : `${v}${count(k) ? ` (${count(k)})` : ''}`]), arg))}
       <div class="card flush"><div class="table-wrap">
-        ${list.length === 0 ? empty('Nada nesta fila.') : `<table>
-          <thead><tr><th>Cedente</th><th>Situação</th><th class="num">Duplicatas</th><th class="num">Pedida</th></tr></thead>
+        ${list.length === 0 ? empty('Nada nesta etapa.') : `<table>
+          <thead><tr><th>Cedente</th><th>Fundo</th><th>Etapa</th><th class="num">Duplicatas</th><th class="num">1º vencimento</th><th class="num">Pedida</th></tr></thead>
           <tbody>${list.map((o) => `<tr class="link" data-id="${esc(o.id)}">
-            <td><b>${esc(o.legal_name)}</b></td>
-            <td>${tag('op', o.status)}</td>
-            <td class="num">${brl(o.gross_amount)}</td>
+            <td><b>${esc(o.legal_name)}</b><div class="small muted">${esc(cnpj(o.cnpj))}</div></td>
+            <td>${esc(o.funder || '—')}</td>
+            <td>${stageTag(o.stage)}</td>
+            <td class="num">${brl(o.gross_amount)}<div class="small muted">${esc(o.items)} título${o.items === 1 ? '' : 's'}</div></td>
+            <td class="num nowrap">${date(o.first_due)}</td>
             <td class="num nowrap">${date(o.created_at)}<div class="small muted">${ago(o.created_at)}</div></td></tr>`).join('')}</tbody></table>`}
       </div></div>`;
     onTabs(el, (t) => (location.hash = `#/operacoes/${t}`));
@@ -61,7 +71,7 @@
       <div class="detail">
       <aside class="rail">
         <div class="card rail-card">
-          ${tag('op', st)}
+          ${tag('op', st === 'paid' && d.items.some((i) => overdue(i)) ? 'vencido' : st)}
           <div class="rail-amount">${brl(o.gross_amount)}</div>
           <div class="rail-amount-label">em duplicatas</div>
           <dl class="lines">
@@ -90,7 +100,8 @@
           <div class="list">${d.items.map((i) => `<div class="list-row">
             <div class="grow"><b>${esc(i.recipient_name || cnpj(i.recipient_cnpj))}</b>
               <div class="small muted">NF-e ${esc(i.invoice_number || '—')}/${esc(i.number)} · vence ${date(i.due_date)}</div></div>
-            <div class="num"><b>${brl(i.amount)}</b><div>${overdue(i) ? '<span class="tag danger">Vencida</span>' : ['paid', 'settled'].includes(st) ? tag('charge', i.charge_status) : ''}</div></div></div>`).join('')}</div></div>
+            <div class="num"><b>${brl(i.amount)}</b><div>${overdue(i) ? '<span class="tag danger">Vencida</span>' : ['paid', 'settled'].includes(st) ? tag('charge', i.charge_status) : ''}</div></div></div>`).join('')}</div>
+          <p class="small muted" style="margin:10px 0 0">Recompras, ocorrências e lembretes de cada duplicata: em <a href="#/cobrancas/all">Cobranças</a>.</p></div>
 
         <div class="card" id="notices-card"></div>
 
@@ -120,25 +131,24 @@
     const one = (st) => rpc('bo_settlements', { p_status: st });
     const list = status === 'all' ? await mergeAll(one, ['awaiting_payment', 'paid', 'expired', 'cancelled']) : await one(status);
     if (skipEmpty(arg, list, 'quitacoes', 'all')) return B.views.quitacoes(el, ['all'], me);
-    const approver = can(me, 'approver');
     el.innerHTML = `
-      ${head('Quitações', null, tabs(SETTLE_TABS, status))}
+      ${head('Quitações', 'O Pix da quitação cai na conta do fundo; quem confirma é o fundo, no Lottus Partners.', tabs(SETTLE_TABS, status))}
       <div class="card flush"><div class="table-wrap">
         ${list.length === 0 ? empty('Nada nesta fila.') : `<table>
-          <thead><tr><th>Pedida</th><th>Empresa</th><th>txid</th><th class="num">Valor</th><th>Validade</th><th></th></tr></thead>
+          <thead><tr><th>Pedida</th><th>Empresa</th><th>Fundo</th><th>Identificador</th><th class="num">Valor</th><th>Validade</th><th></th></tr></thead>
           <tbody>${list.map((s, i) => `<tr>
             <td class="nowrap">${dateTime(s.created_at)}<div class="small muted">${esc(s.requested_by || '')}</div></td>
             <td><b>${esc(s.legal_name)}</b><div class="small muted">${esc(cnpj(s.cnpj))}</div></td>
+            <td>${esc(s.funder || '—')}</td>
             <td class="mono">${esc(s.txid)}</td><td class="num"><b>${brl(s.amount)}</b></td>
             <td class="nowrap">${dateTime(s.expires_at)}${new Date(s.expires_at) < new Date() && s.status === 'awaiting_payment' ? ' <span class="tag">vencida</span>' : ''}</td>
             <td class="num"><div class="row" style="justify-content:flex-end">
               <a class="btn ghost sm" href="#/operacoes/${esc(s.operation_id)}">Operação</a>
-              ${approver && s.status !== 'paid' ? `<button class="btn sm" data-confirm="${i}">Confirmar Pix</button>` : tag('settlement', s.status)}
+              ${tag('settlement', s.status)}
             </div></td></tr>`).join('')}</tbody></table>`}
       </div></div>
 `;
     onTabs(el, (t) => (location.hash = `#/quitacoes/${t}`));
-    el.querySelectorAll('[data-confirm]').forEach((b) => (b.onclick = () => B.confirmSettlement(list[b.dataset.confirm], b)));
   };
 
   /** Pix da quitação antecipada recebido: confirma e liquida as duplicatas */

@@ -7,18 +7,8 @@
 
   Object.assign(B.ACTION_LABEL, { contract_settings_saved: 'atualizou os dados dos contratos' });
 
-  /** Texto de contrato com a marcação simples dos modelos ("# ", "## ", "• "). */
-  function contractHtml(text) {
-    return `<div class="contract">${String(text || '')
-      .split(/\n{2,}/)
-      .map((b) => b.trim())
-      .filter(Boolean)
-      .map((b) => (b.startsWith('# ') ? `<h3 class="contract-title">${esc(b.slice(2))}</h3>`
-        : b.startsWith('## ') ? `<h4>${esc(b.slice(3))}</h4>`
-        : `<p>${esc(b).replace(/\{\{(\w+)\}\}/g, '<mark>{{$1}}</mark>').replace(/\n/g, '<br>')}</p>`))
-      .join('')}</div>`;
-  }
-  B.contractHtml = contractHtml;
+  /** Prévia de modelo: destaca os campos {{...}} (o formato vem de doc.js) */
+  const contractHtml = (text) => B.contractHtml(text, true);
 
   const ACCESS = { admin: 'Administrador', finance: 'Financeiro', viewer: 'Consulta' };
   const ROLE = { partner: 'Sócio', attorney: 'Procurador', employee: 'Colaborador' };

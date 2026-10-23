@@ -261,7 +261,7 @@
     operation_review: 'iniciou a análise da operação', operation_approve: 'aprovou a operação',
     operation_pay: 'registrou o pagamento da operação', operation_settle: 'liquidou a operação',
     operation_reject: 'recusou a operação', operation_cancel: 'cancelou a operação',
-    charge_registered: 'registrou o boleto de uma duplicata', installment_paid: 'deu baixa em uma duplicata',
+    charge_registered: 'emitiu a cobrança de uma duplicata', installment_paid: 'deu baixa em uma duplicata',
     settlement_confirmed: 'confirmou a quitação antecipada', debtor_updated: 'ajustou um sacado', staff_saved: 'alterou a equipe Lottus',
     referral_bonus_set: 'alterou o bônus por indicação', referral_cancelled: 'cancelou uma indicação',
   };
@@ -409,7 +409,7 @@
         <div class="card"><div class="card-head"><h2>Assinaturas eletrônicas</h2>
           ${ev.problems.length === 0 ? '<span class="tag success">Cadeia íntegra</span>' : `<span class="tag danger">${ev.problems.length} registro(s) com problema</span>`}</div>
           <p class="muted" style="margin:0">${esc(ev.records)} evidências registradas</p>
-          ${ev.problems.length ? `<pre class="json">${esc(JSON.stringify(ev.problems, null, 2))}</pre>` : ''}</div>
+          ${ev.problems.length ? `<ul class="small" style="margin:8px 0 0;padding-left:18px">${ev.problems.map((x) => `<li>Registro nº ${esc(x.id)}: ${esc({ document_changed: 'o texto guardado não bate mais com o código de integridade (alterado depois da assinatura)', context_changed: 'os dados do aparelho e da sessão foram alterados depois da assinatura', chain_broken: 'a sequência dos registros foi quebrada (registro apagado ou fora de ordem)' }[x.problem] || x.problem)}</li>`).join('')}</ul><p class="small muted" style="margin:8px 0 0">Não apague nem edite registros. Fale com o time técnico para apurar a causa.</p>` : ''}</div>
         <div class="card flush"><div class="card-pad-head"><h2>Ações da equipe</h2></div><div class="table-wrap">
           ${list.length === 0 ? empty('Nada ainda.') : `<table>
             <thead><tr><th>Quando</th><th>Quem</th><th>O quê</th><th>Empresa</th><th>Detalhe</th></tr></thead>
