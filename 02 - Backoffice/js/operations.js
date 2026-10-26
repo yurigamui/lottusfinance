@@ -103,6 +103,8 @@
             <div class="num"><b>${brl(i.amount)}</b><div>${overdue(i) ? '<span class="tag danger">Vencida</span>' : ['paid', 'settled'].includes(st) ? tag('charge', i.charge_status) : ''}</div></div></div>`).join('')}</div>
           <p class="small muted" style="margin:10px 0 0">Recompras, ocorrências e lembretes de cada duplicata: em <a href="#/cobrancas/all">Cobranças</a>.</p></div>
 
+        <div class="card" id="nfe-card"></div>
+
         <div class="card" id="notices-card"></div>
 
         <details class="card"><summary><b>Assinaturas e histórico</b></summary>
@@ -121,6 +123,7 @@
     const kb = el.querySelector('#contract');
     if (kb) kb.onclick = () => B.openContract(o.id, kb);
     if (B.noticesCard) B.noticesCard(el.querySelector('#notices-card'), o.id);
+    if (B.nfeCard) B.nfeCard(el.querySelector('#nfe-card'), o.id, st);
     el.querySelectorAll('[data-doc]').forEach((x) => (x.onclick = () => B.showLegalDocument(Number(x.dataset.doc))));
   }
 

@@ -82,8 +82,10 @@
       ['emprestimos_lp', 'Empréstimos de longo prazo', 'money'],
       ['lucros_acumulados', 'Lucros acumulados', 'money'], ['prejuizos_acumulados', 'Prejuízos acumulados', 'money'],
       ['prazo_pagamento', 'Prazo médio de pagamento a fornecedores (dias), se não houver balanço', 'days'],
+      ['manipulacao', 'Balanço com indícios de manipulação', 'yn'],
     ]],
   ];
+  B.CREDIT_SECTIONS = SECTIONS;
 
   function fieldHtml([key, label, type], data, opts) {
     const v = data[key];
@@ -142,7 +144,7 @@
     el.innerHTML = `
       <div class="page-head"><div><a class="back" href="#/empresas/${esc(id)}">‹ ${esc(d.company.legal_name)}</a>
         <h1>Motor de crédito</h1><div class="page-sub">${esc(cnpj(d.company.cnpj))} · calculado ${dateTime(r.computed_at)}</div></div>
-        <div class="row"><button class="btn secondary" id="receita">Atualizar dados da Receita</button><button class="btn secondary" id="recalc">Recalcular</button></div></div>
+        <div class="row"><button class="btn secondary" id="ficha">Importar ficha (CSV)</button><button class="btn secondary" id="receita">Atualizar dados da Receita</button><button class="btn secondary" id="recalc">Recalcular</button></div></div>
 
       <div class="credit-hero card">
         <div class="credit-score">
@@ -161,6 +163,8 @@
       </div>
 
       ${(r.alerts || []).length ? `<div class="stack-sm" style="margin:12px 0">${r.alerts.map((a) => `<div class="note-box">${esc(a)}</div>`).join('')}</div>` : ''}
+
+      <div class="card" id="verify-card" style="margin-top:16px"></div>
 
       <div class="grid-2" style="margin-top:16px">
         <div class="card"><h2>Política automática</h2>
@@ -192,7 +196,10 @@
       <div class="card flush" style="margin-top:16px"><div class="card-pad-head"><h2>Quantitativo</h2><span class="muted small">nota ${r.quant_score ?? '—'}</span></div><div class="table-wrap">${tableOf(quant)}</div></div>
 
       <form class="card" id="cdata" style="margin-top:16px" novalidate>
-        <div class="card-head"><div><h2>Dados de crédito</h2><div class="small muted">Preencha o que tiver. O que vem da Receita, das notas e do histórico entra sozinho.${d.data_updated_at ? ' Atualizado ' + dateTime(d.data_updated_at) + '.' : ''}</div></div></div>
+        <div class="card-head"><div><h2>Dados de crédito</h2><div class="small muted">Preencha o que tiver ou importe a ficha (CSV). O que vem da Receita, das notas e do histórico entra sozinho.${d.data_updated_at ? ' Atualizado ' + dateTime(d.data_updated_at) + '.' : ''}</div>
+          ${d.data.ficha_importada_em ? `<div class="small muted" style="margin-top:4px">Última ficha importada em ${dateTime(d.data.ficha_importada_em)}${d.data.ficha_documentos ? ` · documentos: ${esc(d.data.ficha_documentos)}` : ''}${d.data.ficha_referencia ? ` · referência ${esc(d.data.ficha_referencia)}` : ''}</div>` : ''}
+          ${d.data.ficha_observacoes ? `<div class="note-box" style="margin-top:8px">${esc(d.data.ficha_observacoes)}</div>` : ''}</div>
+          <button class="btn secondary sm" type="button" id="ficha-modelo">Baixar modelo da ficha</button></div>
         ${SECTIONS.map(([title, fields]) => `<details class="cd-sec" ${fields.some(([k]) => d.data[k] != null) ? 'open' : ''}><summary>${esc(title)}
             <span class="small muted">${fields.filter(([k]) => d.data[k] != null).length}/${fields.length}</span></summary>
           <div class="grid-3">${fields.map((f) => fieldHtml(f, d.data, opts)).join('')}</div></details>`).join('')}
@@ -208,6 +215,9 @@
 
     el.querySelector('#recalc').onclick = (e) => run(e.currentTarget, () => rpc('bo_run_credit', { p_company: id, p_apply: approver }), 'Recalculado').then(B.reload);
     el.querySelector('#receita').onclick = (e) => refreshReceita(id, d.company.cnpj, e.currentTarget).then((x) => x && B.reload());
+    if (B.companyVerifyCard) B.companyVerifyCard(el.querySelector('#verify-card'), id);
+    el.querySelector('#ficha').onclick = () => B.importCreditSheet({ companyId: id, cnpj: d.company.cnpj });
+    el.querySelector('#ficha-modelo').onclick = () => B.creditSheetTemplate(d.company);
     const auto = el.querySelector('#auto');
     if (auto) auto.onchange = () => run(null, () => rpc('bo_set_credit_auto', { p_company: id, p_on: auto.checked }), auto.checked ? 'Ajustes automáticos ligados' : 'Ajustes automáticos desligados');
     const managed = el.querySelector('#managed');

@@ -52,6 +52,7 @@
       { id: 'identidade', label: 'Identidade', count: 'identity' },
       { id: 'documentos', label: 'Documentos', count: 'documents' },
       { id: 'credito', label: 'Crédito', count: 'credit' },
+      { id: 'verificacoes', label: 'Verificações', count: 'verify' },
     ] },
     { id: 'operacoes', label: 'Operações', items: [
       { id: 'operacoes', label: 'Operações' },
@@ -61,6 +62,7 @@
       { id: 'empresas', label: 'Cedentes' },
       { id: 'sacados', label: 'Sacados' },
       { id: 'parceiros', label: 'Fundos' },
+      { id: 'plataformas', label: 'Plataformas (API)' },
     ] },
     { id: 'juridico', label: 'Jurídico', items: [
       { id: 'juridico', label: 'Documentos assinados', count: 'legal' },
@@ -504,6 +506,7 @@
         ops: d.operations_review + d.operations_to_pay, settlements: d.settlements,
         billing: Number(d.overdue || 0) + Number(d.settlements || 0), legal: Number(d.documents_missing || 0) + Number(d.notices_problem || 0),
       };
+      counts.verify = await rpc('bo_verify_count').catch(() => 0);
       window.BO.dashboard = d;
       paintNav(currentView());
     } catch { /* o painel mostra o erro */ }

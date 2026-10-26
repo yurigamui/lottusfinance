@@ -1,0 +1,47 @@
+﻿# Ficha de crédito Lottus · versão 1
+# Preencha a coluna "valor". Vazio não muda nada; "apagar" apaga o dado salvo. Percentual em % (35 = 35%).
+campo;descricao;formato;valor;fonte
+cnpj;CNPJ do cedente (obrigatório);CNPJ (com ou sem pontuação);;
+ficha_referencia;Período ou data-base dos documentos (ex.: 2025, 12/2025);texto livre;;
+ficha_documentos;"Documentos lidos (ex.: Balanço 2025; DRE 2025; Faturamento 12 meses)";texto livre;;
+ficha_observacoes;Observações para a análise (pontos de atenção, ressalvas, divergências);texto livre;;
+setor;Empresa e gestão · Setor de atuação (se diferente do CNAE);uma opção: Agricultura | Gráfica e Editora | Hospedagem e Turismo | Alimentos | Intermediações Financeiras | Bancos | Metalurgia e Siderurgia | Metal Mecânica | Distribuidora Comercial (Compra e revenda) | Bebidas e Fumo | Brinquedos | Comunicação e Informática | Papel e Celulose | Embalagens | Atacado | Varejo | Petroquímico e Borracha | Petróleo e Gás | Construção Civil | Industria de Móveis | Indústria Têxtil e Vestuário | Saneamento | Securitização de Recebíveis | Educação | Energia | Seguradoras e Corretoras | Farmacêutico e Higiene | Cosméticos | Serviços Médicos | Serviços de Transporte e Logística | Telecomunicações | Industria Convertedora de Papel;;
+regime;Empresa e gestão · Regime de tributação;uma opção: Simples Nacional | Lucro Presumido | Lucro Real;;
+funcionarios;Empresa e gestão · Número de funcionários;número inteiro;;
+experiencia;Empresa e gestão · Experiência dos gestores;uma opção: Nula | Muito Baixa | Baixa | Moderada | Alta | Muito Alta;;
+estrutura;Empresa e gestão · Estrutura (sede);uma opção: Própria | Alugada;;
+idoneos;Empresa e gestão · Sócios parecem idôneos;Sim ou Não;;
+cresc_curto;Empresa e gestão · Crescimento do setor (até 5 anos);uma opção: Sofrerá Retração | Muito Baixa | Baixa | Moderada | Alta | Muito Alta;;
+cresc_longo;Empresa e gestão · Crescimento do setor (mais de 5 anos);uma opção: Sofrerá Retração | Muito Baixa | Baixa | Moderada | Alta | Muito Alta;;
+sens_macro;Empresa e gestão · Sensibilidade macroeconômica;uma opção: Nula | Muito Baixa | Baixa | Moderada | Alta | Muito Alta;;
+invest_capital;Empresa e gestão · Investimento em bens de capital;uma opção: Muito Baixo | Baixo | Moderado | Alto | Muito Alto;;
+praca;Vendas e cobrança · Praça de venda;uma opção: Nacional e Internacional | Nacional | Apenas Região Norte | Apenas Região Nordeste | Apenas Região Centro Oeste | Apenas Região Sudeste | Apenas Região Sul | Mais de uma região brasileira;;
+pct_vendas_prazo;Vendas e cobrança · % das vendas a prazo;% (ex.: 35 ou 35%);;
+concentracao;Vendas e cobrança · Concentração no maior cliente (%) — se diferente das notas;% (ex.: 35 ou 35%);;
+sacado_pj;Vendas e cobrança · Vende para empresas;Sim ou Não;;
+sacado_pf;Vendas e cobrança · Vende para pessoas físicas;Sim ou Não;;
+cobr_duplicata;Vendas e cobrança · Cobra em duplicata/boleto;Sim ou Não;;
+cobr_cheque;Vendas e cobrança · Cobra em cheque;Sim ou Não;;
+cobr_deposito;Vendas e cobrança · Cobra por depósito em conta;Sim ou Não;;
+antecipa_contratos;Vendas e cobrança · Antecipa contratos;Sim ou Não;;
+antes_entrega;Vendas e cobrança · Antecipa antes de entregar a mercadoria;Sim ou Não;;
+intercompany;Vendas e cobrança · Vende para empresas do mesmo grupo;Sim ou Não;;
+outras_factorings;Outras casas de crédito · Tem cadastro em outras securitizadoras/FIDCs;Sim ou Não;;
+limites_outras;Outras casas de crédito · Soma dos limites em outras casas (R$);"R$ (ex.: 1.234.567,89; negativo com -)";;
+liq_recompra;Outras casas de crédito · % recomprado pelo cedente em outras casas;% (ex.: 35 ou 35%);;
+faturamento_gerencial;Faturamento e DRE (últimos 12 meses) · Faturamento gerencial anual (R$);"R$ (ex.: 1.234.567,89; negativo com -)";;
+receita_bruta;Faturamento e DRE (últimos 12 meses) · Receita bruta (DRE);"R$ (ex.: 1.234.567,89; negativo com -)";;
+receita_liquida;Faturamento e DRE (últimos 12 meses) · Receita líquida;"R$ (ex.: 1.234.567,89; negativo com -)";;
+lucro_bruto;Faturamento e DRE (últimos 12 meses) · Lucro bruto;"R$ (ex.: 1.234.567,89; negativo com -)";;
+ebitda;Faturamento e DRE (últimos 12 meses) · EBITDA;"R$ (ex.: 1.234.567,89; negativo com -)";;
+lucro_liquido;Faturamento e DRE (últimos 12 meses) · Lucro líquido;"R$ (ex.: 1.234.567,89; negativo com -)";;
+data_balanco;Balanço · Data do balanço;data (dd/mm/aaaa);;
+ativo_circulante;Balanço · Ativo circulante;"R$ (ex.: 1.234.567,89; negativo com -)";;
+passivo_circulante;Balanço · Passivo circulante;"R$ (ex.: 1.234.567,89; negativo com -)";;
+contas_receber;Balanço · Contas a receber;"R$ (ex.: 1.234.567,89; negativo com -)";;
+contas_pagar;Balanço · Contas a pagar;"R$ (ex.: 1.234.567,89; negativo com -)";;
+emprestimos_lp;Balanço · Empréstimos de longo prazo;"R$ (ex.: 1.234.567,89; negativo com -)";;
+lucros_acumulados;Balanço · Lucros acumulados;"R$ (ex.: 1.234.567,89; negativo com -)";;
+prejuizos_acumulados;Balanço · Prejuízos acumulados;"R$ (ex.: 1.234.567,89; negativo com -)";;
+prazo_pagamento;Balanço · Prazo médio de pagamento a fornecedores (dias), se não houver balanço;dias (número inteiro);;
+manipulacao;Balanço · Balanço com indícios de manipulação;Sim ou Não;;

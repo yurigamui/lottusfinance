@@ -10,6 +10,10 @@
 
   /* ---------------------------------------------------------------- erros */
   const ERRORS = {
+    nfe_blocked: 'Há nota cancelada ou não reconhecida pelo cliente na SEFAZ: o pagamento ao cedente está travado',
+    screening_blocked: 'O cedente tem sanção vigente ou CNPJ inativo: não abre operação nova',
+    not_configured: 'A verificação ainda não está configurada',
+    invalid_url: 'O endereço do webhook precisa começar com https://',
     buyback_overdue: 'O cedente tem recompra vencida: novas antecipações ficam suspensas até o pagamento.',
     forbidden: 'Este login não faz parte da equipe Lottus.',
     mfa_required: 'Confirme o código do autenticador para continuar.',

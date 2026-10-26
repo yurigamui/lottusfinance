@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>API para plataformas · Lottus Finance</title>
+<meta name="description" content="Documentação da API da Lottus para plataformas que querem oferecer antecipação de recebíveis.">
+<meta name="color-scheme" content="light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="icon" type="image/png" href="img/mark-rosa.png">
+<link rel="stylesheet" href="vendor/lenis.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="legal-top">
+  <a class="logo" href="index.html" aria-label="Lottus Finance, início"><img src="img/logo-rosa.png" alt="Lottus" width="132" height="35"></a>
+  <a class="back" href="index.html">← Voltar ao site</a>
+</header>
+<main>
+  <div class="legal-hero">
+    <h1>API para plataformas</h1>
+    <p>Ofereça antecipação de recebíveis dentro do seu sistema. Seu cliente envia as notas, vê a proposta e recebe o dinheiro sem sair da sua plataforma; a Lottus cuida do crédito, dos contratos e do fundo.</p>
+    <div class="legal-meta"><span>Versão <b>v1</b></span><span>Atualizada em <b>25 de outubro de 2026</b></span><span>Veja também: <a href="termos.html">Termos de Uso</a></span></div>
+  </div>
+  <div class="legal-wrap">
+    <nav class="legal-toc" aria-label="Índice"><b>Índice</b><ol><li><a href="#visao">1. Visão geral</a></li><li><a href="#ambientes">2. Ambientes e autenticação</a></li><li><a href="#inicio">3. Integração rápida</a></li><li><a href="#convencoes">4. Convenções</a></li><li><a href="#conectar">5. Tela Conectar</a></li><li><a href="#notas">6. Notas fiscais</a></li><li><a href="#antecipacoes">7. Antecipações</a></li><li><a href="#webhooks">8. Avisos (webhooks)</a></li><li><a href="#sandbox">9. Sandbox e homologação</a></li><li><a href="#erros">10. Códigos de erro</a></li><li><a href="#avancado">11. Modo avançado</a></li><li><a href="#empresas">12. Avançado: empresas</a></li><li><a href="#representantes">13. Avançado: representantes</a></li><li><a href="#cadastro">14. Avançado: perfil, documentos e conta</a></li><li><a href="#contrato">15. Avançado: contrato-mãe</a></li><li><a href="#operacoes">16. Avançado: simulação e operação</a></li><li><a href="#provas">17. Avançado: provas de aceite</a></li></ol></nav>
+    <article class="legal-doc dev-doc"><h2 id="visao">1. Visão geral</h2>
+<p>A API da Lottus permite que um ERP, sistema de gestão ou marketplace ofereça antecipação de recebíveis dentro do próprio produto. A plataforma manda os dados que já tem (CNPJ, sócio, conta e as notas fiscais); a Lottus analisa o crédito, formaliza a cessão com o fundo e paga o cliente na conta da empresa dele.</p>
+<p>Os passos que valem como prova (consentimento, documento com selfie, aceite do contrato e confirmação de cada antecipação com código no e-mail) acontecem na <b>tela Conectar</b>, uma página da Lottus que você abre dentro do seu sistema. Você não precisa construir essas telas nem guardar provas de aceite.</p>
+<div class="box"><b>Como fica para o seu cliente:</b> a primeira vez leva uns 3 minutos (dados, fotos, contrato). Depois, o seu sistema mostra quanto ele pode antecipar; ele escolhe as notas, vê o valor e confirma com um código de 6 números.</div>
+<h3>Dois jeitos de integrar</h3>
+<div class="table-wrap"><table><thead><tr><th></th><th>Tela Conectar (recomendado)</th><th>Modo avançado</th></tr></thead><tbody><tr><td>Telas no seu sistema</td><td>Um botão que abre a tela da Lottus</td><td>Você constrói todas</td></tr><tr><td>Documento e selfie</td><td>Na tela da Lottus</td><td>Você envia as fotos</td></tr><tr><td>Aceites e provas</td><td>Colhidos e guardados pela Lottus</td><td>Colhidos e guardados por você</td></tr><tr><td>Chamadas</td><td>4 a 5</td><td>Cerca de 12</td></tr><tr><td>Disponível para</td><td>Todas as plataformas</td><td>Mediante contrato específico</td></tr></tbody></table></div><h2 id="ambientes">2. Ambientes e autenticação</h2>
+<div class="table-wrap"><table><thead><tr><th>Ambiente</th><th>Endereço base</th><th>Chave</th></tr></thead><tbody><tr><td>Produção</td><td><code>https://api.lottusfinance.com.br/v1</code></td><td><code>lt_live_…</code></td></tr><tr><td>Sandbox</td><td><code>https://api-sandbox.lottusfinance.com.br/v1</code></td><td><code>lt_test_…</code></td></tr></tbody></table></div>
+<p>As chaves são criadas pela Lottus e entregues por canal seguro. Envie a chave em todas as chamadas:</p>
+<pre class="code" data-lang="bash"><code>curl https://api.lottusfinance.com.br/v1 \
+  -H &quot;Authorization: Bearer lt_live_SUA_CHAVE&quot;</code></pre>
+<ul>
+<li>A chave é secreta: use só no seu servidor, nunca no navegador ou no app do seu cliente.</li>
+<li>Chave de teste não funciona em produção e vice-versa (erro <code>wrong_environment</code>).</li>
+<li>Se a chave vazar, peça a revogação à Lottus; outra é criada na hora.</li>
+<li>Limite padrão: 300 chamadas por minuto por plataforma (erro <code>429 rate_limited</code>).</li>
+</ul><h2 id="inicio">3. Integração rápida</h2>
+<p>O caminho completo, do cadastro à primeira antecipação:</p>
+<ol>
+<li><b>Crie uma sessão de cadastro</b> no seu servidor, com o que você já sabe do cliente.
+<pre class="code" data-lang="bash"><code>curl -X POST https://api.lottusfinance.com.br/v1/connect/sessions \
+  -H &quot;Authorization: Bearer lt_live_SUA_CHAVE&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#x27;{
+    &quot;type&quot;: &quot;onboarding&quot;,
+    &quot;cnpj&quot;: &quot;12.345.678/0001-90&quot;,
+    &quot;external_id&quot;: &quot;cliente-8812&quot;,
+    &quot;return_url&quot;: &quot;https://seu-sistema.com.br/antecipacao&quot;,
+    &quot;prefill&quot;: {
+      &quot;signer&quot;: { &quot;name&quot;: &quot;Maria da Silva Souza&quot;, &quot;cpf&quot;: &quot;123.456.789-09&quot;, &quot;email&quot;: &quot;maria@exemplo.com.br&quot;, &quot;phone&quot;: &quot;+5511999990000&quot; },
+      &quot;profile&quot;: { &quot;monthly_revenue&quot;: &quot;200k_1m&quot;, &quot;avg_receivable_days&quot;: 45 },
+      &quot;bank&quot;: { &quot;bank_code&quot;: &quot;341&quot;, &quot;branch&quot;: &quot;1234&quot;, &quot;account_number&quot;: &quot;56789&quot;, &quot;account_digit&quot;: &quot;0&quot; }
+    }
+  }&#x27;</code></pre>
+A resposta traz <code>url</code>, válida por 7 dias.</li>
+<li><b>Abra a tela</b> para o cliente, na sua página:
+<pre class="code" data-lang="html"><code>&lt;script src=&quot;https://lottusfinance.com.br/conectar/lottus.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+  LottusConectar.open(sessao.url, {
+    onComplete: () =&gt; mostrarMensagem(&#x27;Cadastro enviado! Avisaremos quando o limite sair.&#x27;),
+    onClose: () =&gt; {},
+  });
+&lt;/script&gt;</code></pre>
+No celular ou num app, você também pode redirecionar para <code>url</code> ou abrir numa aba do navegador; no fim, a tela volta para o seu <code>return_url</code>.</li>
+<li><b>Espere o limite.</b> Os avisos <code>connect.session_completed</code> e depois <code>company.credit_updated</code> (com <code>status: "approved"</code>) chegam no seu webhook.</li>
+<li><b>Envie as notas automaticamente.</b> Sempre que o cliente emitir uma NF-e a prazo, mande o XML (<code>POST /v1/invoices</code>). Mostre no seu sistema o valor de <code>GET /v1/companies/{id}/available</code>: "Você tem R$ 48.300 para antecipar".</li>
+<li><b>Antecipe.</b> Quando ele escolher as notas, crie a sessão de antecipação e abra a tela de novo; ele confere o valor e confirma com o código do e-mail.
+<pre class="code" data-lang="bash"><code>curl -X POST https://api.lottusfinance.com.br/v1/anticipations \
+  -H &quot;Authorization: Bearer lt_live_SUA_CHAVE&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#x27;{ &quot;company_id&quot;: &quot;6f1c…&quot;, &quot;invoice_ids&quot;: [&quot;c0a1…&quot;, &quot;c0a2…&quot;], &quot;reference&quot;: &quot;pedido-981&quot; }&#x27;</code></pre>
+O aviso <code>operation.updated</code> acompanha cada etapa até o dinheiro cair na conta.</li>
+</ol><h2 id="convencoes">4. Convenções</h2>
+<ul>
+<li>Corpo e respostas em JSON (UTF-8). Valores em reais com ponto decimal (<code>12500.50</code>); datas em ISO 8601.</li>
+<li>CNPJ e CPF podem ir com ou sem máscara.</li>
+<li>Arquivos vão em base64 no próprio JSON (até 25 MB por chamada).</li>
+<li>Listas aceitam <code>limit</code> (até 200) e <code>created_before</code> para paginar.</li>
+</ul>
+<h3>Erros</h3>
+<p>Toda resposta de erro tem o mesmo formato. Use o <code>code</code> no seu sistema; a <code>message</code> é em português e pode ser mostrada ao usuário.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;debtor_contact_required&quot;,
+    &quot;message&quot;: &quot;Falta o e-mail de cobrança de um dos clientes.&quot;,
+    &quot;detail&quot;: &quot;12345678000190&quot;
+  }
+}</code></pre>
+<h3>Idempotência</h3>
+<p>Envie o cabeçalho <code>Idempotency-Key</code> (até 200 caracteres, por exemplo um UUID) nos POST. Repetir a mesma chave com o mesmo corpo devolve a resposta guardada, com o cabeçalho <code>Idempotent-Replayed: true</code>, sem criar nada de novo. Com outro corpo, a resposta é <code>409 idempotency_conflict</code>. A chave vale por 24 horas. Em <code>POST /v1/operations</code> ela é obrigatória.</p>
+<p>Erros não ficam guardados: depois de corrigir o problema, você pode tentar de novo com a mesma chave.</p><h2 id="conectar">5. Tela Conectar</h2>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/connect/sessions</code></div><p>Cria a sessão de cadastro. A Lottus busca a empresa na Receita; ela precisa estar ativa e ter pelo menos 6 meses de abertura.</p>
+<div class="table-wrap"><table><thead><tr><th>Campo</th><th>O que é</th></tr></thead><tbody><tr><td><code>type</code></td><td><code>onboarding</code> (padrão) ou <code>anticipation</code> (o mesmo que <code>POST /v1/anticipations</code>).</td></tr><tr><td><code>cnpj</code></td><td>CNPJ da empresa do seu cliente.</td></tr><tr><td><code>external_id</code></td><td>Código do cliente no seu sistema; volta em todos os avisos.</td></tr><tr><td><code>return_url</code></td><td>Opcional, https. Para onde a tela volta no fim, com <code>?lottus_session=…&amp;status=completed</code>.</td></tr><tr><td><code>reference</code></td><td>Opcional. Texto seu, devolvido nos avisos.</td></tr><tr><td><code>prefill</code></td><td>Opcional. <code>signer</code>, <code>profile</code> e <code>bank</code>: a tela mostra preenchido e o cliente só confere.</td></tr></tbody></table></div>
+<p>Resposta <code>201</code>:</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;id&quot;: &quot;5d2e…&quot;,
+  &quot;object&quot;: &quot;connect_session&quot;,
+  &quot;type&quot;: &quot;onboarding&quot;,
+  &quot;status&quot;: &quot;open&quot;,
+  &quot;company_id&quot;: &quot;6f1c…&quot;,
+  &quot;url&quot;: &quot;https://lottusfinance.com.br/conectar/#cs_live_…&quot;,
+  &quot;expires_at&quot;: &quot;2026-11-01T14:02:11-03:00&quot;
+}</code></pre>
+<p>A <code>url</code> é só do seu cliente: não guarde nem reaproveite. Se ela expirar ou ele fechar no meio, crie outra sessão: os passos já feitos não se repetem.</p>
+<p>A tela mostra só o que falta. Se você já enviou algo pelo modo avançado (por exemplo, o contrato social), ela pula esse passo.</p>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/connect/sessions/{id}</code></div><p>Situação da sessão: <code>open</code>, <code>completed</code> ou <code>expired</code>; em antecipações, traz <code>operation_id</code>.</p>
+<h3>Eventos na página</h3>
+<p>Com <code>lottus.js</code>, a tela abre numa janela sobre a sua página (em celular, ocupa a tela toda) e avisa o seu código por <code>postMessage</code>:</p>
+<div class="table-wrap"><table><thead><tr><th>Evento</th><th>Quando</th></tr></thead><tbody><tr><td><code>ready</code></td><td>A tela carregou.</td></tr><tr><td><code>completed</code></td><td>O cliente terminou. Em antecipações, traz <code>operation_id</code> e <code>net</code>.</td></tr><tr><td><code>closed</code></td><td>O cliente fechou sem terminar.</td></tr><tr><td><code>error</code></td><td>Link inválido ou expirado.</td></tr></tbody></table></div>
+<p>Use o aviso do webhook como fonte da verdade; os eventos da página servem para atualizar a tela na hora.</p><h2 id="notas">6. Notas fiscais</h2>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/invoices</code></div><p>Envia o XML autorizado de uma NF-e (modelo 55) emitida pela empresa. A Lottus confere a chave, o emitente, o cliente na Receita e as parcelas (duplicatas) da nota.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;company_id&quot;: &quot;6f1c…&quot;,
+  &quot;xml_base64&quot;: &quot;PD94bWwgdmVyc2lvbj0iMS4wIj8+…&quot;
+}</code></pre>
+<p>Você pode enviar <code>xml</code> (texto) em vez de <code>xml_base64</code>. Para várias de uma vez, envie <code>files</code> com até 50 itens (<code>{ "name", "xml_base64" }</code>); a resposta traz o resultado de cada uma, sem interromper as outras.</p>
+<p>Resposta <code>201</code>: o objeto <code>invoice</code>, com <code>status</code> e as parcelas.</p>
+<div class="table-wrap"><table><thead><tr><th>status</th><th>Significado</th></tr></thead><tbody><tr><td><code>available</code></td><td>Pode ser antecipada.</td></tr><tr><td><code>in_review</code></td><td>Em conferência.</td></tr><tr><td><code>rejected</code></td><td>Cancelada ou não reconhecida na SEFAZ. Motivo em <code>status_note</code>.</td></tr><tr><td><code>ineligible</code></td><td>Fora das regras (por exemplo, vencida ou para pessoa física).</td></tr></tbody></table></div>
+<p>Cada parcela tem <code>id</code>, <code>due_date</code>, <code>amount</code> e <code>assigned</code> (já antecipada).</p>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/invoices?company_id=…&amp;amp;status=…</code></div><p>Lista as notas da empresa.</p>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/invoices/{id}</code></div><p>Uma nota.</p>
+<div class="ep"><span class="m m-put">PUT</span><code>/v1/companies/{id}/debtors/{cnpj_do_cliente}</code></div><p>E-mail de cobrança do cliente da nota (o sacado). É obrigatório antes de antecipar, porque a cessão é comunicada a ele e os boletos chegam por esse e-mail. A Lottus usa o e-mail do XML quando existe.</p>
+<pre class="code" data-lang="json"><code>{ &quot;email&quot;: &quot;financeiro@cliente.com.br&quot;, &quot;name&quot;: &quot;Financeiro&quot; }</code></pre><h2 id="antecipacoes">7. Antecipações</h2>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/companies/{id}/available</code></div><p>Quanto a empresa pode antecipar agora: notas disponíveis, dentro do limite e do prazo máximo. Use para mostrar a oferta no seu sistema.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;object&quot;: &quot;available&quot;,
+  &quot;credit_status&quot;: &quot;approved&quot;,
+  &quot;credit_available&quot;: 80000.00,
+  &quot;gross&quot;: 48300.00,
+  &quot;amount&quot;: 48300.00,
+  &quot;estimated_net&quot;: 46912.40,
+  &quot;installments&quot;: 7,
+  &quot;invoices&quot;: 4,
+  &quot;invoice_ids&quot;: [&quot;c0a1…&quot;, &quot;c0a2…&quot;, &quot;c0a3…&quot;, &quot;c0a4…&quot;]
+}</code></pre>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/anticipations</code></div><p>Cria a sessão de confirmação para as notas ou parcelas escolhidas (vale 30 minutos). A Lottus confere as notas, o limite e os clientes na hora e devolve o valor estimado.</p>
+<div class="table-wrap"><table><thead><tr><th>Campo</th><th>O que é</th></tr></thead><tbody><tr><td><code>company_id</code></td><td>A empresa.</td></tr><tr><td><code>invoice_ids</code> ou <code>installment_ids</code></td><td>As notas inteiras ou parcelas específicas.</td></tr><tr><td><code>bank_account_id</code></td><td>Opcional. Sem ele, usa a conta principal.</td></tr><tr><td><code>signer_id</code></td><td>Só quando a empresa tem mais de um representante habilitado.</td></tr><tr><td><code>return_url</code>, <code>reference</code></td><td>Como na sessão de cadastro.</td></tr></tbody></table></div>
+<p>A resposta é uma <code>connect_session</code> com <code>type: "anticipation"</code> e <code>quote</code> (<code>gross</code>, <code>net</code>, <code>monthly_rate</code>). Abra a <code>url</code> do mesmo jeito. Na tela, o cliente vê as notas, o valor líquido, o custo e o Termo de Cessão, e confirma com o código enviado ao e-mail do representante.</p>
+<h3>Etapas da operação</h3>
+<div class="table-wrap"><table><thead><tr><th>stage</th><th>status</th><th>O que acontece</th></tr></thead><tbody><tr><td><code>solicitacao</code></td><td><code>requested</code></td><td>Pedido recebido.</td></tr><tr><td><code>analise</code></td><td><code>in_review</code></td><td>Conferência da Lottus e do fundo.</td></tr><tr><td><code>pagamento</code></td><td><code>approved</code></td><td>Aprovada; o pagamento ao cedente está sendo feito.</td></tr><tr><td><code>ativo</code></td><td><code>paid</code></td><td>Valor pago na conta da empresa. Os clientes pagam os boletos no vencimento.</td></tr><tr><td><code>vencido</code></td><td><code>paid</code></td><td>Alguma parcela venceu sem pagamento.</td></tr><tr><td><code>liquidado</code></td><td><code>settled</code></td><td>Tudo pago.</td></tr><tr><td><code>reprovado</code></td><td><code>rejected</code> / <code>cancelled</code></td><td>Não seguiu. Motivo em <code>status_note</code>.</td></tr></tbody></table></div>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/operations/{id}</code></div><p>Situação atual, valores, fundo e itens.</p>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/operations?company_id=…</code></div><p>Lista as operações.</p><h2 id="webhooks">8. Avisos (webhooks)</h2>
+<p>A Lottus envia um <code>POST</code> para o endereço https que você informar sempre que algo muda. Responda com qualquer status 2xx em até 10 segundos. Se falhar, tentamos de novo com intervalos crescentes, até 10 vezes.</p>
+<div class="table-wrap"><table><thead><tr><th>Evento</th><th>Quando</th></tr></thead><tbody><tr><td><code>connect.session_completed</code></td><td>O cliente terminou a tela Conectar (cadastro ou confirmação de antecipação).</td></tr><tr><td><code>company.credit_updated</code></td><td>Limite de crédito aprovado, alterado ou recusado.</td></tr><tr><td><code>signer.identity_updated</code></td><td>Identidade do representante aprovada ou recusada.</td></tr><tr><td><code>invoice.updated</code></td><td>A nota mudou de situação (por exemplo, cancelada na SEFAZ).</td></tr><tr><td><code>operation.updated</code></td><td>A operação mudou de etapa.</td></tr></tbody></table></div>
+<pre class="code" data-lang="http"><code>POST /seu-endpoint
+Lottus-Event: operation.updated
+Lottus-Event-Id: evt_1842
+Lottus-Signature: t=1761416403,v1=5c2e…
+
+{
+  &quot;id&quot;: &quot;evt_1842&quot;,
+  &quot;type&quot;: &quot;operation.updated&quot;,
+  &quot;created_at&quot;: &quot;2026-10-25T15:40:03-03:00&quot;,
+  &quot;data&quot;: { &quot;id&quot;: &quot;…&quot;, &quot;object&quot;: &quot;operation&quot;, &quot;stage&quot;: &quot;ativo&quot;, &quot;net&quot;: 11160.58, &quot;company_id&quot;: &quot;6f1c…&quot;, &quot;external_id&quot;: &quot;cliente-8812&quot;, … }
+}</code></pre>
+<p>O mesmo aviso pode chegar mais de uma vez: use o <code>id</code> para ignorar repetidos. Os avisos também ficam em <code>GET /v1/events</code>.</p>
+<h3>Conferir a assinatura</h3>
+<p>Cada aviso é assinado com o segredo do webhook (<code>whsec_…</code>) que a Lottus entrega a você. Calcule o HMAC-SHA256 de <code>t + "." + corpo</code> e compare com <code>v1</code>. Recuse avisos com <code>t</code> de mais de 5 minutos.</p>
+<pre class="code" data-lang="js"><code>// Node.js
+import crypto from &#x27;node:crypto&#x27;;
+
+function avisoValido(corpoBruto, cabecalho, segredo) {
+  const partes = Object.fromEntries(cabecalho.split(&#x27;,&#x27;).map((p) =&gt; p.split(&#x27;=&#x27;)));
+  if (Math.abs(Date.now() / 1000 - Number(partes.t)) &gt; 300) return false;
+  const esperado = crypto.createHmac(&#x27;sha256&#x27;, segredo).update(`${partes.t}.${corpoBruto}`).digest(&#x27;hex&#x27;);
+  return crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(partes.v1));
+}</code></pre>
+<pre class="code" data-lang="python"><code># Python
+import hashlib, hmac, time
+
+def aviso_valido(corpo_bruto: bytes, cabecalho: str, segredo: str) -&gt; bool:
+    partes = dict(p.split(&quot;=&quot;, 1) for p in cabecalho.split(&quot;,&quot;))
+    if abs(time.time() - int(partes[&quot;t&quot;])) &gt; 300:
+        return False
+    esperado = hmac.new(segredo.encode(), f&quot;{partes[&#x27;t&#x27;]}.&quot;.encode() + corpo_bruto, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(esperado, partes[&quot;v1&quot;])</code></pre>
+<p>Use o corpo exatamente como chegou, antes de converter o JSON.</p><h2 id="sandbox">9. Sandbox e homologação</h2>
+<p>O sandbox é um ambiente separado (<code>https://api-sandbox.lottusfinance.com.br/v1</code>), com as mesmas regras e sem dinheiro de verdade. Use a chave <code>lt_test_…</code>; as sessões começam com <code>cs_test_</code> e a mesma tela Conectar funciona com elas.</p>
+<ul>
+<li>Use CNPJs reais de empresas de teste suas (a consulta à Receita é real).</li>
+<li>Notas de homologação da SEFAZ (ambiente 2) são aceitas.</li>
+<li>Os códigos de confirmação chegam de verdade no e-mail informado: use um e-mail seu.</li>
+</ul>
+<p>Para testar sozinho, sem esperar a equipe da Lottus, use estas rotas (só existem no sandbox):</p>
+<div class="table-wrap"><table><thead><tr><th>Rota</th><th>O que faz</th></tr></thead><tbody><tr><td><code>POST /v1/sandbox/signers/{{id}}/approve_identity</code></td><td>Aprova a identidade do representante.</td></tr><tr><td><code>POST /v1/sandbox/companies/{{id}}/approve_credit</code></td><td>Aprova o limite. Corpo opcional: <code>limit</code>, <code>monthly_rate</code>, <code>max_days</code>, <code>fee</code> ou <code>approve: false</code> para recusar.</td></tr><tr><td><code>POST /v1/sandbox/operations/{{id}}/approve</code></td><td>Aprova a operação (com o aceite do fundo).</td></tr><tr><td><code>POST /v1/sandbox/operations/{{id}}/pay</code></td><td>Aprova e marca como paga.</td></tr><tr><td><code>POST /v1/sandbox/operations/{{id}}/settle</code></td><td>Aprova, paga e liquida.</td></tr><tr><td><code>POST /v1/sandbox/operations/{{id}}/reject</code></td><td>Recusa. Corpo opcional: <code>reason</code>.</td></tr></tbody></table></div>
+<p>Cada rota dispara os mesmos avisos de webhook da produção. Para entrar em produção, rode o caminho completo no sandbox e fale com a Lottus: <a href="mailto:contato@lottusfinance.com.br">contato@lottusfinance.com.br</a>.</p><h2 id="erros">10. Códigos de erro</h2><div class="table-wrap"><table><thead><tr><th>Código</th><th>HTTP</th><th>O que fazer</th></tr></thead><tbody><tr><td><code>unauthorized</code></td><td>401</td><td>Chave ausente, inválida ou revogada.</td></tr><tr><td><code>wrong_environment</code></td><td>401</td><td>Chave de teste em produção, ou o contrário.</td></tr><tr><td><code>partner_suspended</code></td><td>403</td><td>Acesso suspenso. Fale com a Lottus.</td></tr><tr><td><code>rate_limited</code></td><td>429</td><td>Espere alguns segundos e tente de novo.</td></tr><tr><td><code>invalid</code>, <code>invalid_json</code></td><td>422 / 400</td><td>Corrija o campo indicado em <code>message</code>.</td></tr><tr><td><code>not_found</code>, <code>route_not_found</code></td><td>404</td><td>O recurso não existe ou não é da sua plataforma.</td></tr><tr><td><code>consent_required</code></td><td>422</td><td>Falta o consentimento do cliente ou o aceite dos Termos.</td></tr><tr><td><code>company_not_found</code></td><td>404</td><td>CNPJ não encontrado na Receita.</td></tr><tr><td><code>company_not_eligible</code></td><td>422</td><td>Empresa inativa ou com menos de 6 meses.</td></tr><tr><td><code>company_in_use</code></td><td>409</td><td>A empresa já usa a Lottus por outro canal.</td></tr><tr><td><code>cpf_in_use</code>, <code>email_in_use</code></td><td>409</td><td>CPF ou e-mail ligado a outra pessoa.</td></tr><tr><td><code>signer_not_authorized</code></td><td>403</td><td>Representante não é sócio e não há procuração.</td></tr><tr><td><code>identity_expired</code></td><td>403</td><td>Envie de novo documento e selfie.</td></tr><tr><td><code>terms_changed</code></td><td>409</td><td>O texto mudou. Busque de novo e peça novo aceite.</td></tr><tr><td><code>evidence_required</code></td><td>422</td><td>Faltam <code>ip</code>, <code>accepted_at</code> ou <code>document_sha256</code>.</td></tr><tr><td><code>signup_incomplete</code></td><td>422</td><td>Veja <code>requirements</code>.</td></tr><tr><td><code>agreement_required</code></td><td>422</td><td>Falta o aceite do contrato-mãe.</td></tr><tr><td><code>credit_not_approved</code></td><td>422</td><td>O limite ainda não foi aprovado.</td></tr><tr><td><code>over_limit</code>, <code>debtor_over_limit</code></td><td>422</td><td>Escolha menos notas ou parcelas.</td></tr><tr><td><code>quote_changed</code></td><td>409</td><td>Simule de novo.</td></tr><tr><td><code>invoice_not_eligible</code>, <code>installment_overdue</code>, <code>installment_too_long</code></td><td>422</td><td>Alguma parcela não pode ser antecipada.</td></tr><tr><td><code>debtor_contact_required</code></td><td>422</td><td>Informe o e-mail de cobrança do cliente (<a href="#notas">notas fiscais</a>).</td></tr><tr><td><code>debtor_blocked</code>, <code>screening_blocked</code>, <code>buyback_overdue</code></td><td>422</td><td>A operação não pode ser aberta agora.</td></tr><tr><td><code>bank_required</code>, <code>scr_required</code></td><td>422</td><td>Cadastre a conta ou a autorização do SCR.</td></tr><tr><td><code>duplicate</code>, <code>already_registered</code></td><td>409</td><td>A nota já foi enviada.</td></tr><tr><td><code>not_nfe</code>, <code>invalid_xml</code>, <code>invalid_access_key</code>, <code>invoice_rejected</code></td><td>422</td><td>O XML não é uma NF-e válida desta empresa ou a nota não pode ser antecipada.</td></tr><tr><td><code>identity_files</code>, <code>invalid_file</code>, <code>too_large</code></td><td>422 / 413</td><td>Formato ou tamanho do arquivo.</td></tr><tr><td><code>idempotency_required</code>, <code>idempotency_conflict</code></td><td>400 / 409</td><td>Veja <a href="#convencoes">convenções</a>.</td></tr><tr><td><code>signer_required</code></td><td>422</td><td>Há mais de um representante habilitado: informe <code>signer_id</code>.</td></tr><tr><td><code>debtor_limit</code></td><td>422</td><td>Um cliente passaria do limite dele: escolha outras notas.</td></tr><tr><td><code>sandbox_only</code></td><td>403</td><td>Rota de teste chamada em produção.</td></tr><tr><td><code>receita_unavailable</code>, <code>unavailable</code></td><td>503 / 500</td><td>Tente de novo em instantes.</td></tr></tbody></table></div><h2 id="avancado">11. Modo avançado</h2>
+<p>No modo avançado, a sua plataforma faz tudo pela API: envia documento e selfie, mostra os contratos, colhe os aceites e manda as provas para a Lottus. Ele é liberado para plataformas que já têm verificação de identidade própria e assinam com a Lottus o contrato que trata da guarda das provas.</p>
+<p>As seções a seguir descrevem esse modo. As duas formas convivem: você pode, por exemplo, enviar o contrato social pela API e deixar o restante para a tela Conectar.</p><h2 id="empresas">12. Avançado: empresas</h2>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/companies</code></div><p>Vincula uma empresa à sua plataforma. A Lottus busca os dados na Receita Federal. A empresa precisa estar ativa e ter pelo menos 6 meses de abertura.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;cnpj&quot;: &quot;12.345.678/0001-90&quot;,
+  &quot;external_id&quot;: &quot;cliente-8812&quot;,
+  &quot;consent&quot;: {
+    &quot;accepted&quot;: true,
+    &quot;accepted_at&quot;: &quot;2026-10-25T14:02:11-03:00&quot;,
+    &quot;ip&quot;: &quot;177.10.20.30&quot;,
+    &quot;user_reference&quot;: &quot;usuario-551&quot;,
+    &quot;text&quot;: &quot;Autorizo o compartilhamento dos dados da minha empresa com a Lottus para análise de antecipação.&quot;
+  }
+}</code></pre>
+<p><code>external_id</code> é o código do cliente no seu sistema; ele volta em todos os avisos. O <code>consent</code> registra que o cliente autorizou o envio dos dados dele à Lottus.</p>
+<p>Resposta <code>201</code>: o objeto <code>company</code>.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;id&quot;: &quot;6f1c…&quot;,
+  &quot;object&quot;: &quot;company&quot;,
+  &quot;cnpj&quot;: &quot;12345678000190&quot;,
+  &quot;legal_name&quot;: &quot;Exemplo Comércio LTDA&quot;,
+  &quot;registry_status&quot;: &quot;ATIVA&quot;,
+  &quot;external_id&quot;: &quot;cliente-8812&quot;,
+  &quot;credit&quot;: { &quot;status&quot;: &quot;not_requested&quot; },
+  &quot;signers&quot;: [],
+  &quot;bank_accounts&quot;: [],
+  &quot;documents&quot;: [],
+  &quot;master_agreement&quot;: null,
+  &quot;requirements&quot;: [&quot;signer&quot;, &quot;profile&quot;, &quot;document_contract&quot;, &quot;bank_account&quot;, &quot;scr_consent&quot;, &quot;master_agreement&quot;],
+  &quot;ready_to_operate&quot;: false
+}</code></pre>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/companies/{id}</code></div><p>Dados atuais da empresa: crédito (<code>limit</code>, <code>available</code>, <code>monthly_rate</code>, <code>max_days</code>), representantes, contas, documentos e o que falta.</p>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/companies?cnpj=… ou ?external_id=…</code></div><p>Busca uma empresa sua pelo CNPJ ou pelo seu código. Sem filtro, lista as empresas.</p>
+<h3>O que falta (<code>requirements</code>)</h3>
+<div class="table-wrap"><table><thead><tr><th>Valor</th><th>Como resolver</th></tr></thead><tbody><tr><td><code>signer</code></td><td>Cadastre um representante (<a href="#representantes">representantes</a>).</td></tr><tr><td><code>signer_identity</code></td><td>Envie documento e selfie de um representante sócio, ou uma procuração.</td></tr><tr><td><code>profile</code></td><td><code>PUT /v1/companies/{id}/profile</code></td></tr><tr><td><code>document_contract</code></td><td>Envie o contrato social (<code>kind: "contract"</code>).</td></tr><tr><td><code>bank_account</code></td><td>Cadastre uma conta no CNPJ da empresa.</td></tr><tr><td><code>scr_consent</code></td><td>Envie <code>scr_consent: true</code> ao cadastrar a conta.</td></tr><tr><td><code>master_agreement</code></td><td>Colha o aceite do contrato-mãe (<a href="#contrato">contrato-mãe</a>).</td></tr></tbody></table></div>
+<p>Se a empresa já usa a Lottus pelo app ou por outra plataforma, a resposta é <code>409 company_in_use</code>. Fale com a Lottus para unir as contas.</p><h2 id="representantes">13. Avançado: representantes</h2>
+<p>O representante é a pessoa que aceita os contratos em nome da empresa. Ele precisa ser sócio no quadro da Receita (a Lottus confere pelo nome e pelo CPF) ou ter uma procuração enviada como documento.</p>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/companies/{id}/signers</code></div><p>Cadastra o representante. <code>terms_accepted</code> registra que ele aceitou os Termos de Uso e a Política de Privacidade da Lottus.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;name&quot;: &quot;Maria da Silva Souza&quot;,
+  &quot;cpf&quot;: &quot;123.456.789-09&quot;,
+  &quot;email&quot;: &quot;maria@exemplo.com.br&quot;,
+  &quot;phone&quot;: &quot;+5511999990000&quot;,
+  &quot;external_id&quot;: &quot;usuario-551&quot;,
+  &quot;terms_accepted&quot;: true
+}</code></pre>
+<p>Resposta <code>201</code> com <code>signer_id</code>, <code>role</code> e <code>qsa_verified</code>. Os textos dos Termos ficam em <code>GET /v1/contracts/terms</code>.</p>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/companies/{id}/signers/{signer_id}/identity</code></div><p>Documento com foto (frente e verso) e selfie, em JPEG de até 5 MB cada, em base64. A análise é da Lottus; o resultado chega no aviso <code>signer.identity_updated</code>. Vale por 90 dias.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;document_type&quot;: &quot;cnh&quot;,
+  &quot;document_front&quot;: &quot;/9j/4AAQSkZJRg…&quot;,
+  &quot;document_back&quot;: &quot;/9j/4AAQSkZJRg…&quot;,
+  &quot;selfie&quot;: &quot;/9j/4AAQSkZJRg…&quot;,
+  &quot;provider&quot;: &quot;seu-fornecedor-de-biometria&quot;,
+  &quot;provider_reference&quot;: &quot;sess_99812&quot;,
+  &quot;liveness_score&quot;: 0.97,
+  &quot;evidence&quot;: { &quot;ip&quot;: &quot;177.10.20.30&quot;, &quot;user_agent&quot;: &quot;Mozilla/5.0 …&quot;, &quot;authenticated_at&quot;: &quot;2026-10-25T14:05:00-03:00&quot; }
+}</code></pre>
+<p><code>document_type</code>: <code>cnh</code> ou <code>rg</code>. Se você já faz prova de vida, informe o fornecedor e a referência; isso ajuda a análise.</p><h2 id="cadastro">14. Avançado: perfil, documentos e conta</h2>
+<div class="ep"><span class="m m-put">PUT</span><code>/v1/companies/{id}/profile</code></div><p>Faturamento e prazo médio de recebimento.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;signer_id&quot;: &quot;a7d2…&quot;,
+  &quot;monthly_revenue&quot;: &quot;200k_1m&quot;,
+  &quot;avg_receivable_days&quot;: 45,
+  &quot;invoice_types&quot;: [&quot;nfe&quot;]
+}</code></pre>
+<p><code>monthly_revenue</code>: <code>ate_50k</code>, <code>50k_200k</code>, <code>200k_1m</code>, <code>1m_5m</code> ou <code>acima_5m</code>.</p>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/companies/{id}/documents</code></div><p>PDF, JPEG ou PNG de até 15 MB, em base64.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;signer_id&quot;: &quot;a7d2…&quot;,
+  &quot;kind&quot;: &quot;contract&quot;,
+  &quot;file_name&quot;: &quot;contrato-social.pdf&quot;,
+  &quot;content_base64&quot;: &quot;JVBERi0xLjcK…&quot;
+}</code></pre>
+<div class="table-wrap"><table><thead><tr><th>kind</th><th>Documento</th></tr></thead><tbody><tr><td><code>contract</code></td><td>Contrato social ou última alteração consolidada (obrigatório)</td></tr><tr><td><code>power_of_attorney</code></td><td>Procuração, quando o representante não é sócio</td></tr><tr><td><code>financials</code></td><td>Balanço e DRE</td></tr><tr><td><code>revenue</code></td><td>Faturamento dos últimos 12 meses</td></tr><tr><td><code>address</code></td><td>Comprovante de endereço</td></tr><tr><td><code>other</code></td><td>Outro</td></tr></tbody></table></div>
+<p>Quanto mais documentos financeiros, melhor e mais rápida a análise de crédito.</p>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/companies/{id}/bank_accounts</code></div><p>Conta para receber o valor antecipado. Precisa estar no CNPJ da empresa.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;signer_id&quot;: &quot;a7d2…&quot;,
+  &quot;bank_code&quot;: &quot;341&quot;,
+  &quot;branch&quot;: &quot;1234&quot;,
+  &quot;account_number&quot;: &quot;56789&quot;,
+  &quot;account_digit&quot;: &quot;0&quot;,
+  &quot;account_type&quot;: &quot;checking&quot;,
+  &quot;default&quot;: true,
+  &quot;scr_consent&quot;: true,
+  &quot;evidence&quot;: { &quot;ip&quot;: &quot;177.10.20.30&quot;, &quot;accepted_at&quot;: &quot;2026-10-25T14:10:00-03:00&quot; }
+}</code></pre>
+<p><code>scr_consent: true</code> registra que o representante autorizou a consulta da empresa ao SCR do Banco Central, obrigatória para a análise. Mostre o texto dessa autorização antes de pedir o aceite.</p><h2 id="contrato">15. Avançado: contrato-mãe</h2>
+<p>Uma vez por empresa, o representante aceita o Contrato Normativo de Cessão de Direitos Creditórios. Mostre o texto completo e peça o aceite de forma ativa (por exemplo, caixa de seleção e botão).</p>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/companies/{id}/contracts/master-agreement?signer_id=…</code></div><p>Devolve <code>version</code>, <code>title</code>, <code>text</code> e <code>sha256</code> (hash do texto). Mostre o <code>text</code> como veio.</p>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/companies/{id}/agreement</code></div><p>Registra o aceite. O <code>document_sha256</code> precisa ser o do texto mostrado; se o contrato mudou no meio do caminho, a resposta é <code>409 terms_changed</code> e você busca o texto de novo.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;signer_id&quot;: &quot;a7d2…&quot;,
+  &quot;evidence&quot;: {
+    &quot;document_sha256&quot;: &quot;9b1f…&quot;,
+    &quot;accepted_at&quot;: &quot;2026-10-25T14:12:40-03:00&quot;,
+    &quot;ip&quot;: &quot;177.10.20.30&quot;,
+    &quot;user_agent&quot;: &quot;Mozilla/5.0 …&quot;,
+    &quot;user_reference&quot;: &quot;usuario-551&quot;,
+    &quot;auth_method&quot;: &quot;senha+otp&quot;,
+    &quot;authenticated_at&quot;: &quot;2026-10-25T14:01:02-03:00&quot;
+  }
+}</code></pre><h2 id="operacoes">16. Avançado: simulação e operação</h2>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/quotes</code></div><p>Simula a antecipação das notas ou parcelas escolhidas e devolve o Termo de Cessão já preenchido, que o representante precisa aceitar.</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;company_id&quot;: &quot;6f1c…&quot;,
+  &quot;signer_id&quot;: &quot;a7d2…&quot;,
+  &quot;invoice_ids&quot;: [&quot;c0a1…&quot;, &quot;c0a2…&quot;],
+  &quot;bank_account_id&quot;: &quot;e91d…&quot;
+}</code></pre>
+<p>Use <code>installment_ids</code> em vez de <code>invoice_ids</code> para escolher parcelas específicas. Resposta:</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;object&quot;: &quot;quote&quot;,
+  &quot;gross&quot;: 12000.00,
+  &quot;discount&quot;: 744.42,
+  &quot;fee&quot;: 95.00,
+  &quot;bonus&quot;: 0,
+  &quot;net&quot;: 11160.58,
+  &quot;monthly_rate&quot;: 0.031,
+  &quot;effective_monthly_rate&quot;: 0.0335,
+  &quot;over_limit&quot;: false,
+  &quot;debtor_issues&quot;: [],
+  &quot;installments&quot;: [{ &quot;installment_id&quot;: &quot;…&quot;, &quot;due_date&quot;: &quot;2026-12-10&quot;, &quot;days&quot;: 46, &quot;amount&quot;: 6000.00, &quot;discount&quot;: 291.10 }],
+  &quot;terms&quot;: { &quot;kind&quot;: &quot;assignment_terms&quot;, &quot;version&quot;: &quot;…&quot;, &quot;title&quot;: &quot;Termo de Cessão&quot;, &quot;text&quot;: &quot;…&quot;, &quot;sha256&quot;: &quot;4e07…&quot; },
+  &quot;expires_at&quot;: &quot;2026-10-26T00:00:00-03:00&quot;
+}</code></pre>
+<p>Mostre o valor líquido (<code>net</code>), o custo e o texto do termo. A simulação vale até o fim do dia.</p>
+<div class="ep"><span class="m m-post">POST</span><code>/v1/operations</code></div><p>Pede a antecipação. Exige o cabeçalho <code>Idempotency-Key</code>. Envie o <code>net</code> que o cliente viu em <code>expected_net</code>: se os valores mudaram, a resposta é <code>409 quote_changed</code> e você simula de novo.</p>
+<pre class="code" data-lang="bash"><code>curl -X POST https://api.lottusfinance.com.br/v1/operations \
+  -H &quot;Authorization: Bearer lt_live_SUA_CHAVE&quot; \
+  -H &quot;Idempotency-Key: 0b8f5a8e-2f8a-4a4f-9c1e-0f7a2c9d1e33&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#x27;{
+    &quot;company_id&quot;: &quot;6f1c…&quot;,
+    &quot;signer_id&quot;: &quot;a7d2…&quot;,
+    &quot;invoice_ids&quot;: [&quot;c0a1…&quot;, &quot;c0a2…&quot;],
+    &quot;bank_account_id&quot;: &quot;e91d…&quot;,
+    &quot;expected_net&quot;: 11160.58,
+    &quot;evidence&quot;: {
+      &quot;document_sha256&quot;: &quot;4e07…&quot;,
+      &quot;accepted_at&quot;: &quot;2026-10-25T15:20:03-03:00&quot;,
+      &quot;ip&quot;: &quot;177.10.20.30&quot;,
+      &quot;user_agent&quot;: &quot;Mozilla/5.0 …&quot;,
+      &quot;user_reference&quot;: &quot;usuario-551&quot;,
+      &quot;auth_method&quot;: &quot;senha+otp&quot;,
+      &quot;authenticated_at&quot;: &quot;2026-10-25T15:18:40-03:00&quot;
+    }
+  }&#x27;</code></pre>
+<p>Resposta <code>201</code>: o objeto <code>operation</code>.</p>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/operations/{id}</code></div><p>Situação atual, valores, fundo e itens.</p>
+<div class="ep"><span class="m m-get">GET</span><code>/v1/operations?company_id=…</code></div><p>Lista as operações.</p>
+<p>As etapas estão em <a href="#antecipacoes">Antecipações</a>.</p><h2 id="provas">17. Avançado: provas de aceite</h2>
+<p>Como a pessoa aceita os contratos dentro do seu sistema, a prova de que foi ela quem aceitou vem de você. A Lottus grava junto com cada aceite o que você enviar em <code>evidence</code>, e o contrato de parceria obriga a plataforma a guardar os registros que comprovam esses dados e a entregá-los quando pedidos.</p>
+<div class="table-wrap"><table><thead><tr><th>Campo</th><th>Obrigatório</th><th>O que é</th></tr></thead><tbody><tr><td><code>ip</code></td><td>sim</td><td>IP de onde a pessoa aceitou (não o do seu servidor).</td></tr><tr><td><code>accepted_at</code></td><td>sim</td><td>Momento do aceite, com fuso.</td></tr><tr><td><code>document_sha256</code></td><td>sim</td><td>O <code>sha256</code> do texto mostrado (contrato-mãe ou termo da simulação).</td></tr><tr><td><code>user_agent</code></td><td>recomendado</td><td>Navegador ou app da pessoa.</td></tr><tr><td><code>user_reference</code></td><td>recomendado</td><td>Código do usuário no seu sistema.</td></tr><tr><td><code>auth_method</code></td><td>recomendado</td><td>Como a pessoa entrou (por exemplo, <code>senha+otp</code>, <code>sso</code>).</td></tr><tr><td><code>authenticated_at</code></td><td>recomendado</td><td>Quando ela entrou.</td></tr><tr><td><code>device</code>, <code>app_version</code>, <code>timezone</code>, <code>locale</code></td><td>opcional</td><td>Dados do aparelho.</td></tr></tbody></table></div>
+<div class="box">Boas práticas: peça o aceite com uma ação clara da pessoa logada (não deixe marcado por padrão), mostre o texto completo antes, peça um segundo fator de autenticação para antecipar e guarde os registros por pelo menos 5 anos.</div></article>
+  </div>
+</main>
+<footer class="legal-top" style="padding-bottom:40px;color:var(--muted);font-size:13px">
+  <span>© 2026 Lottus Finance · Lottus Tecnologia LTDA</span>
+  <span><a href="termos.html">Termos de Uso</a> · <a href="privacidade.html">Política de Privacidade</a></span>
+</footer>
+<script src="vendor/lenis.min.js"></script>
+<script>
+if (window.Lenis) { var l = new Lenis({ lerp: 0.09, wheelMultiplier: 0.9 }); document.documentElement.style.scrollBehavior = 'auto';
+  (function f(t) { l.raf(t); requestAnimationFrame(f); })(0);
+  document.addEventListener('click', function (e) { var a = e.target.closest('a[href^="#"]'); if (!a) return; var t = document.getElementById(a.getAttribute('href').slice(1));
+    if (t) { e.preventDefault(); l.scrollTo(t, { offset: -16, duration: 1.1 }); history.pushState(null, '', a.getAttribute('href')); } }); }
+</script>
+</body>
+</html>

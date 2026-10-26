@@ -250,7 +250,8 @@
             ${check(!missing.length, 'Documentos', missing.length ? `Falta: ${esc(missing.map((m) => m.label).join(', '))}` : 'Tudo assinado')}
             ${check(a.tier ? !['CCC', 'CC', 'C', 'DDD', 'DD', 'D'].includes(a.tier) : null, 'Cedente', a.tier ? `Nota ${esc(a.tier)}${bh.ops_total ? ` · ${esc(bh.ops_total)} operações na Lottus` : ''}` : 'Sem nota')}
             ${check(worst ? !['D', 'E'].includes(worst) : null, debtors.length === 1 ? 'Sacado' : `${debtors.length} sacados`, worst ? `Pior nota ${esc(worst)}` : 'Sem nota')}
-          </ul>` : ''}
+            <li class="info" id="nfe-li"><span class="ci" aria-hidden="true">·</span><span><b>Notas na SEFAZ</b><span class="small muted">consultando…</span></span></li>
+          </ul>` : '<ul class="decide" style="margin-top:10px"><li class="info" id="nfe-li"><span class="ci" aria-hidden="true">·</span><span><b>Notas na SEFAZ</b><span class="small muted">consultando…</span></span></li></ul>'}
           ${canApprove && noAccount ? `<div class="note-box small">Para aprovar, conecte a Conta Trio do fundo (o Pix ao cedente sai dela). <a href="#/config/banco">Conectar</a></div>` : ''}
           ${canApprove ? `<div class="rail-actions" id="acts"><p class="small muted" id="bal-note" style="margin:0 0 8px" hidden></p><p class="small" id="limit-note" hidden style="margin:0 0 8px;color:var(--danger)"></p><button class="btn block lg" id="approve" ${missing.length ? 'disabled' : ''}>Aprovar</button>
             <button class="btn danger block" id="decline">Recusar</button></div>` : ''}
@@ -281,7 +282,7 @@
                 <span class="small muted">${s.paid_history && s.paid_history.count ? `${esc(s.paid_history.count)} pagas, ${esc(s.paid_history.late)} com atraso` : 'sem histórico'}${Number(s.exposure_funder) ? ` · ${brl(s.exposure_funder)} já com você` : ''}</span></div>
               ${g.items.map((i) => `<label class="t-row ${selectable ? 'sel' : ''}">
                 ${selectable ? `<input type="checkbox" data-it="${i.n}" checked aria-label="Escolher NF-e ${esc(i.nfe_number || '')}/${esc(i.installment)}">` : ''}
-                <span class="grow">${xmlOf(i) ? `<button type="button" class="nf-link" data-nfxml="${i.n}" title="Baixar o XML da NF-e">NF-e ${esc(i.nfe_number || '—')}/${esc(i.installment)}</button>` : `<b>NF-e ${esc(i.nfe_number || '—')}/${esc(i.installment)}</b>`}<span class="small muted">${date(i.due_date)} · ${itemState(i)}${i.charge && i.charge.pdf_url ? ` · <a href="${esc(i.charge.pdf_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">cobrança Pix</a>` : ''}</span></span>
+                <span class="grow">${xmlOf(i) ? `<button type="button" class="nf-link" data-nfxml="${i.n}" title="Baixar o XML da NF-e">NF-e ${esc(i.nfe_number || '—')}/${esc(i.installment)}</button>` : `<b>NF-e ${esc(i.nfe_number || '—')}/${esc(i.installment)}</b>`}<span class="small muted">${date(i.due_date)} · ${itemState(i)}<span data-nfe="${esc(i.nfe_number || '')}"></span>${i.charge && i.charge.pdf_url ? ` · <a href="${esc(i.charge.pdf_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">cobrança Pix</a>` : ''}</span></span>
                 <span class="num"><b>${brl(i.amount)}</b></span></label>`).join('')}
             </div>`; }).join('')}
           </div>
@@ -314,6 +315,38 @@
     }));
     const cp = el.querySelector('#contract-pdf');
     if (cp) cp.onclick = () => contractPdf(d, x, me);
+    // Notas na SEFAZ (cancelamento e manifestação do cliente)
+    const nfeLi = el.querySelector('#nfe-li');
+    const paintNfe = (n) => {
+      if (!nfeLi || !n) return;
+      const list = (n.invoices || []).filter((v) => v.kind !== 'nfse'), bad = n.blocking || [];
+      const unchecked = list.filter((v) => !v.checked_at).length, confirmed = list.filter((v) => v.confirmed).length;
+      const ok = bad.length ? false : unchecked || !list.length ? null : true;
+      nfeLi.className = ok === true ? 'ok' : ok === false ? 'no' : 'info';
+      nfeLi.querySelector('.ci').textContent = ok === true ? '✓' : ok === false ? '!' : '·';
+      nfeLi.querySelector('.small').innerHTML = bad.length
+        ? `${bad.map((b) => `NF ${esc(b.number || '—')} ${esc(b.problem)}`).join('; ')}. O Pix ao cedente não sai.`
+        : unchecked ? `${unchecked} de ${list.length} ainda não ${unchecked === 1 ? 'conferida' : 'conferidas'} · <a href="#" id="nfe-now">conferir agora</a>`
+        : `${list.length === 1 ? 'Autorizada' : `${list.length} autorizadas`}, sem cancelamento${confirmed ? ` · ${confirmed} ${confirmed === 1 ? 'confirmada' : 'confirmadas'} pelo cliente` : ''} · <a href="#" id="nfe-now">conferir de novo</a>`;
+      if (bad.length) el.querySelectorAll('#approve, [data-ap]').forEach((b) => { b.disabled = true; b.title = 'Há nota cancelada ou não reconhecida pelo cliente'; });
+      (n.invoices || []).forEach((v) => {
+        const t = el.querySelector(`[data-nfe="${CSS.escape(String(v.number || ''))}"]`);
+        if (!t) return;
+        t.innerHTML = v.cancelled || v.status === 'cancelled' ? ' · <b style="color:var(--danger)">cancelada na SEFAZ</b>'
+          : v.disputed ? ' · <b style="color:var(--danger)">cliente não reconhece</b>'
+          : v.confirmed ? ' · <span style="color:var(--success)">cliente confirmou</span>' : '';
+      });
+      const now = nfeLi.querySelector('#nfe-now');
+      if (now) now.onclick = async (ev) => {
+        ev.preventDefault();
+        nfeLi.querySelector('.small').textContent = 'consultando a SEFAZ…';
+        const { data, error } = await B.sb.functions.invoke('verify', { body: { action: 'operation', operation_id: id } });
+        if (error) { toast('Não deu para consultar agora', true); paintNfe(n); return; }
+        if (!data.checked) toast('A consulta das notas ainda não está ligada pela Lottus.', true);
+        paintNfe(data.nfe || n);
+      };
+    };
+    rpc('partner_operation_nfe', { p_op: id }).then(paintNfe).catch(() => { if (nfeLi) nfeLi.remove(); });
     // Pix para pagar o cedente (QR na tela do fundo)
     const ppx = el.querySelector('#payout-pix');
     if (ppx) rpc('partner_payout_pix', { p_id: id }).then((px) => {

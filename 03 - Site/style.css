@@ -983,3 +983,16 @@ html { scroll-padding-top: 16px; }
   .hero-card.home .site-header.open .nav-login-m { border-top-color: #3a322e; }
 }
 .hero-card.home .site-header { z-index: 5; }
+
+/* ===== documentação da API (desenvolvedores.html) ===== */
+.dev-doc code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.88em; background: var(--surface-2); border-radius: 6px; padding: 1px 5px; overflow-wrap: anywhere; }
+.dev-doc pre.code { background: #2b2421; color: #f3ece2; border-radius: 14px; padding: 16px 18px; margin: 12px 0 16px; overflow-x: auto; font-size: 13.5px; line-height: 1.6; max-width: 100%; }
+.dev-doc pre.code code { background: none; padding: 0; font-size: inherit; color: inherit; overflow-wrap: normal; white-space: pre; }
+.dev-doc .ep { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 22px 0 4px; }
+.dev-doc .ep code { background: none; padding: 0; font-weight: 600; color: var(--tinta); font-size: 15px; }
+.dev-doc .ep .m { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; border-radius: 6px; padding: 3px 8px; color: #fff; }
+.dev-doc .m-get { background: #3b7a57; } .dev-doc .m-post { background: var(--rosa); } .dev-doc .m-put { background: #8a5a1f; }
+.dev-doc td code { white-space: nowrap; }
+@media (max-width: 600px) { .dev-doc td code { white-space: normal; } .dev-doc pre.code { font-size: 12.5px; padding: 14px; } }
+.dev-doc ol, .dev-doc ul { grid-template-columns: minmax(0, 1fr); }
+.dev-doc li { min-width: 0; }

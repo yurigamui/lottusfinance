@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conectar com a Lottus</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="icon" type="image/png" href="../img/mark-rosa.png">
+<link rel="stylesheet" href="conectar.css">
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <img src="../img/logo-rosa.png" alt="Lottus" width="104" height="28">
+    <span class="lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>Ambiente seguro da Lottus</span>
+    <button class="close" id="close" type="button" aria-label="Fechar" hidden>✕</button>
+  </header>
+  <div class="progress" id="progress" hidden><i></i></div>
+  <main id="app" aria-live="polite"><div class="loading"><span class="spin"></span>Carregando…</div></main>
+  <footer class="foot">Lottus Tecnologia LTDA · <a href="../termos.html" target="_blank" rel="noopener">Termos</a> · <a href="../privacidade.html" target="_blank" rel="noopener">Privacidade</a></footer>
+</div>
+<script src="conectar.js"></script>
+</body>
+</html>
