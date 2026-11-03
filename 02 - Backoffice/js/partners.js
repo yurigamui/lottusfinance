@@ -525,7 +525,7 @@
         ${p ? `<dt>Via</dt><dd>${esc({ asaas: 'Asaas do parceiro', http: 'API do parceiro', manual: 'Registro manual' }[p.provider] || p.provider)}</dd>` : ''}
         ${p && p.amount ? `<dt>Valor</dt><dd>${brl(p.amount)}</dd>` : ''}</dl>
         ${p && p.error ? `<div class="note-box">${esc(p.error)}</div>` : ''}
-        ${p && p.receipt_url ? `<a class="btn ghost sm block" href="${esc(p.receipt_url)}" target="_blank" rel="noopener">Comprovante do pagamento</a>` : ''}
+        ${p && p.receipt_url ? `<a class="btn ghost sm block" href="${esc(B.safeUrl(p.receipt_url))}" target="_blank" rel="noopener">Comprovante do pagamento</a>` : ''}
         ${auto && o.status === 'approved' && (!p || p.status === 'failed') && can(me, 'approver') ? `<button class="btn sm block" id="po-run">${p ? 'Tentar pagar de novo' : 'Pagar pela API do parceiro'}</button>` : ''}`;
     }
     if (!html) return;

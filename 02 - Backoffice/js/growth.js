@@ -92,7 +92,7 @@
     if (sb) sb.onclick = async () => {
       const r = await confirmAction({
         title: 'Bônus por indicação', confirmLabel: 'Salvar',
-        text: 'Valor creditado a quem indicou, somado ao líquido do próximo saque depois que a empresa indicada fizer o primeiro saque pago.',
+        text: 'Valor creditado a quem indicou, somado ao líquido dos próximos saques depois que a empresa indicada fizer o primeiro saque pago. Em cada saque entra no máximo o custo da operação (deságio + tarifa); o resto fica para os seguintes.',
         extra: `<div class="field"><label>Valor (R$)</label><input class="input" inputmode="decimal" data-field="amount" value="${esc(String(d.bonus ?? 0).replace('.', ','))}"></div>`,
       });
       if (r == null) return;

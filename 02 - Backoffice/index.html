@@ -10,18 +10,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <script>
-    /* Tema antes de desenhar a página: claro (padrão), escuro ou do sistema */
-    document.documentElement.dataset.theme = 'light';
-    try { localStorage.removeItem('lottus.bo.theme'); } catch (e) { /* sem armazenamento */ }
-  </script>
+  <script src="js/theme.js"></script>
 </head>
 <body>
   <div id="app" aria-live="polite"></div>
   <div id="modal-root"></div>
   <div id="toast-root" aria-live="assertive"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="js/vendor/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/core.js"></script>
   <script src="js/ui.js"></script>
@@ -29,6 +25,7 @@
   <script src="js/views.js"></script>
   <script src="js/operations.js"></script>
   <script src="js/growth.js"></script>
+  <script src="js/pricing.js"></script>
   <script src="js/partners.js"></script>
   <script src="js/people.js"></script>
   <script src="js/emails.js"></script>

@@ -17,6 +17,9 @@
     sacados: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
     agendamentos: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
     indicacoes: 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7',
+    taxa: 'M19 5 5 19M6.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm11 11a2.5 2.5 0 100-5 2.5 2.5 0 000 5z',
+    verificacoes: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    plataformas: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
     parceiros: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
     assinar: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',
     auditoria: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
@@ -56,7 +59,6 @@
     ] },
     { id: 'operacoes', label: 'Operações', items: [
       { id: 'operacoes', label: 'Operações' },
-      { id: 'cobrancas', label: 'Cobranças', count: 'billing' },
     ] },
     { id: 'partes', label: 'Cadastros', items: [
       { id: 'empresas', label: 'Cedentes' },
@@ -74,6 +76,7 @@
       { id: 'emails', label: 'E-mails', admin: true },
       { id: 'auditoria', label: 'Auditoria' },
       { id: 'indicacoes', label: 'Indicações' },
+      { id: 'taxa', label: 'Taxa e repasse' },
     ] },
   ];
   // Páginas que continuam abrindo por link, fora do menu
@@ -531,7 +534,7 @@
       const msg = message(e);
       if (/mfa_required|forbidden|JWT|session/i.test(e.message || '')) { signOut(); return; }
       el.innerHTML = `<div class="card"><div class="error-box">${esc(msg)}</div>
-        <div style="margin-top:12px"><button class="btn secondary" onclick="location.reload()">Tentar de novo</button></div></div>`;
+        <div style="margin-top:12px"><button class="btn secondary" data-reload>Tentar de novo</button></div></div>`;
     }
   }
   window.addEventListener('hashchange', () => { route(); refreshCounts(); });

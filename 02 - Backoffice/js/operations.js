@@ -47,6 +47,7 @@
   const OFFER = { approved: ['aprovou', 'success'], declined: ['recusou', 'danger'], skipped: ['pulado', ''] };
   const PAY = { pending: 'na fila', processing: 'processando', done: 'pago', failed: 'falhou' };
 
+  const LTR = { pending: 'a pagar pelo fundo', processing: 'Pix enviado', done: 'recebido', failed: 'falhou', informed: 'fundo informou o Pix', waived: 'dispensado' };
   /** Operação no admin: só acompanhamento (quem decide e paga é o fundo, no Lottus Partners) */
   async function detail(el, id) {
     const [d, docs, fx] = await Promise.all([
@@ -77,7 +78,9 @@
           <dl class="lines">
             <dt>Líquido ao cedente</dt><dd>${brl(o.net_amount)}</dd>
             <dt>Taxa</dt><dd>${pct(o.monthly_rate)} a.m.</dd>
+            ${o.lottus_amount != null ? `<dt>Parte da Lottus</dt><dd><b>${brl(o.lottus_amount)}</b></dd>` : ''}
           </dl>
+          ${o.pricing && o.pricing.adj && Number(o.pricing.adj) !== 0 ? `<div class="small muted" style="margin-top:4px">Taxa por comportamento: ${Number(o.pricing.adj) > 0 ? '+' : ''}${Math.round(Number(o.pricing.adj) * 100)}% no spread${o.pricing.label ? ` (${esc(o.pricing.label)})` : ''}</div>` : ''}
           ${o.status_note ? `<div class="note-box">${esc(o.status_note)}</div>` : ''}
           <div class="stack-sm" style="margin-top:6px">
             <button class="btn ghost sm block" id="receipt">Baixar comprovante</button>
@@ -92,6 +95,8 @@
             <dt>Cedente</dt><dd><a href="#/empresas/${esc(d.company.id)}">${esc(d.company.legal_name)}</a></dd>
             <dt>Documentos</dt><dd>${missing.length ? `<span class="tag danger">Falta: ${missing.map((x) => esc(x.label)).join(', ')}</span>` : '<span class="tag success">Tudo assinado</span>'}</dd>
             ${p ? `<dt>Pagamento</dt><dd>${esc(PAY[p.status] || p.status)}${p.error ? ` · <span style="color:var(--danger)">${esc(p.error)}</span>` : ''}</dd>` : ''}
+            ${o.lottus_amount != null ? `<dt>Parte da Lottus</dt><dd>${brl(o.lottus_amount)} <span class="small muted">= spread ${brl(o.lottus_discount_amount || 0)} + tarifa ${brl(o.lottus_fee_amount || 0)}${Number(o.bonus_amount) ? ` − bônus ${brl(o.bonus_amount)}` : ''}</span>
+              ${d.lottus_transfer ? `<div class="small">Repasse: <b>${esc(LTR[d.lottus_transfer.status] || d.lottus_transfer.status)}</b>${d.lottus_transfer.error && d.lottus_transfer.status === 'failed' ? ` · <span style="color:var(--danger)">${esc(d.lottus_transfer.error)}</span>` : ''} · <a href="#/taxa/repasses">ver repasses</a></div>` : ''}</dd>` : ''}
             <dt>Datas</dt><dd>${when.map(([l, v]) => `${l} ${date(v)}`).join('<br>')}</dd>
           </dl>
         </div>
@@ -100,8 +105,7 @@
           <div class="list">${d.items.map((i) => `<div class="list-row">
             <div class="grow"><b>${esc(i.recipient_name || cnpj(i.recipient_cnpj))}</b>
               <div class="small muted">NF-e ${esc(i.invoice_number || '—')}/${esc(i.number)} · vence ${date(i.due_date)}</div></div>
-            <div class="num"><b>${brl(i.amount)}</b><div>${overdue(i) ? '<span class="tag danger">Vencida</span>' : ['paid', 'settled'].includes(st) ? tag('charge', i.charge_status) : ''}</div></div></div>`).join('')}</div>
-          <p class="small muted" style="margin:10px 0 0">Recompras, ocorrências e lembretes de cada duplicata: em <a href="#/cobrancas/all">Cobranças</a>.</p></div>
+            <div class="num"><b>${brl(i.amount)}</b><div>${overdue(i) ? '<span class="tag danger">Vencida</span>' : ['paid', 'settled'].includes(st) ? tag('charge', i.charge_status) : ''}</div></div></div>`).join('')}</div></div>
 
         <div class="card" id="nfe-card"></div>
 

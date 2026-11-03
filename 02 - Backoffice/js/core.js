@@ -10,7 +10,9 @@
 
   /* ---------------------------------------------------------------- erros */
   const ERRORS = {
-    nfe_blocked: 'Há nota cancelada ou não reconhecida pelo cliente na SEFAZ: o pagamento ao cedente está travado',
+    nfe_blocked: 'Nota cancelada, não reconhecida pelo cliente ou ainda não conferida na SEFAZ: a operação não pode ser aprovada nem paga',
+    protected_delete: 'Registros financeiros e jurídicos não podem ser apagados',
+    terms_changed: 'O texto do contrato mudou. Abra de novo e confira.',
     screening_blocked: 'O cedente tem sanção vigente ou CNPJ inativo: não abre operação nova',
     not_configured: 'A verificação ainda não está configurada',
     invalid_url: 'O endereço do webhook precisa começar com https://',
@@ -21,6 +23,7 @@
     not_found: 'Não encontrado. Atualize a página.',
     note_required: 'Escreva o motivo. Ele aparece para o cliente.',
     invalid: 'Confira os valores informados.',
+    pix_key_required: 'Cadastre a chave Pix da Lottus antes de ligar o repasse.',
     invalid_status: 'Esta ação não vale para a situação atual. Atualize a página.',
     reference_required: 'Informe o comprovante do pagamento (ex.: id do Pix ou da TED).',
     bank_required: 'A operação não tem conta de crédito.',
@@ -59,6 +62,13 @@
   /* ---------------------------------------------------------- formatação */
   const esc = (v) =>
     String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  /** Só endereços https (ou âncoras internas): nada de javascript: vindo do banco ou de um parceiro */
+  const safeUrl = (v) => { const s = String(v == null ? '' : v).trim(); return /^https:\/\//i.test(s) || /^#\//.test(s) ? s : '#'; };
+  // Sem atributos onclick no HTML (a política de segurança bloqueia script embutido)
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-reload]')) location.reload();
+    if (e.target.closest('a[data-stop]')) e.stopPropagation();
+  }, true);
   const brlFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   const brl = (v) => (v == null || v === '' ? '—' : brlFmt.format(Number(v)));
   const pct = (v, d = 2) => (v == null ? '—' : (Number(v) * 100).toFixed(d).replace('.', ',') + '%');
@@ -243,7 +253,7 @@
   window.addEventListener('unhandledrejection', (ev) => { if (ev.reason && ev.reason.handled) ev.preventDefault(); });
 
   window.BO = {
-    sb, rpc, message, esc, brl, pct, date, dateTime, ago, cnpj, cpf, yearsSince, tag, check,
+    sb, rpc, safeUrl, message, esc, brl, pct, date, dateTime, ago, cnpj, cpf, yearsSince, tag, check,
     DOC_KIND, ACCESS, ROLE, LEVEL, REVENUE, toast, modal, closeModal, confirmAction, run,
     signedUrl, openFile, isImage, copy,
   };

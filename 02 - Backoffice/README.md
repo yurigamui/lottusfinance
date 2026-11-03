@@ -1,6 +1,6 @@
 # Lottus · Admin
 
-Site da equipe Lottus, publicado em **admin.lottusfinance.com.br**: cadastros, crédito, acompanhamento das operações (só para ver: quem aprova e paga é o fundo, no Lottus Partners), jurídico, controle e crescimento.
+Site da equipe Lottus, publicado em **admin.lottusfinance.com.br**: cadastros, crédito, acompanhamento das operações (só para ver: quem aprova, paga e cobra é o fundo, no Lottus Partners), jurídico, controle e crescimento.
 
 O site dos fundos fica na pasta `lottus-partners`, publicado em partners.lottusfinance.com.br. Representante de fundo que tenta entrar aqui é recusado com o aviso do endereço certo.
 

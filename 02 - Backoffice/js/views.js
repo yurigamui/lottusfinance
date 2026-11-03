@@ -16,8 +16,7 @@
       ['identidade', d.identity, 'Identidade para analisar', 'Identidades para analisar'],
       ['documentos', d.documents, 'Documento para analisar', 'Documentos para analisar'],
       ['credito', d.credit, 'Limite para decidir', 'Limites para decidir'],
-      ['cobrancas', d.settlements, 'Quitação aguardando Pix', 'Quitações aguardando Pix'],
-      ['cobrancas/overdue', d.overdue, 'Duplicata vencida', 'Duplicatas vencidas'],
+      ['quitacoes', d.settlements, 'Quitação aguardando Pix', 'Quitações aguardando Pix'],
       ['juridico', d.documents_missing, 'Operação com documento faltando', 'Operações com documento faltando'],
       ['juridico', d.notices_problem, 'Notificação de cessão sem entrega', 'Notificações de cessão sem entrega'],
     ];
@@ -28,8 +27,6 @@
     el.innerHTML = `
       ${head(`Visão geral, ${me.name.split(' ')[0]}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}
       <div class="kpis">
-        ${kpi('Carteira em aberto', d.portfolio, 'cobrancas/open')}
-        ${kpi('Vencido e não pago', d.overdue_amount, 'cobrancas/overdue', true)}
         ${kpi('Desembolsado em 30 dias', d.volume_30d, 'operacoes/liquidadas')}
         ${kpi('Limites aprovados', d.approved_limits, 'credito/aprovados')}
       </div>
