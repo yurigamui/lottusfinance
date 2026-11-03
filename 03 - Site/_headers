@@ -1,0 +1,23 @@
+# Cabeçalhos de segurança do site (Cloudflare lê este arquivo)
+/*
+  Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'self'; upgrade-insecure-requests
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Páginas com token no endereço: não vazam o endereço para outros sites
+/pagar.html
+  Referrer-Policy: no-referrer
+/ciencia.html
+  Referrer-Policy: no-referrer
+
+# Tela Conectar: abre dentro do sistema dos parceiros (iframe) e usa a câmera para a selfie
+/conectar/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  ! Permissions-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://rowhslnnlzfbhmzbylbz.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors *
+  Permissions-Policy: camera=(self), microphone=(), geolocation=()
+  Referrer-Policy: no-referrer
