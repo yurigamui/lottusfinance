@@ -14,6 +14,21 @@
     mfa_required: 'Confirme o código do autenticador para continuar.',
     insufficient_level: 'Seu nível de acesso não permite esta ação.',
     not_found: 'Não encontrado. Atualize a página.',
+    signing_url_missing: 'Peça a um administrador do fundo para enviar o primeiro documento (isso define o endereço de assinatura).',
+    signer_required: 'O representante precisa de nome, CPF e e-mail.',
+    already_signed: 'Este documento já foi assinado.',
+    invalid_bank: 'Confira os dados da conta bancária (banco com 3 dígitos, agência, conta e dígito).',
+    link_invalid: 'Link inválido ou substituído por um mais recente.',
+    too_many_attempts: 'Muitas tentativas. Peça um novo link.',
+    not_manual: 'Só séries com indexador Manual são valorizadas à mão.',
+    amount_too_low: 'O valor é menor que o P.U. da série. Aumente o valor.',
+    file_too_large: 'O PDF é grande demais. Use um arquivo de até 5 MB.',
+    invalid_pdf: 'O arquivo não é um PDF válido.',
+    in_use: 'Este cadastro já tem movimentações e não pode ser excluído.',
+    series_required: 'Escolha a série (lastro) da operação antes de aprovar.',
+    series_full: 'A série escolhida não comporta o valor desta operação.',
+    series_exists: 'Já existe uma série com essa emissão e número.',
+    below_allocated: 'O valor total não pode ficar abaixo do que já está alocado em operações.',
     note_required: 'Escreva o motivo. Ele aparece para o cliente.',
     invalid: 'Confira os valores informados.',
     invalid_status: 'Esta ação não vale para a situação atual. Atualize a página.',
@@ -38,19 +53,27 @@
     invalid_pem: 'Certificado ou chave fora do formato PEM',
     invalid_rules: 'Confira as regras de cobrança',
     invalid_url: 'O endereço precisa começar com https://',
+    email_required: 'Cadastre um e-mail válido do investidor antes de convidar.',
+    email_not_confirmed: 'Confirme o e-mail da conta antes de continuar.',
+    too_many_requests: 'Muitas solicitações em aberto.',
+    not_auto: 'Esta série é valorizada manualmente.',
+    not_redeemable: 'Esta série só permite resgate no vencimento.',
+    insufficient_position: 'O investidor não tem essa quantidade de debêntures.',
+    invalid_file: 'Arquivo inválido. Envie PDF, PNG ou JPG.',
+    too_many_files: 'Limite de 30 arquivos neste cadastro.',
     invalid_provider: 'Escolha um banco da lista.',
-    member_elsewhere: 'Esta pessoa já tem acesso em outro fundo ou na equipe Lottus.',
+    member_elsewhere: 'Esta pessoa é da equipe Lottus e não pode ser cadastrada em um fundo.',
+    has_positions: 'A série já tem integralizações: não dá para mudar esta opção.',
     cannot_demote_self: 'Você não pode tirar o seu próprio acesso de administrador.',
     user_not_found: 'Não encontramos este e-mail.',
-    nfe_blocked: 'Há nota cancelada ou não reconhecida pelo cliente na SEFAZ: o pagamento ao cedente está travado',
     screening_blocked: 'O cedente tem sanção vigente ou CNPJ inativo: não abre operação nova',
     not_configured: 'A verificação ainda não está configurada',
     payout_failed: 'O Pix não saiu',
-    trio_not_ready: 'Conecte a Conta Trio do fundo em Configurações → Banco',
+    trio_not_ready: 'Conecte a conta bancária do fundo em Configurações → Banco',
     invalid_keys: 'Confira o Client ID e a Secret Key.',
-    trio_not_configured: 'Cole as chaves da API da Trio em Configurações → Banco.',
+    trio_not_configured: 'Configure a conta bancária do fundo em Configurações → Banco.',
     trio_error: 'Não deu para concluir agora',
-    manual_disabled: 'O pagamento sai pela Conta Trio do fundo; não há registro manual.',
+    manual_disabled: 'O pagamento sai pela conta do fundo; não há registro manual.',
     invalid_phone: 'Confira os celulares dos representantes, com DDD.',
     not_pdf: 'Envie o documento em PDF.',
     file_too_large: 'O arquivo passa de 10 MB.',
@@ -66,6 +89,13 @@
     e2e_other_bank: 'Este Pix saiu de outro banco, não do banco cadastrado do fundo.',
     doc_failed: 'Não deu para enviar o documento agora. Tente de novo.',
     buyback_overdue: 'O cedente tem recompra vencida: novas antecipações ficam suspensas até o pagamento.',
+    cannot_sign: 'Seu usuário não tem permissão para assinar pelo fundo. Peça a um administrador.',
+    already_sent: 'Este documento já foi enviado para assinatura. Edite as partes ou cancele o envio.',
+    nfe_invalid: 'Nota fiscal inválida. Confira o XML e tente de novo.',
+    nfe_duplicate: 'Esta nota fiscal já foi usada em outra operação.',
+    too_many_rules: 'No máximo 12 lembretes.',
+    too_many_reminders: 'Limite de lembretes manuais atingido para esta parcela.',
+    no_email: 'O sacado não tem e-mail cadastrado.',
   };
   function message(err) {
     const raw = (err && (err.message || err.error_description || err.msg)) || String(err || '');
@@ -86,6 +116,13 @@
   /* ---------------------------------------------------------- formatação */
   const esc = (v) =>
     String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  /** Só endereços https (ou âncoras internas): nada de javascript: vindo do banco ou de um parceiro */
+  const safeUrl = (v) => { const s = String(v == null ? '' : v).trim(); return /^https:\/\//i.test(s) || /^#\//.test(s) ? s : '#'; };
+  // Sem atributos onclick no HTML (a política de segurança bloqueia script embutido)
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-reload]')) location.reload();
+    if (e.target.closest('a[data-stop]')) e.stopPropagation();
+  }, true);
   const brlFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   const brl = (v) => (v == null || v === '' ? '—' : brlFmt.format(Number(v)));
   const pct = (v, d = 2) => (v == null ? '—' : (Number(v) * 100).toFixed(d).replace('.', ',') + '%');
@@ -204,7 +241,7 @@
       const el = modal({
         title,
         body: `<div class="stack">
-          ${text ? `<p style="margin:0">${text}</p>` : ''}
+          ${text ? `<p class="u-m0">${text}</p>` : ''}
           ${extra || ''}
           ${note ? `<div class="field"><label for="m-note">${esc(noteLabel || 'Motivo')}</label>
             <textarea id="m-note" class="input" placeholder="${esc(notePlaceholder || '')}"></textarea>
@@ -288,9 +325,24 @@
 
   window.addEventListener('unhandledrejection', (ev) => { if (ev.reason && ev.reason.handled) ev.preventDefault(); });
 
+  /* ---------- helpers compartilhados (um só lugar para todas as telas) ---------- */
+  const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const monthStart = () => today().slice(0, 8) + '01';
+  const digits = (v) => String(v || '').replace(/\D/g, '');
+  const fmtDoc = (d) => { const v = digits(d); return v.length === 11 ? v.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : v.length === 14 ? v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : v; };
+  const kpi = (l, v, sub, bad) => `<div class="card kpi${bad ? ' alert' : ''}"><span class="lbl">${l}</span><span class="big">${v}</span>${sub ? `<span class="small muted">${sub}</span>` : ''}</div>`;
+  const pill = (attr, k, l, cur) => `<button type="button" ${attr}="${k}" class="btn ${cur === k ? '' : 'secondary'} sm">${l}</button>`;
+  const mini = (l, v, sub, col) => `<div class="mini-card"><div class="small muted">${l}</div><div class="mini-v"${col ? ` style="color:${col}"` : ''}>${v}</div>${sub ? `<div class="small muted">${sub}</div>` : ''}</div>`;
+  const dline = (l, v) => `<div class="dline"><span class="muted">${l}</span><b>${v}</b></div>`;
+  const csvFile = (name, head, rows) => {
+    const cell = (v) => { const t = String(v == null ? '' : v); return /[;"\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\uFEFF' + [head, ...rows].map((r) => r.map(cell).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' })); a.download = name.endsWith('.csv') ? name : `${name}-${today()}.csv`; a.click();
+  };
+
   window.BO = {
-    sb, rpc, message, esc, brl, pct, date, dateTime, ago, cnpj, cpf, yearsSince, tag, check,
+    sb, rpc, safeUrl, message, esc, brl, pct, date, dateTime, ago, cnpj, cpf, yearsSince, tag, check,
     DOC_KIND, ACCESS, ROLE, LEVEL, REVENUE, toast, modal, closeModal, confirmAction, run,
     signedUrl, openFile, downloadFile, qrSvg, isImage, copy,
+    today, monthStart, digits, fmtDoc, kpi, pill, mini, dline, csvFile,
   };
 })();

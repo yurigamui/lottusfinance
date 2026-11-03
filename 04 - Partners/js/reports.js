@@ -2,18 +2,11 @@
 (function () {
   'use strict';
   const B = window.BO;
-  const { rpc, esc, brl, pct, date, cnpj, modal, closeModal, toast } = B;
+  const { rpc, esc, brl, date, cnpj, modal, closeModal, toast } = B;
 
-  const MONTH_LONG = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   const STATUS = { open: 'Em aberto', paid: 'Recebida', cancelled: 'Cancelada' };
   const num = (v) => (v == null || v === '' ? '' : Number(v).toFixed(2).replace('.', ','));
   const brDate = (v) => (v ? String(v).slice(0, 10).split('-').reverse().join('/') : '');
-  const monthRange = (ym) => {
-    const [y, m] = ym.split('-').map(Number);
-    const last = new Date(y, m, 0).getDate();
-    return [`${ym}-01`, `${ym}-${String(last).padStart(2, '0')}`];
-  };
-  const monthName = (ym) => { const [y, m] = ym.split('-').map(Number); return `${MONTH_LONG[m - 1]} de ${y}`; };
 
   /** CSV com ; e vírgula decimal (abre direto no Excel em português) */
   function download(name, rows) {
@@ -30,7 +23,7 @@
   B.statementCsv = (rows, name) => download(name, [
     ['Operação', 'Paga ao cedente em', 'Cedente', 'CNPJ do cedente', 'Sacado', 'CNPJ do sacado', 'NF-e', 'Parcela', 'Vencimento',
       'Valor de face', 'Deságio', 'IOF', 'Pago ao cedente', 'Taxa (% a.m.)', 'Prazo (dias)', 'Situação', 'Recebida em', 'Nosso número', 'Comprovante do pagamento'],
-    ...rows.map((r) => [r.operation_id, brDate(r.paid_at), r.cedente, cnpj(r.cedente_cnpj), r.sacado, cnpj(r.sacado_cnpj), r.nfe, r.parcela,
+    ...rows.map((r) => [r.operation_id, brDate(r.paid_at), r.cedente, cnpj(r.cedente_cnpj), r.sacado, cnpj(r.sacado_cnpj), /^(NO|CC|CE)-[0-9a-f]{8}$/i.test(String(r.nfe || '')) ? '' : r.nfe, r.parcela,
       brDate(r.due_date), num(r.face), num(r.discount), num(r.iof), num(r.paid_to_cedente), num(Number(r.rate) * 100), r.days,
       STATUS[r.charge_status] || r.charge_status, brDate(r.received_at), r.our_number || '', r.payout_reference || '']),
   ]);
@@ -324,7 +317,7 @@
   }
   B.fullReport = fullReport;
 
-  /** Janela "Relatórios": escolhe o período e baixa o PDF ou o extrato */
+  /** Janela "Relatórios": escolhe o período e baixa o modelo desejado */
   B.openReports = (me) => {
     const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const now = new Date();
@@ -336,15 +329,48 @@
       ['ano', 'Este ano', [new Date(now.getFullYear(), 0, 1), now]],
       ['12m', 'Últimos 12 meses', [first(now.getFullYear(), now.getMonth() - 11), now]],
     ].map(([k, l, [a, b]]) => [k, l, iso(a), iso(b)]);
+    const inRange = (d, from, to) => { const s = String(d || '').slice(0, 10); return s >= from && s <= to; };
+    const RECV = { open: 'Em aberto', paid: 'Recebida', cancelled: 'Cancelada', overdue: 'Vencida' };
+    /* Cada modelo: título, descrição e os formatos disponíveis (cada um recebe o período) */
+    const MODELS = [
+      ['Relatório gerencial', 'Carteira, resultado, vencimentos, concentração e operações do período.', [['PDF', (f, t) => fullReport(f, t, me)]]],
+      ['Balancete de verificação', 'Saldos e movimento de todas as contas contábeis no período.', [['PDF', (f, t) => B.acct.balanceteExport(f, t, 'pdf', me)], ['CSV', (f, t) => B.acct.balanceteExport(f, t, 'csv', me)]]],
+      ['Operações do período', 'Cada operação pedida: cedente, valores, taxa, parcelas e situação.', [['CSV', async (f, t) => {
+        const list = (await rpc('partner_operations', { p_tab: 'all' })).filter((o) => o.mine !== false && inRange(o.created_at, f, t));
+        if (!list.length) return toast('Nenhuma operação neste período.');
+        B.operationsCsv(list.map((o) => ({ ...o, _state: (B.STAGES.find(([k]) => k === (o.stage === 'solicitacao' ? 'analise' : o.stage)) || [, o.stage])[1] })), `operacoes-${f}-a-${t}.csv`);
+      }]]],
+      ['Extrato de duplicatas', 'Cada duplicata paga ou recebida, para conciliar com o banco.', [['CSV', async (f, t) => {
+        const rows = await rpc('partner_statement', { p_from: f, p_to: t });
+        if (!rows.length) return toast('Nenhuma duplicata paga ou recebida neste período.');
+        B.statementCsv(rows, `extrato-${f}-a-${t}.csv`);
+      }]]],
+      ['Carteira a receber', 'Parcelas em aberto com vencimento no período.', [['CSV', async (f, t) => {
+        const d = await rpc('partner_receivables', { p_view: 'open' });
+        const rows = (d.items || []).filter((x) => inRange(x.due_date, f, t));
+        if (!rows.length) return toast('Nenhuma parcela a receber neste período.');
+        download(`carteira-${f}-a-${t}.csv`, [['Vencimento', 'Sacado', 'Documento', 'Parcela', 'Cedente', 'Valor', 'Situação'],
+          ...rows.map((x) => [brDate(x.due_date), x.sacado, x.document || '', x.parcela, x.cedente, num(x.amount), RECV[x.status] || x.status || ''])]);
+      }]]],
+      ['Movimentações da Tesouraria', 'Pagamentos e recebimentos feitos no período, com a conta bancária.', [['CSV', async (f, t) => {
+        const rows = (await rpc('partner_treasury_list')).filter((x) => x.status === 'paid' && inRange(x.paid_at || x.date, f, t));
+        if (!rows.length) return toast('Nenhuma movimentação neste período.');
+        download(`tesouraria-${f}-a-${t}.csv`, [['Data', 'Tipo', 'Favorecido ou origem', 'Descrição', 'Conta', 'Valor'],
+          ...rows.map((x) => [brDate(x.paid_at || x.date), x.direction === 'in' ? 'Recebimento' : 'Pagamento', x.who, x.label + (x.note ? ` · ${x.note}` : ''), x.account || '', num((x.direction === 'in' ? 1 : -1) * Number(x.amount))])]);
+      }]]],
+    ];
     const box = modal({
       title: 'Relatórios',
+      subtitle: 'Escolha o período e baixe o modelo que precisar.',
       body: `<div class="stack">
         <div class="chips" role="group" aria-label="Período">${PRESETS.map(([k, l], i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-p="${k}" type="button">${esc(l)}</button>`).join('')}</div>
         <div class="grid-2"><div class="field"><label for="rf">De</label><input class="input" type="date" id="rf" value="${PRESETS[0][2]}"></div>
           <div class="field"><label for="rt">Até</label><input class="input" type="date" id="rt" value="${PRESETS[0][3]}"></div></div>
-        <p class="small muted" style="margin:0">O relatório traz carteira, resultado, vencimentos, concentração e as operações do período, em PDF. O extrato lista cada duplicata, para conciliar com o banco.</p></div>`,
-      foot: '<button class="btn secondary" id="rcsv">Baixar extrato (CSV)</button><button class="btn" id="rpdf">Relatório em PDF</button>',
+        <div class="rep-list">${MODELS.map(([title, desc, fmts], i) => `<div style="display:grid;gap:10px;padding:14px 0;border-top:1px solid var(--line)"><span><b>${esc(title)}</b><br><span class="small muted">${esc(desc)}</span></span>
+          <span class="row" style="gap:6px;justify-content:flex-start">${fmts.map(([l], j) => `<button class="btn secondary sm" type="button" data-m="${i}.${j}">${l}</button>`).join('')}</span></div>`).join('')}</div></div>`,
+      foot: '<button class="btn secondary" data-act="cancel">Fechar</button>',
     });
+    box.querySelector('[data-act=cancel]').onclick = () => closeModal();
     const f = box.querySelector('#rf'), t = box.querySelector('#rt');
     box.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => {
       const p = PRESETS.find((x) => x[0] === b.dataset.p); f.value = p[2]; t.value = p[3];
@@ -356,17 +382,11 @@
       if ((new Date(t.value) - new Date(f.value)) / 864e5 > 400) { toast('Escolha um período de até 13 meses.', true); return null; }
       return [f.value, t.value];
     };
-    box.querySelector('#rpdf').onclick = () => { const r = range(); if (!r) return; closeModal(); fullReport(r[0], r[1], me).catch((e) => toast(B.message(e), true)); };
-    box.querySelector('#rcsv').onclick = async (e) => {
+    box.querySelectorAll('[data-m]').forEach((btn) => (btn.onclick = async () => {
       const r = range(); if (!r) return;
-      const btn = e.currentTarget;
+      const [i, j] = btn.dataset.m.split('.').map(Number);
       btn.disabled = true;
-      try {
-        const rows = await rpc('partner_statement', { p_from: r[0], p_to: r[1] });
-        if (!rows.length) { toast('Nenhuma duplicata paga ou recebida neste período.'); return; }
-        B.statementCsv(rows, `extrato-${r[0]}-a-${r[1]}.csv`);
-        closeModal();
-      } catch (err) { toast(B.message(err), true); } finally { btn.disabled = false; }
-    };
+      try { await MODELS[i][2][j][1](r[0], r[1]); } catch (err) { toast(B.message(err), true); } finally { btn.disabled = false; }
+    }));
   };
 })();

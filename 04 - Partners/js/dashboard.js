@@ -23,27 +23,31 @@
         <span class="conc-val">${brl(r.amount)} <span class="muted">· ${Math.round(share * 100)}%</span></span>
         <div class="meter" role="img" aria-label="${Math.round(share * 100)}% da carteira"><span style="width:${Math.max(2, share * 100).toFixed(1)}%"></span></div>
       </div>`;
-    }).join('')}</div>` : '<p class="muted small" style="margin:10px 0 0">Sem carteira em aberto.</p>'}</div>`;
+    }).join('')}</div>` : '<p class="u-m10t muted small">Sem carteira em aberto.</p>'}</div>`;
   }
 
   B.views.painel = async (el, [raw], me) => {
     let months = raw;
     if (!PERIODS.some(([k]) => k === months)) { try { months = localStorage.getItem(KEY) || '12'; } catch { months = '12'; } }
     if (!PERIODS.some(([k]) => k === months)) months = '12';
-    const d = await rpc('partner_dashboard', { p_months: Number(months) });
+    const [d, fs] = await Promise.all([rpc('partner_dashboard', { p_months: Number(months) }), rpc('partner_fund_summary').catch(() => null)]);
     const p = d.period || {}, pf = d.portfolio || {}, q = d.queue || {};
 
     const actions = [];
-    if (Number(q.pending)) actions.push(`<a class="action-card" href="#/assinar/pending"><span class="action-count">${esc(q.pending)}</span>
+    if (Number(q.pending)) actions.push(`<a class="action-card" href="#/assinar/analise"><span class="action-count">${esc(q.pending)}</span>
         <span class="grow"><b>${Number(q.pending) === 1 ? 'Para aprovar' : 'Para aprovar'}</b><span class="small muted">${brl(q.pending_gross)}</span></span><span class="action-go" aria-hidden="true">›</span></a>`);
-    if (Number(q.to_pay)) actions.push(`<a class="action-card" href="#/assinar/to_pay"><span class="action-count">${esc(q.to_pay)}</span>
+    if (Number(q.to_pay)) actions.push(`<a class="action-card" href="#/tesouraria"><span class="action-count">${esc(q.to_pay)}</span>
         <span class="grow"><b>Para pagar</b><span class="small muted">${brl(q.to_pay_net)} aos cedentes</span></span><span class="action-go" aria-hidden="true">›</span></a>`);
+
+    const sp = fs && fs.subs_pending || {}, rp = fs && fs.redemptions_pending || {};
+    if (Number(sp.count)) actions.push(`<a class="action-card" href="#/debentures/solicitacoes"><span class="action-count">${esc(sp.count)}</span>
+        <span class="grow"><b>Integralizações a confirmar</b><span class="small muted">${brl(sp.amount)}</span></span><span class="action-go" aria-hidden="true">›</span></a>`);
+    if (Number(rp.count)) actions.push(`<a class="action-card" href="#/debentures/resgates"><span class="action-count">${esc(rp.count)}</span>
+        <span class="grow"><b>Resgates a pagar</b><span class="small muted">${brl(rp.amount)} líquidos</span></span><span class="action-go" aria-hidden="true">›</span></a>`);
 
     setTimeout(() => B.askAccountConsent && B.askAccountConsent(me), 400);
     el.innerHTML = `
-      ${head('Painel', null, `<div class="row" style="gap:8px">${tabs(PERIODS, months)}<button class="btn secondary sm" id="reports">Relatórios</button></div>`)}
-      ${me.trio_required && !me.trio_ready ? `<a class="trio-banner" href="#/config/banco"><b>Conecte a Conta Trio do fundo</b>
-        <span class="small">Até lá, o fundo não recebe operações: o Pix aos cedentes e o Pix das duplicatas usam essa conta. É só colar as chaves da API em Configurações → Banco.</span></a>` : ''}
+      ${head('Painel', null, `<div class="u-g8 row">${tabs(PERIODS, months)}<button class="btn secondary sm" id="reports">Relatórios</button></div>`)}
       ${actions.length ? `<div class="action-cards">${actions.join('')}</div>` : ''}
 
       <div class="kpi4">

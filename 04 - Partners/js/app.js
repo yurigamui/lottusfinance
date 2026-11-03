@@ -23,6 +23,11 @@
     equipe: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z',
     representantes: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
     contratos: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+    series: 'M4 6h16M4 12h16M4 18h10',
+    debentures: 'M4 6h16M4 12h16M4 18h10',
+    tesouraria: 'M3 10h18M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2zm10 6h2',
+    cobranca: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    cadastros: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
     collapse: 'M11 19l-7-7 7-7m8 14l-7-7 7-7',
     mail: 'M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z',
     motor: 'M4 19h16M7 16V9m5 7V5m5 11v-4',
@@ -79,10 +84,15 @@
   const PARTNER_GROUPS = [
     { id: 'painel', label: 'Painel', items: [{ id: 'painel', label: 'Painel' }] },
     { id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] },
+    { id: 'cobranca', label: 'Cobrança', items: [{ id: 'cobranca', label: 'Cobrança' }] },
+    { id: 'debentures', label: 'Debêntures', items: [{ id: 'debentures', label: 'Debêntures' }] },
+    { id: 'tesouraria', label: 'Tesouraria', items: [{ id: 'tesouraria', label: 'Tesouraria' }] },
+    { id: 'contratos', label: 'Contratos', items: [{ id: 'contratos', label: 'Contratos' }] },
+    { id: 'cadastros', label: 'Cadastros', items: [{ id: 'cadastros', label: 'Cadastros' }] },
     { id: 'config', label: 'Configurações', items: [{ id: 'config', label: 'Configurações' }] },
   ];
-  const PARTNER_VIEWS = ['painel', 'assinar', 'config'];
-  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações'], ['painel', 'Painel'], ['config', 'Configurações']]));
+  const PARTNER_VIEWS = ['painel', 'assinar', 'cobranca', 'cadastros', 'contratos', 'debentures', 'series', 'tesouraria', 'config'];
+  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações'], ['cobranca', 'Cobrança'], ['cadastros', 'Cadastros'], ['contratos', 'Contratos'], ['debentures', 'Debêntures'], ['tesouraria', 'Tesouraria'], ['series', 'Debêntures'], ['painel', 'Painel'], ['config', 'Configurações']]));
   const navGroups = () => (me && me.partner ? PARTNER_GROUPS : NAV_GROUPS);
 
   /** Equipe Lottus ou representante de parceiro */
@@ -97,16 +107,6 @@
     }
     try { return await rpc('bo_me'); }
     catch (e) { if (/forbidden/.test(e.message || '')) throw new Error('wrong_surface_admin'); throw e; }
-  }
-
-  /* ---------------------------------------------------------------- tema */
-  const THEME_KEY = 'lottus.bo.theme';
-  // Só o tema claro
-  const getTheme = () => 'light';
-  function setTheme(t) {
-    document.documentElement.dataset.theme = t;
-    try { localStorage.setItem(THEME_KEY, t); } catch { /* sem armazenamento: vale só nesta aba */ }
-    document.querySelectorAll('[data-theme-opt]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeOpt === t)));
   }
 
   /* ------------------------------------------------------------- login */
@@ -314,6 +314,7 @@
     try {
       me = await whoami();
     } catch (e) {
+      if (/mfa_required/.test(e.message || '')) return renderMfa();
       await sb.auth.signOut();
       renderLogin(message(e));
       return;
@@ -453,7 +454,6 @@
 
   function startShell() {
     const initials = me.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
-    const theme = getTheme();
     app.innerHTML = `
       <div class="shell">
         <aside class="sidenav">
@@ -464,8 +464,13 @@
           <div class="surface">
             <header class="topbar">
               <div class="org">
-                ${me.partner ? `<div class="org-mark">${esc((me.funder.trade_name || me.funder.legal_name || 'P').trim()[0].toUpperCase())}</div>` : '<div class="org-mark logo"></div>'}
-                <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
+                ${me.partner && (me.funders || []).length > 1 ? `<div class="org-wrap"><button class="org org-btn" id="org-btn" aria-haspopup="true" aria-expanded="false" aria-label="Trocar de fundo">
+                    <div class="org-mark">${esc((me.funder.trade_name || me.funder.legal_name || 'P').trim()[0].toUpperCase())}</div>
+                    <div><div class="org-name">${esc(me.funder.legal_name)} <span class="org-caret" aria-hidden="true">▾</span></div><div class="org-sub" id="crumb">Lottus Partners · ${me.funders.length} fundos</div></div></button>
+                  <div class="menu org-menu" id="org-menu" hidden><div class="menu-head"><div class="menu-sub">Seus fundos e securitizadoras</div></div>
+                    ${me.funders.map((f) => `<button class="menu-item org-item ${f.id === me.funder.id ? 'on' : ''}" data-fund="${esc(f.id)}"><span class="org-dot">${esc((f.trade_name || f.legal_name || 'P').trim()[0].toUpperCase())}</span><span>${esc(f.legal_name)}<small>${f.id === me.funder.id ? 'Em uso' : esc(f.role || 'Representante')}</small></span></button>`).join('')}</div></div>`
+                : `${me.partner ? `<div class="org-mark">${esc((me.funder.trade_name || me.funder.legal_name || 'P').trim()[0].toUpperCase())}</div>` : '<div class="org-mark logo"></div>'}
+                <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>`}
               </div>
               <div class="topbar-right">
                 <div class="profile">
@@ -483,6 +488,25 @@
         </main>
       </div>`;
     document.getElementById('logout').onclick = signOut;
+    if (me.partner) {
+      const view = document.getElementById('view');
+      window.BO.emailBanner = (on) => {
+        let b = document.getElementById('pause-banner');
+        if (!on) { if (b) b.remove(); return; }
+        if (!b) { b = document.createElement('a'); b.id = 'pause-banner'; b.className = 'pause-banner'; b.href = '#/config/notificacoes'; view.parentNode.insertBefore(b, view); }
+        b.textContent = 'Modo de ambientação ligado: nenhum e-mail está sendo enviado. Clique para desligar.';
+      };
+      rpc('partner_email_pause_get').then((r) => window.BO.emailBanner(!!r.paused)).catch(() => {});
+    }
+    const ob = document.getElementById('org-btn'), om = document.getElementById('org-menu');
+    if (ob && om) {
+      ob.onclick = (e) => { e.stopPropagation(); om.hidden = !om.hidden; ob.setAttribute('aria-expanded', String(!om.hidden)); };
+      document.addEventListener('click', (e) => { if (!om.hidden && !om.contains(e.target)) { om.hidden = true; ob.setAttribute('aria-expanded', 'false'); } });
+      om.querySelectorAll('[data-fund]').forEach((b) => (b.onclick = async () => {
+        if (b.dataset.fund === me.funder.id) { om.hidden = true; return; }
+        try { await rpc('partner_switch_funder', { p_funder: b.dataset.fund }); location.hash = '#/painel'; location.reload(); } catch (e) { window.BO.toast(message(e), true); }
+      }));
+    }
     const avatar = document.getElementById('avatar'), menu = document.getElementById('profile-menu');
     avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });
@@ -532,7 +556,7 @@
       const msg = message(e);
       if (/mfa_required|forbidden|JWT|session/i.test(e.message || '')) { signOut(); return; }
       el.innerHTML = `<div class="card"><div class="error-box">${esc(msg)}</div>
-        <div style="margin-top:12px"><button class="btn secondary" onclick="location.reload()">Tentar de novo</button></div></div>`;
+        <div class="u-mt12"><button class="btn secondary" data-reload>Tentar de novo</button></div></div>`;
     }
   }
   window.addEventListener('hashchange', () => { route(); refreshCounts(); });
