@@ -1,0 +1,10 @@
+# Cabeçalhos de segurança (Cloudflare Pages / Workers com arquivos estáticos lêem este arquivo)
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://rowhslnnlzfbhmzbylbz.supabase.co; connect-src 'self' https://rowhslnnlzfbhmzbylbz.supabase.co wss://rowhslnnlzfbhmzbylbz.supabase.co https://brasilapi.com.br; frame-src 'self' blob: https://rowhslnnlzfbhmzbylbz.supabase.co; worker-src 'self' blob:; object-src blob:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  X-Robots-Tag: noindex, nofollow

@@ -1,0 +1,88 @@
+/* Lottus Partners — painel: o que espera o fundo, carteira, volume, vencimentos e concentração */
+(function () {
+  'use strict';
+  const B = window.BO;
+  const { rpc, esc, brl, pct } = B;
+  const { head, tabs, onTabs } = B.ui;
+
+  const PERIODS = [['6', '6 meses'], ['12', '12 meses'], ['24', '24 meses']];
+  const MONTH = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const MONTH_LONG = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const monthRow = (ym, i) => {
+    const [y, mo] = ym.split('-').map(Number);
+    return { label: MONTH[mo - 1] + (mo === 1 || i === 0 ? `/${String(y).slice(2)}` : ''), long: `${MONTH_LONG[mo - 1]} de ${y}` };
+  };
+  const plural = (n, one, many) => `${n} ${Number(n) === 1 ? one : many}`;
+  const KEY = 'lottus.partners.period';
+
+  function concentration(title, rows, total) {
+    return `<div class="card"><h2>${title}</h2>${rows.length ? `<div class="conc">${rows.map((r) => {
+      const share = total > 0 ? Number(r.amount) / total : 0;
+      return `<div class="conc-row">
+        <span class="conc-name">${esc(r.name || r.cnpj)}</span>
+        <span class="conc-val">${brl(r.amount)} <span class="muted">· ${Math.round(share * 100)}%</span></span>
+        <div class="meter" role="img" aria-label="${Math.round(share * 100)}% da carteira"><span style="width:${Math.max(2, share * 100).toFixed(1)}%"></span></div>
+      </div>`;
+    }).join('')}</div>` : '<p class="u-m10t muted small">Sem carteira em aberto.</p>'}</div>`;
+  }
+
+  const RKEY = 'lottus.partners.range';
+  const isoD = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  B.views.painel = async (el, [raw], me) => {
+    // período: calendário (de/até); sem início = desde a primeira operação
+    const now = new Date();
+    let rng = null;
+    try { rng = JSON.parse(localStorage.getItem(RKEY) || 'null'); } catch { rng = null; }
+    if (PERIODS.some(([k]) => k === raw)) { rng = { from: isoD(new Date(now.getFullYear(), now.getMonth() - Number(raw) + 1, 1)), to: isoD(now) }; try { localStorage.setItem(RKEY, JSON.stringify(rng)); } catch { /* ok */ } }
+    if (!rng || typeof rng !== 'object' || (rng.from == null && rng.to == null && !rng.all)) rng = { from: isoD(new Date(now.getFullYear(), now.getMonth() - 11, 1)), to: isoD(now) };
+    const [d, fs] = await Promise.all([
+      rpc('partner_dashboard_range', { p_from: rng.from || null, p_to: rng.to || null }).catch(() => rpc('partner_dashboard', { p_months: 12 })),
+      rpc('partner_fund_summary').catch(() => null)]);
+    const p = d.period || {}, pf = d.portfolio || {}, q = d.queue || {};
+
+    const actions = [];
+    if (Number(q.pending)) actions.push(`<a class="action-card" href="#/assinar/analise"><span class="action-count">${esc(q.pending)}</span>
+        <span class="grow"><b>${Number(q.pending) === 1 ? 'Para aprovar' : 'Para aprovar'}</b><span class="small muted">${brl(q.pending_gross)}</span></span><span class="action-go" aria-hidden="true">›</span></a>`);
+    if (Number(q.to_pay)) actions.push(`<a class="action-card" href="#/tesouraria"><span class="action-count">${esc(q.to_pay)}</span>
+        <span class="grow"><b>Para pagar</b><span class="small muted">${brl(q.to_pay_net)} aos cedentes</span></span><span class="action-go" aria-hidden="true">›</span></a>`);
+
+    const sp = fs && fs.subs_pending || {}, rp = fs && fs.redemptions_pending || {};
+    if (Number(sp.count)) actions.push(`<a class="action-card" href="#/debentures/solicitacoes"><span class="action-count">${esc(sp.count)}</span>
+        <span class="grow"><b>Integralizações a confirmar</b><span class="small muted">${brl(sp.amount)}</span></span><span class="action-go" aria-hidden="true">›</span></a>`);
+    if (Number(rp.count)) actions.push(`<a class="action-card" href="#/debentures/resgates"><span class="action-count">${esc(rp.count)}</span>
+        <span class="grow"><b>Resgates a pagar</b><span class="small muted">${brl(rp.amount)} líquidos</span></span><span class="action-go" aria-hidden="true">›</span></a>`);
+
+    setTimeout(() => B.askAccountConsent && B.askAccountConsent(me), 400);
+    el.innerHTML = `
+      ${head('Painel', null, `<div class="u-g8 row"><input class="input" id="dr" style="width:230px" aria-label="Período" placeholder="Período"><button class="btn secondary sm" id="reports">Relatórios</button></div>`)}
+      ${actions.length ? `<div class="action-cards">${actions.join('')}</div>` : ''}
+
+      <div class="kpi4">
+        <div class="tile main"><span class="kpi-label">Carteira a receber</span><span class="tile-value">${brl(pf.open)}</span>
+          <span class="small muted">${brl(pf.next30)} nos próximos 30 dias</span></div>
+        <div class="tile ${Number(pf.overdue) ? 'danger' : ''}"><span class="kpi-label">${Number(pf.overdue) ? '<span class="dot-ico" aria-hidden="true">!</span>' : ''}Vencido</span>
+          <span class="tile-value">${brl(pf.overdue)}</span><span class="small muted">${Number(pf.overdue) ? plural(pf.overdue_items, 'duplicata', 'duplicatas') : 'nada vencido'}</span></div>
+        <div class="tile"><span class="kpi-label">Volume cedido</span><span class="tile-value">${brl(p.gross)}</span>
+          <span class="small muted">${plural(p.count || 0, 'operação', 'operações')}</span></div>
+        <div class="tile"><span class="kpi-label">Taxa média</span><span class="tile-value">${p.rate != null ? pct(p.rate) : '—'}</span>
+          <span class="small muted">${p.days != null ? `prazo médio ${Math.round(p.days)} dias` : 'ao mês'}</span></div>
+      </div>
+
+      <div class="grid-2 dash-row">
+        <div class="card"><h2>Volume por mês</h2><div id="ch-vol"></div></div>
+        <div class="card"><h2>A receber por mês</h2><div id="ch-mat"></div></div>
+      </div>
+      <div class="grid-2 dash-row">
+        ${concentration('Maiores sacados', d.top_debtors || [], Number(pf.open) || 0)}
+        ${concentration('Maiores cedentes', d.top_cedentes || [], Number(pf.open) || 0)}
+      </div>`;
+
+    B.mask.rangePicker(el.querySelector('#dr'), { get: () => ({ from: rng.from || '', to: rng.to || '' }), emptyLabel: 'Desde o início', presets: B.mask.presetsStd({ months: [6, 12, 24] }),
+      set: (f, t) => { try { localStorage.setItem(RKEY, JSON.stringify({ from: f || '', to: t || '', all: !f && !t })); } catch { /* ok */ } if (location.hash !== '#/painel') location.hash = '#/painel'; B.views.painel(el, [], me); } });
+    el.querySelector('#reports').onclick = () => B.openReports(me);
+    B.columnChart(el.querySelector('#ch-vol'), (d.monthly || []).map((r, i) => ({ ...monthRow(r.month, i), value: r.gross,
+      detail: r.count ? plural(r.count, 'operação', 'operações') : '' })), { name: 'Volume cedido' });
+    B.columnChart(el.querySelector('#ch-mat'), (d.maturities || []).map((r, i) => ({ ...monthRow(r.month, i), value: r.amount,
+      detail: r.items ? plural(r.items, 'duplicata', 'duplicatas') : '' })), { name: 'A receber' });
+  };
+})();
