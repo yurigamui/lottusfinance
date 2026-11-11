@@ -144,7 +144,7 @@
     const fund = d.fund.trade_name || d.fund.legal_name;
     const period = `${date(d.from)} a ${date(d.to)}`;
     // Logo embutido (a janela do relatório nem sempre carrega arquivos do site)
-    const logo = await fetch('img/logo-rosa.png').then((r) => r.blob()).then((b) => new Promise((res) => {
+    const logo = window.LOTTUS_LOGO || await fetch('img/logo-rosa.png').then((r) => r.blob()).then((b) => new Promise((res) => {
       const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b);
     })).catch(() => null);
 
@@ -352,35 +352,43 @@
         download(`carteira-${f}-a-${t}.csv`, [['Vencimento', 'Sacado', 'Documento', 'Parcela', 'Cedente', 'Valor', 'Situação'],
           ...rows.map((x) => [brDate(x.due_date), x.sacado, x.document || '', x.parcela, x.cedente, num(x.amount), RECV[x.status] || x.status || ''])]);
       }]]],
-      ['Movimentações da Tesouraria', 'Pagamentos e recebimentos feitos no período, com a conta bancária.', [['CSV', async (f, t) => {
+      ['Movimentações da Tesouraria', 'Pagamentos e recebimentos já realizados no período, com a conta bancária.', [['CSV', async (f, t) => {
         const rows = (await rpc('partner_treasury_list')).filter((x) => x.status === 'paid' && inRange(x.paid_at || x.date, f, t));
         if (!rows.length) return toast('Nenhuma movimentação neste período.');
         download(`tesouraria-${f}-a-${t}.csv`, [['Data', 'Tipo', 'Favorecido ou origem', 'Descrição', 'Conta', 'Valor'],
           ...rows.map((x) => [brDate(x.paid_at || x.date), x.direction === 'in' ? 'Recebimento' : 'Pagamento', x.who, x.label + (x.note ? ` · ${x.note}` : ''), x.account || '', num((x.direction === 'in' ? 1 : -1) * Number(x.amount))])]);
       }]]],
     ];
+    MODELS.push(['Lançamentos contábeis', 'Cada lançamento do período, com código e nome da conta, débito, crédito e contraparte.', [['CSV', async (f, t) => {
+      const movs = (await rpc('partner_acct_movements')).filter((m) => inRange(m.date, f, t));
+      if (!movs.length) return toast('Nenhum lançamento contábil neste período.');
+      const rows = []; movs.forEach((m) => (m.lines || []).forEach((l) => rows.push([brDate(m.date), m.description || '', m.kind || '', (m.parties || []).map((p) => p.name).join(' / '), l.code, l.name, num(l.debit) === '0,00' ? '' : num(l.debit), num(l.credit) === '0,00' ? '' : num(l.credit)])));
+      download(`lancamentos-contabeis-${f}-a-${t}.csv`, [['Data', 'Histórico', 'Tipo', 'Contraparte', 'Código da Conta', 'Conta', 'Débito', 'Crédito'], ...rows]);
+    }]]]);
+    MODELS.push(['Agenda de pagamentos e recebimentos', 'O que está a pagar e a receber no período, com a conta do fundo e a tarifa.', [['CSV', async (f, t) => {
+      const rows = (await rpc('partner_treasury_list')).filter((x) => x.status === 'pending' && !x.ext && inRange(x.date || x.due_date, f, t));
+      if (!rows.length) return toast('Nada a pagar ou receber neste período.');
+      download(`agenda-${f}-a-${t}.csv`, [['Vencimento', 'Tipo', 'Favorecido ou origem', 'Descrição', 'Conta do fundo', 'Tarifa', 'Valor'],
+        ...rows.map((x) => [brDate(x.date || x.due_date), x.direction === 'in' ? 'Recebimento' : 'Pagamento', x.who, x.label, x.account || '', Number(x.fee) ? num(x.fee) : '', num((x.direction === 'in' ? 1 : -1) * Number(x.amount))])]);
+    }]]]);
+    const GROUPS = [['Gerencial', ['Relatório gerencial']], ['Contabilidade', ['Balancete de verificação', 'Lançamentos contábeis']],
+      ['Carteira e operações', ['Operações do período', 'Carteira a receber', 'Extrato de duplicatas']], ['Tesouraria', ['Movimentações da Tesouraria', 'Agenda de pagamentos e recebimentos']]];
+    let from = PRESETS[0][2], to = PRESETS[0][3];
     const box = modal({
       title: 'Relatórios',
       subtitle: 'Escolha o período e baixe o modelo que precisar.',
-      body: `<div class="stack">
-        <div class="chips" role="group" aria-label="Período">${PRESETS.map(([k, l], i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-p="${k}" type="button">${esc(l)}</button>`).join('')}</div>
-        <div class="grid-2"><div class="field"><label for="rf">De</label><input class="input" type="date" id="rf" value="${PRESETS[0][2]}"></div>
-          <div class="field"><label for="rt">Até</label><input class="input" type="date" id="rt" value="${PRESETS[0][3]}"></div></div>
-        <div class="rep-list">${MODELS.map(([title, desc, fmts], i) => `<div style="display:grid;gap:10px;padding:14px 0;border-top:1px solid var(--line)"><span><b>${esc(title)}</b><br><span class="small muted">${esc(desc)}</span></span>
-          <span class="row" style="gap:6px;justify-content:flex-start">${fmts.map(([l], j) => `<button class="btn secondary sm" type="button" data-m="${i}.${j}">${l}</button>`).join('')}</span></div>`).join('')}</div></div>`,
+      body: `<div class="field"><label>Período</label><input class="input" id="rp" style="max-width:280px" aria-label="Período"></div>
+        <div class="rep-list u-mt10">${GROUPS.map(([g, names]) => `<div style="margin-top:18px"><h3 style="font-size:13px;margin:0 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">${esc(g)}</h3>
+          ${names.map((n) => { const i = MODELS.findIndex((m) => m[0] === n); const [title, desc, fmts] = MODELS[i]; return `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-top:1px solid var(--line)"><span><b>${esc(title)}</b><br><span class="small muted">${esc(desc)}</span></span>
+            <span class="row" style="gap:6px;flex-shrink:0">${fmts.map(([l], j) => `<button class="btn secondary sm" type="button" data-m="${i}.${j}">${l}</button>`).join('')}</span></div>`; }).join('')}</div>`).join('')}</div>`,
       foot: '<button class="btn secondary" data-act="cancel">Fechar</button>',
     });
     box.querySelector('[data-act=cancel]').onclick = () => closeModal();
-    const f = box.querySelector('#rf'), t = box.querySelector('#rt');
-    box.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => {
-      const p = PRESETS.find((x) => x[0] === b.dataset.p); f.value = p[2]; t.value = p[3];
-      box.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('on', x === b));
-    }));
-    [f, t].forEach((x) => (x.oninput = () => box.querySelectorAll('[data-p]').forEach((c) => c.classList.remove('on'))));
+    B.mask.rangePicker(box.querySelector('#rp'), { get: () => ({ from, to }), set: (f, t) => { if (f && t) { from = f; to = t; } }, presets: () => PRESETS.map(([, label, a, b]) => ({ label, from: a, to: b })) });
     const range = () => {
-      if (!f.value || !t.value || t.value < f.value) { toast('Confira as datas do período.', true); return null; }
-      if ((new Date(t.value) - new Date(f.value)) / 864e5 > 400) { toast('Escolha um período de até 13 meses.', true); return null; }
-      return [f.value, t.value];
+      if (!from || !to || to < from) { toast('Confira as datas do período.', true); return null; }
+      if ((new Date(to) - new Date(from)) / 864e5 > 400) { toast('Escolha um período de até 13 meses.', true); return null; }
+      return [from, to];
     };
     box.querySelectorAll('[data-m]').forEach((btn) => (btn.onclick = async () => {
       const r = range(); if (!r) return;

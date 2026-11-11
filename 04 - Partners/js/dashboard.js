@@ -26,11 +26,18 @@
     }).join('')}</div>` : '<p class="u-m10t muted small">Sem carteira em aberto.</p>'}</div>`;
   }
 
+  const RKEY = 'lottus.partners.range';
+  const isoD = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   B.views.painel = async (el, [raw], me) => {
-    let months = raw;
-    if (!PERIODS.some(([k]) => k === months)) { try { months = localStorage.getItem(KEY) || '12'; } catch { months = '12'; } }
-    if (!PERIODS.some(([k]) => k === months)) months = '12';
-    const [d, fs] = await Promise.all([rpc('partner_dashboard', { p_months: Number(months) }), rpc('partner_fund_summary').catch(() => null)]);
+    // período: calendário (de/até); sem início = desde a primeira operação
+    const now = new Date();
+    let rng = null;
+    try { rng = JSON.parse(localStorage.getItem(RKEY) || 'null'); } catch { rng = null; }
+    if (PERIODS.some(([k]) => k === raw)) { rng = { from: isoD(new Date(now.getFullYear(), now.getMonth() - Number(raw) + 1, 1)), to: isoD(now) }; try { localStorage.setItem(RKEY, JSON.stringify(rng)); } catch { /* ok */ } }
+    if (!rng || typeof rng !== 'object' || (rng.from == null && rng.to == null && !rng.all)) rng = { from: isoD(new Date(now.getFullYear(), now.getMonth() - 11, 1)), to: isoD(now) };
+    const [d, fs] = await Promise.all([
+      rpc('partner_dashboard_range', { p_from: rng.from || null, p_to: rng.to || null }).catch(() => rpc('partner_dashboard', { p_months: 12 })),
+      rpc('partner_fund_summary').catch(() => null)]);
     const p = d.period || {}, pf = d.portfolio || {}, q = d.queue || {};
 
     const actions = [];
@@ -47,7 +54,7 @@
 
     setTimeout(() => B.askAccountConsent && B.askAccountConsent(me), 400);
     el.innerHTML = `
-      ${head('Painel', null, `<div class="u-g8 row">${tabs(PERIODS, months)}<button class="btn secondary sm" id="reports">Relatórios</button></div>`)}
+      ${head('Painel', null, `<div class="u-g8 row"><input class="input" id="dr" style="width:230px" aria-label="Período" placeholder="Período"><button class="btn secondary sm" id="reports">Relatórios</button></div>`)}
       ${actions.length ? `<div class="action-cards">${actions.join('')}</div>` : ''}
 
       <div class="kpi4">
@@ -70,7 +77,8 @@
         ${concentration('Maiores cedentes', d.top_cedentes || [], Number(pf.open) || 0)}
       </div>`;
 
-    onTabs(el, (t) => { try { localStorage.setItem(KEY, t); } catch { /* ok */ } location.hash = `#/painel/${t}`; });
+    B.mask.rangePicker(el.querySelector('#dr'), { get: () => ({ from: rng.from || '', to: rng.to || '' }), emptyLabel: 'Desde o início', presets: B.mask.presetsStd({ months: [6, 12, 24] }),
+      set: (f, t) => { try { localStorage.setItem(RKEY, JSON.stringify({ from: f || '', to: t || '', all: !f && !t })); } catch { /* ok */ } if (location.hash !== '#/painel') location.hash = '#/painel'; B.views.painel(el, [], me); } });
     el.querySelector('#reports').onclick = () => B.openReports(me);
     B.columnChart(el.querySelector('#ch-vol'), (d.monthly || []).map((r, i) => ({ ...monthRow(r.month, i), value: r.gross,
       detail: r.count ? plural(r.count, 'operação', 'operações') : '' })), { name: 'Volume cedido' });

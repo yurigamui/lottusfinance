@@ -351,7 +351,7 @@
       const esc2 = loan && f.esc ? escs.find((e) => e.id === f.esc.value) : null;
       if (esc2) { const ec = f.esc_cost ? B.mask.parse(f.esc_cost.value) : 0; try { await rpc('partner_op_set_escrituracao', { p_op: opId, p_amount: ec > 0 ? ec : null }); } catch (_) { /* segue */ } }
       if (esc2) { try { const mt = await rpc('partner_op_meta', { p_op: opId }); await rpc('partner_op_set_meta', { p_op: opId, p: { escriturador_id: esc2.id, originator_id: mt.originator_id, commission_kind: mt.commission_kind, commission_value: mt.commission_value } }); } catch (_) { /* segue */ } data.escriturador = esc2; }
-      const vars = termVars(kind, data, prof, { numero: f.numero ? f.numero.value : '1', avalistas: loan ? chosen.map((r) => r.cpf) : [], serie: serie.emission ? `${serie.emission} · ${serie.series}` : '' });
+      const vars = termVars(kind, data, prof, { numero: f.numero ? f.numero.value : '1', avalistas: loan ? chosen.map((r) => r.cpf) : [], serie: serie.emission ? B.serie(serie.emission, serie.series) : '' });
       const text = render(tpl.body, vars);
       const signers = [{ auto: true, role: loan ? 'Titular / Credora' : 'Cessionária' }];
       chosen.forEach((r) => signers.push({ name: r.name, cpf: r.cpf, email: r.email, phone: r.phone, role: loan ? 'Emitente e Avalista' : 'Cedente' }));
@@ -399,7 +399,7 @@
     const tk = kind === 'cessao' ? 'termo_cessao' : kind, tpl = tpls.find((t) => t.kind === tk), loan = kind !== 'cessao';
     const reps = (data.cedente.representatives || []).filter(validRep);
     const serie = (prof.series || []).find((x) => x.id === data.series_id) || {};
-    const vars = termVars(kind, data, prof, { numero: '1', avalistas: loan ? reps.map((r) => r.cpf) : [], serie: serie.emission ? `${serie.emission} · ${serie.series}` : '' });
+    const vars = termVars(kind, data, prof, { numero: '1', avalistas: loan ? reps.map((r) => r.cpf) : [], serie: serie.emission ? B.serie(serie.emission, serie.series) : '' });
     const signers = [{ auto: true, role: loan ? 'Titular / Credora' : 'Cessionária' }];
     reps.forEach((r) => signers.push({ name: r.name, cpf: r.cpf, email: r.email, phone: r.phone, role: loan ? 'Emitente e Avalista' : 'Cedente' }));
     if (loan && data.escriturador) (data.escriturador.representatives || []).filter(validRep).forEach((r) => signers.push({ name: r.name, cpf: r.cpf, email: r.email, phone: r.phone, role: 'Escriturador' }));
@@ -438,6 +438,58 @@
     return run(btn, () => rpc('partner_approve_send', { p_id: opId }));
   };
 
+  /** Operação cujos documentos já foram assinados em outra plataforma: guarda os PDFs e segue sem enviar nada para assinatura */
+  B.markSigned = function (opId, ck, before, done) {
+    const needMaster = !ck.docs.master.ok;
+    const kindName = { cessao: 'Termo de cessão', nota_comercial: 'Termo da nota comercial', ccb: 'CCB' }[ck.kind] || 'Termo da operação';
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    const row = (key, label) => `<div class="fsec"><h3>${label}</h3><div class="fgrid">
+        <div class="field full"><label class="filebox"><input type="file" name="${key}_file" accept="application/pdf,.pdf" hidden><span class="btn secondary sm">Escolher PDF assinado</span><span class="fname" data-name="${key}">Nenhum arquivo escolhido</span></label></div>
+        <div class="field"><label>Data da assinatura</label><input class="input" name="${key}_date" data-mask="date" value="${B.mask.toBr(today)}"></div></div></div>`;
+    const box = B.modal({ title: 'Operação já assinada',
+      subtitle: 'Os documentos foram assinados em outra plataforma. Nada é enviado para assinatura nem por e-mail.',
+      body: `<form id="ms" class="stack" novalidate>
+        <div class="field"><label>Plataforma de assinatura <span class="small muted">(opcional)</span></label><input class="input" name="platform" maxlength="80" placeholder="Ex.: ClickSign, D4Sign, DocuSign"></div>
+        ${row('term', kindName)}${needMaster ? row('master', 'Contrato-mãe') : ''}
+        <div class="note-box small">Use o PDF final, com as assinaturas e, se tiver, o relatório de assinaturas. Até 5 MB por arquivo. A data informada é a da assinatura original e fica no registro.</div>
+        <div class="error-box" id="ms-err" hidden></div></form>`,
+      foot: '<button class="btn secondary" data-act="cancel">Cancelar</button><button class="btn" data-act="ok">Registrar e aprovar</button>' });
+    B.mask.attach(box);
+    const f = box.querySelector('#ms'), err = box.querySelector('#ms-err');
+    const showErr = (m) => { err.hidden = !m; err.textContent = m || ''; };
+    f.querySelectorAll('input[type=file]').forEach((i) => (i.onchange = () => { const nm = f.querySelector(`[data-name="${i.name.replace('_file', '')}"]`); if (nm) nm.textContent = i.files[0] ? i.files[0].name : 'Nenhum arquivo escolhido'; }));
+    box.querySelector('[data-act=cancel]').onclick = () => closeModal();
+    box.querySelector('[data-act=ok]').onclick = async (ev) => {
+      const parts = [['term', kindName]].concat(needMaster ? [['master', 'contrato-mãe']] : []);
+      const data = {};
+      for (const [k, label] of parts) {
+        const file = f[k + '_file'].files[0], iso = B.mask.iso(f[k + '_date']);
+        if (!file) return showErr(`Escolha o PDF do ${label}.`);
+        if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return showErr(`O arquivo do ${label} precisa ser um PDF.`);
+        if (file.size > 5 * 1024 * 1024) return showErr(`O PDF do ${label} passa de 5 MB.`);
+        if (!iso) return showErr(`Informe a data da assinatura do ${label}.`);
+        if (iso > today) return showErr(`A data da assinatura do ${label} não pode ser no futuro.`);
+        data[k] = { file, signed_on: iso };
+      }
+      if (before && (await before()) === false) return;
+      try {
+        const r = await run(ev.currentTarget, async () => {
+          const me = await rpc('partner_me');
+          const base = `${me.funder.id}/assinados/${opId}`;
+          const p = { platform: f.platform.value.trim() };
+          for (const k of Object.keys(data)) {
+            const path = `${base}/${k}-${Date.now()}.pdf`;
+            const { error } = await B.sb.storage.from('boletos').upload(path, data[k].file, { contentType: 'application/pdf', upsert: false });
+            if (error) throw new Error('Não conseguimos enviar o PDF: ' + error.message);
+            p[k] = { path, name: data[k].file.name.slice(0, 120), signed_on: data[k].signed_on };
+          }
+          return rpc('partner_op_mark_signed', { p_op: opId, p });
+        });
+        closeModal(); done && done(r);
+      } catch (e) { showErr(B.message(e)); }
+    };
+  };
+
   /** Quadro do que falta (Análise) com o botão de aprovar; mostra a assinatura em andamento depois do envio */
   B.opManualPanel = async function (host, { opId, instrument, before, onSent, onFix }) {
     const ck = await B.opChecklist(opId, instrument);
@@ -452,7 +504,8 @@
     host.innerHTML = `<div class="stack-sm">${todo.map((i) => `<div class="ck-row no"><span class="ck-ico" aria-hidden="true">!</span>
         <span class="grow"><b>${esc(i.label)}</b><span class="small muted">${esc(i.text)}</span>${i.key === 'esc' ? `<select class="u-mt6 input" data-esc><option value="">${ck.kind === 'ccb' ? 'Sem escriturador' : 'Escolha…'}</option>${(i.escs || []).map((e) => `<option value="${esc(e.id)}" ${i.current && i.current.id === e.id ? 'selected' : ''}>${esc(e.legal_name)}</option>`).join('')}</select>` : ''}
         ${i.key === 'cedente' ? '<button class="linkbtn" data-fix="cedente">Completar cadastro</button>' : ''}${i.key === 'esc' && i.current ? '<button class="linkbtn" data-fix="esc">Completar escriturador</button>' : ''}${i.key === 'tpl' ? '<a class="linkbtn" href="#/config/modelos/contratos">Ver modelos</a>' : ''}</span></div>`).join('')}
-      <button class="btn block" id="apsend" style="font-size:13.5px" ${ck.ready ? '' : 'disabled'}>Aprovar &amp; Assinar</button></div>`;
+      <button class="btn block" id="apsend" style="font-size:13.5px" ${ck.ready ? '' : 'disabled'}>Aprovar &amp; Assinar</button>
+      <button class="btn secondary block" id="apdone" type="button" style="font-size:13.5px">Operação já assinada</button></div>`;
     const sel = host.querySelector('[data-esc]');
     if (sel) sel.onchange = async () => {
       try { const mt = await rpc('partner_op_meta', { p_op: opId }); await rpc('partner_op_set_meta', { p_op: opId, p: { escriturador_id: sel.value || null, originator_id: mt.originator_id, commission_kind: mt.commission_kind, commission_value: mt.commission_value } }); }
@@ -465,6 +518,10 @@
       const id = kind === 'cedente' ? ck.prep.party_id : (ck.data.escriturador || {}).id;
       B.partyForm(kind, list.find((p) => p.id === id) || null, () => { if (onFix) onFix(); else B.opManualPanel(host, { opId, instrument, before, onSent, onFix }); });
     }));
+    host.querySelector('#apdone').onclick = () => B.markSigned(opId, ck, async (r) => {
+      if (before && !(await before())) return false;
+      return true;
+    }, (r) => { toast(r.approved ? 'Operação aprovada' : 'Documentos registrados'); onSent && onSent(r); });
     const go = host.querySelector('#apsend');
     go.onclick = async () => {
       const term = await B.buildTermDoc(ck.kind, opId);
@@ -500,25 +557,94 @@
   };
 
   /* ---------------- painel "Documentos" no detalhe da operação ---------------- */
-  B.docsBox = async function (host, opId, onComplete) {
+  /* mode: 'all' (padrão, etapa de assinatura) · 'cedente' (só contrato-mãe, e só se houver) · 'op' (termo, contratos vinculados e PDFs da operação) */
+  B.docsBox = async function (host, opId, onComplete, mode) {
     if (!host) return;
+    mode = mode || 'all';
+    const KF = { nota: 'Original', aditivo: 'Aditivo', retificacao: 'Termo de retificação', contrato: 'Contrato', outro: 'Documento' };
     const draw = async () => {
-      let d, cols; try { [d, cols] = await Promise.all([rpc('partner_operation_docs', { p_op: opId }), rpc('partner_collections_list')]); } catch (_) { return; }
-      if (!d.applicable) { host.hidden = true; return; }
-      host.hidden = false;
+      let d, cols, ext, fl = { files: [], can_edit: false };
+      try {
+        [d, cols, ext, fl] = await Promise.all([rpc('partner_operation_docs', { p_op: opId }), rpc('partner_collections_list'), rpc('partner_op_external_docs', { p_op: opId }).catch(() => []),
+          (mode === 'op' || mode === 'cedente') ? rpc('partner_op_files', { p_op: opId }).catch(() => ({ files: [], can_edit: false })) : Promise.resolve({ files: [], can_edit: false })]);
+      } catch (_) { return; }
+      const files = ((fl && fl.files) || []).filter((f) => (mode === 'cedente' ? f.scope === 'cedente' : f.scope !== 'cedente'));
+      host.dataset.na = d.applicable ? '' : '1';
+      if (!d.applicable && !((mode === 'op' || mode === 'cedente') && (files.length || host.dataset.always || fl.can_edit))) { host.hidden = true; return; }
       const find = (kind, ref) => cols.filter((c) => c.kind === kind && c.ref_id === ref && c.status !== 'cancelled')[0];
-      const rows = [['contrato_mae', 'Contrato-mãe', d.master, find('contrato_mae', d.party_id)], [d.term_kind === 'termo_cessao' ? 'op_cessao' : 'op_' + d.term_kind, KIND[d.term_kind] || 'Termo', d.term, find(d.term_kind === 'termo_cessao' ? 'op_cessao' : 'op_' + d.term_kind, opId)]];
-      host.innerHTML = `<div class="docs"><h3>Documentos</h3>${rows.map(([k, label, legacy, c], i) => {
+      const linked = cols.filter((c) => c.operation_id === opId && !c.kind && c.status !== 'cancelled');
+      const termK = d.term_kind === 'termo_cessao' ? 'op_cessao' : 'op_' + d.term_kind;
+      const rowsAll = d.applicable ? [['contrato_mae', 'Contrato-mãe', d.master, find('contrato_mae', d.party_id)], [termK, KIND[d.term_kind] || 'Termo', d.term, find(termK, opId)]] : [];
+      const extOf = (k) => (ext || []).filter((e) => e.kind === (k === 'contrato_mae' ? 'master' : 'term'))[0];
+      const hasDoc = ([k, , legacy, c]) => !!(extOf(k) || c || legacy.signed || legacy.doc);
+      const rows = mode === 'all' ? rowsAll : rowsAll.filter((r) => (mode === 'cedente' ? r[0] === 'contrato_mae' : r[0] !== 'contrato_mae') && hasDoc(r));
+      const showLinked = mode !== 'cedente' ? linked : [];
+      const canEdit = (mode === 'op' || mode === 'cedente') && fl.can_edit;
+      const empty = !rows.length && !showLinked.length && !files.length;
+      if (mode !== 'all' && empty && !canEdit) { host.hidden = true; return; }
+      host.hidden = false;
+      const bytes = (n) => (n == null ? '' : n > 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+      host.innerHTML = `<div class="docs${mode === 'op' ? ' docs-flat' : ''}">${mode === 'op' ? '' : empty && mode === 'cedente' ? '' : '<h3>Documentos</h3>'}${rows.map(([k, label, legacy, c], i) => {
         const done = c && c.signers.length && c.signers.every((s) => s.status === 'signed');
-        const st = legacy.signed || done ? ['Assinado', 'success'] : c ? (c.status === 'draft' ? ['Rascunho', ''] : [`${c.signers.filter((s) => s.status === 'signed').length} de ${c.signers.length} assinaram`, 'warning']) : legacy.doc ? ['Documento antigo', 'warning'] : ['Gerado ao aprovar', ''];
-        const act = c ? `<button class="linkbtn" data-see="${esc(c.id)}">Ver</button>`
+        let st = legacy.signed || done ? ['Assinado', 'success'] : c ? (c.status === 'draft' ? ['Rascunho', ''] : [`${c.signers.filter((s) => s.status === 'signed').length} de ${c.signers.length} assinaram`, 'warning']) : legacy.doc ? ['Documento antigo', 'warning'] : ['Gerado ao aprovar', ''];
+        const xd = extOf(k);
+        if (xd) st = [`Assinado externamente · ${B.mask.toBr(xd.signed_on)}`, 'success'];
+        const act = xd ? `<button class="linkbtn" data-ext="${esc(xd.path)}">Ver PDF</button>` : c ? `<button class="linkbtn" data-see="${esc(c.id)}">Ver</button>`
           : legacy.doc ? `<button class="linkbtn" data-legacy="${esc(legacy.doc.id)}">Ver</button>` : '';
         return `<div class="docrow"><div><b>${label}</b></div><span class="tag ${st[1]}">${st[0]}</span><span>${act}</span></div>`;
-      }).join('')}</div>`;
+      }).join('')}${files.map((f) => { const lc = f.collection_id ? cols.find((c) => c.id === f.collection_id) : null; const all = lc && lc.signers.length && lc.signers.every((x) => x.status === 'signed');
+        const st = lc ? (all ? ['Assinado', 'success'] : lc.status === 'draft' ? ['Rascunho', ''] : [`${lc.signers.filter((x) => x.status === 'signed').length} de ${lc.signers.length} assinaram`, 'warning']) : null;
+        return `<div class="docrow"><div><b>${esc(f.title)}</b><div class="small muted">${esc(KF[f.kind] || 'Documento')}${lc ? ' · Lottus Sign' : ''}${f.signed_on ? ' · ' + esc(B.mask.toBr(f.signed_on)) : ''}${f.size ? ' · ' + esc(bytes(f.size)) : ''}</div></div>${st ? `<span class="tag ${st[1]}">${st[0]}</span>` : '<span></span>'}<span>${lc ? `<button class="linkbtn" data-see="${esc(lc.id)}">Ver</button>` : `<button class="linkbtn" data-file="${esc(f.path)}">Ver PDF</button>`}${canEdit ? ` <button class="linkbtn" data-frm="${esc(f.id)}">Remover</button>` : ''}</span></div>`; }).join('')}${showLinked.map((c) => { const all = c.signers.length && c.signers.every((x) => x.status === 'signed'); const st = all ? ['Assinado', 'success'] : c.status === 'draft' ? ['Rascunho', ''] : [`${c.signers.filter((x) => x.status === 'signed').length} de ${c.signers.length} assinaram`, 'warning'];
+        return `<div class="docrow"><div><b>${esc(c.name)}</b><div class="small muted">Contrato vinculado</div></div><span class="tag ${st[1]}">${st[0]}</span><span><button class="linkbtn" data-see="${esc(c.id)}">Ver</button> <button class="linkbtn" data-unlink="${esc(c.id)}">Desvincular</button></span></div>`; }).join('')}
+        ${canEdit ? '<div class="u-mt8"><button class="linkbtn" id="add-file">+ Anexar contrato</button></div>' : ''}</div>`;
+      if (mode === 'op') host.innerHTML = `<div class="card cedente-card"><div class="u-top-wrap row between"><div><h2>Operação</h2><div class="u-mt4 small muted">${esc(host.dataset.summary || '')}</div></div></div>${host.innerHTML}</div>`;
+      host.querySelectorAll('[data-unlink]').forEach((b) => (b.onclick = async () => { try { await run(b, () => rpc('partner_collection_link', { p_id: b.dataset.unlink, p_op: null }), 'Contrato desvinculado'); draw(); } catch (_) { /* já avisado */ } }));
+      const af = host.querySelector('#add-file');
+      if (af) af.onclick = () => {
+        const isOp = mode === 'op';
+        const signList = cols.filter((c) => c.status !== 'cancelled').sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)));
+        const stOf = (c) => { const all = c.signers.length && c.signers.every((x) => x.status === 'signed'); return all ? 'Assinado' : c.status === 'draft' ? 'Rascunho' : `${c.signers.filter((x) => x.status === 'signed').length} de ${c.signers.length} assinaram`; };
+        const bx = B.modal({ title: 'Anexar contrato', subtitle: isOp ? 'Envie o PDF ou escolha um contrato da Lottus Sign.' : 'Contrato do cedente (contrato-mãe, aditivos, procurações…).',
+          body: `<div class="stack">${isOp ? '<div class="field"><label for="of-k">Tipo</label><select class="input" id="of-k"><option value="contrato">Contrato</option><option value="nota">Original (nota, termo ou confissão)</option><option value="aditivo">Aditivo</option><option value="retificacao">Termo de retificação</option><option value="outro">Outro</option></select></div>' : ''}
+            <div class="field"><label for="of-t">Nome</label><input class="input" id="of-t" maxlength="160" placeholder="Ex.: Contrato-mãe assinado"></div>
+            <div class="field" id="of-pdf"><label for="of-f">Arquivo PDF (até 5 MB)</label><input class="input" id="of-f" type="file" accept="application/pdf,.pdf"></div>
+            <div style="border-top:1px solid var(--line);padding-top:10px"><button type="button" class="linkbtn" id="of-ls">Selecionar da Lottus Sign</button><div id="of-list" hidden style="max-height:220px;overflow:auto;margin-top:8px">${signList.length ? signList.map((c) => `<label class="docrow" style="cursor:pointer"><span style="display:flex;gap:8px;align-items:center"><input type="radio" name="of-c" value="${esc(c.id)}"><span><b>${esc(c.name)}</b><span class="small muted"> · ${esc(B.date(c.created_at))}</span></span></span><span class="tag ${stOf(c) === 'Assinado' ? 'success' : ''}">${esc(stOf(c))}</span><span></span></label>`).join('') : '<div class="small muted">Nenhum contrato na Lottus Sign ainda.</div>'}</div></div>
+            <div class="error-box" id="of-e" hidden></div></div>`,
+          foot: '<button class="btn secondary" data-act="cancel">Cancelar</button><button class="btn" data-act="ok">Anexar</button>' });
+        const err = (m2) => { const e = bx.querySelector('#of-e'); e.hidden = false; e.textContent = m2; };
+        bx.querySelector('[data-act=cancel]').onclick = () => closeModal();
+        bx.querySelector('#of-ls').onclick = () => { const l = bx.querySelector('#of-list'); l.hidden = !l.hidden; };
+        bx.querySelectorAll('[name=of-c]').forEach((r) => (r.onchange = () => { const c = cols.find((q) => q.id === r.value); const t = bx.querySelector('#of-t'); if (c && !t.value) t.value = c.name; bx.querySelector('#of-pdf').hidden = true; bx.querySelector('#of-f').value = ''; }));
+        bx.querySelector('#of-f').onchange = (ev) => { const t = bx.querySelector('#of-t'); const f = ev.target.files[0]; if (f && !t.value) t.value = f.name.replace(/\.pdf$/i, ''); const ck = bx.querySelector('[name=of-c]:checked'); if (ck) ck.checked = false; };
+        bx.querySelector('[data-act=ok]').onclick = async (ev) => {
+          const file = bx.querySelector('#of-f').files[0], title = bx.querySelector('#of-t').value.trim(), ck = bx.querySelector('[name=of-c]:checked'), kind = isOp ? bx.querySelector('#of-k').value : 'contrato', scope = isOp ? 'op' : 'cedente';
+          if (!ck && (!file || !/\.pdf$/i.test(file.name))) return err('Envie um PDF ou selecione um contrato da Lottus Sign.');
+          if (file && file.size > 5 * 1024 * 1024) return err('O PDF passa de 5 MB.');
+          if (!title) return err('Dê um nome ao documento.');
+          try {
+            await run(ev.currentTarget, async () => {
+              if (ck) return rpc('partner_op_file_add', { p_op: opId, p: { kind, scope, title, collection_id: ck.value } });
+              const me = await rpc('partner_me');
+              const path = `${me.funder.id}/operacao/${opId}/${Date.now()}.pdf`;
+              const { error } = await B.sb.storage.from('boletos').upload(path, file, { contentType: 'application/pdf', upsert: false });
+              if (error) throw new Error('Não conseguimos enviar o PDF: ' + error.message);
+              return rpc('partner_op_file_add', { p_op: opId, p: { kind, scope, title, path, name: file.name, size: file.size } });
+            }, 'Contrato anexado');
+            closeModal(); draw();
+          } catch (e) { err(B.message(e)); }
+        };
+      };
+      host.querySelectorAll('[data-frm]').forEach((b) => (b.onclick = async () => {
+        const ok = await B.confirmAction({ title: 'Remover o PDF', text: 'O arquivo deixa de aparecer na operação.', confirmLabel: 'Remover' });
+        if (ok == null || ok === false) return;
+        try { await run(b, () => rpc('partner_op_file_remove', { p_id: b.dataset.frm }), 'PDF removido'); draw(); } catch (_) { /* já avisado */ }
+      }));
+      host.querySelectorAll('[data-file]').forEach((b) => (b.onclick = () => B.openFile('boletos', b.dataset.file)));
+      host.querySelectorAll('[data-ext]').forEach((b) => (b.onclick = () => B.openFile('boletos', b.dataset.ext)));
       host.querySelectorAll('[data-see]').forEach((b) => (b.onclick = () => B.collectionPopup(b.dataset.see, draw)));
       host.querySelectorAll('[data-legacy]').forEach((b) => (b.onclick = () => B.viewDocument(b.dataset.legacy)));
-      const allDone = rows.every(([, , legacy, c]) => legacy.signed || (c && c.signers.length && c.signers.every((x) => x.status === 'signed')));
-      if (allDone && onComplete) { window.removeEventListener('focus', draw); onComplete(); }
+      const allDone = rowsAll.every(([, , legacy, c]) => legacy.signed || (c && c.signers.length && c.signers.every((x) => x.status === 'signed')));
+      if (mode === 'all' && allDone && onComplete) { window.removeEventListener('focus', draw); onComplete(); }
     };
     await draw();
     if (host.isConnected) window.addEventListener('focus', draw);
@@ -539,7 +665,7 @@
         <div data-cm-body style="${cur.originator_id ? '' : 'display:none'};margin-top:10px">${B.seg('cm_kind', [['percent', '% do valor'], ['fixed', 'Valor fixo']], cur.commission_kind || 'percent')}
           <div class="u-mt8 field"><label data-cm-l>${cur.commission_kind === 'fixed' ? 'Comissão (R$)' : 'Comissão (% do valor)'}</label>
           <input class="input" name="cm_value" data-mask="${cur.commission_kind === 'fixed' ? 'money' : 'rate'}" value="${cur.commission_value != null ? esc(cur.commission_kind === 'fixed' ? B.mask.fmtMoney(cur.commission_value) : String(cur.commission_value).replace('.', ',')) : ''}" placeholder="0,00"></div></div>
-        <a class="linkbtn" href="#/cadastros/originador/novo" data-cm-new>${origs.length ? '+ Cadastrar originador' : 'Nenhum originador ainda: cadastrar'}</a></div>`;
+        <a class="linkbtn" href="#/cadastros/originador/novo" data-cm-new>+ Cadastrar originador</a></div>`;
     },
     bind(root, origs) {
       const f = root.closest('form') || root, sec = root.querySelector('[data-cm]') || root, body = sec.querySelector('[data-cm-body]');

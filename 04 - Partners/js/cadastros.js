@@ -7,9 +7,11 @@
   const TABS = [['cedente', 'Cedentes'], ['sacado', 'Sacados'], ['investidor', 'Investidores'], ['parceiros', 'Parceiros'], ['outro', 'Outros']];
   const SUBTITLE = 'Cedentes, sacados, investidores, parceiros e outros';
   const pfpj = (k) => k === 'investidor' || k === 'outro'; // aceitam pessoa física ou jurídica
+  const hasP = (k) => pfpj(k) || k === 'cedente' || k === 'sacado'; // formulário com toggle PF/PJ
+  const normDoc = (c) => /^000\d{11}$/.test(String(c || '')) ? String(c).slice(3) : c; // PF guardada como 000+CPF
   const LABEL = { cedente: 'Cedente', sacado: 'Sacado', investidor: 'Investidor', escriturador: 'Escriturador', outro: 'Cadastro' };
   const BANKS = [['001', 'Banco do Brasil'], ['033', 'Santander'], ['104', 'Caixa'], ['237', 'Bradesco'], ['341', 'Itaú'], ['260', 'Nubank'], ['077', 'Inter'], ['336', 'C6 Bank'], ['290', 'PagBank'], ['380', 'PicPay'], ['756', 'Sicoob'], ['748', 'Sicredi'], ['422', 'Safra'], ['655', 'Votorantim'], ['197', 'Stone']];
-  const fmtCnpj = (c) => String(c || '').length === 11 ? String(c).replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : String(c || '').replace(/^(.{2})(.{3})(.{3})(.{4})(.{2})$/, '$1.$2.$3/$4-$5');
+  const fmtCnpj = (c0) => { const c = normDoc(c0); return String(c || '').length === 11 ? String(c).replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : String(c || '').replace(/^(.{2})(.{3})(.{3})(.{4})(.{2})$/, '$1.$2.$3/$4-$5'); };
   const digits = (v) => String(v || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
 
   const repRow = (r = {}) => `<div class="rep rep-card">
@@ -36,11 +38,11 @@
   const readBank = (f) => {
     if (!f.bank_sel || !f.bank_sel.value || !f.account_number.value) return null;
     const other = f.bank_sel.value === 'other';
-    return { bank_code: other ? f.bank_code.value : f.bank_sel.value, bank_name: other ? f.bank_name.value.trim() : (BANKS.find(([c]) => c === f.bank_sel.value) || [])[1] || '', branch: f.branch.value, account_number: f.account_number.value, account_digit: f.account_digit.value.toUpperCase(), account_type: f.account_type.value };
+    return { bank_code: other ? f.bank_code.value : f.bank_sel.value, bank_name: other ? f.bank_name.value.trim() : (B.banks.name(f.bank_sel.value) || (BANKS.find(([c]) => c === f.bank_sel.value) || [])[1] || ''), branch: f.branch.value, account_number: f.account_number.value, account_digit: f.account_digit.value.toUpperCase(), account_type: f.account_type.value };
   };
 
   const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-  const idFields = (kind, pj, p, ro) => pfpj(kind)
+  const idFields = (kind, pj, p, ro) => hasP(kind)
     ? `<div class="field"><label>${pj ? 'CNPJ' : 'CPF'}</label><input class="input mono" name="cnpj" data-mask="${pj ? 'cnpj' : 'cpf'}" data-req="Informe o ${pj ? 'CNPJ' : 'CPF'}" placeholder="${pj ? '00.000.000/0000-00' : '000.000.000-00'}" value="${esc(fmtCnpj(p.cnpj || ''))}" ${ro ? 'readonly' : ''}></div>
        <div class="field"><label>${pj ? 'Razão social' : 'Nome completo'}</label><input class="input" name="legal_name" data-req="Informe o nome" value="${esc(p.legal_name || '')}"></div>`
     : `<div class="field"><label>CNPJ</label><input class="input mono" name="cnpj" data-mask="cnpj" data-req="Informe o CNPJ" placeholder="00.000.000/0000-00" value="${esc(fmtCnpj(p.cnpj || ''))}" ${ro ? 'readonly' : ''}></div>
@@ -103,17 +105,18 @@
   };
 
   function edit(kind, party, done) {
-    const p = party || {};
-    const isPj = pfpj(kind) && p.cnpj ? String(p.cnpj).length === 14 : false;
+    const p = party ? { ...party, cnpj: normDoc(party.cnpj) } : {};
+    const isPj = hasP(kind) && p.cnpj ? String(p.cnpj).length === 14 : (kind === 'cedente' || kind === 'sacado');
+    const pessoaSel = () => (party && party.id ? `<div class="tag">${isPj ? 'Pessoa jurídica' : 'Pessoa física'}</div><input type="hidden" name="pessoa" value="${isPj ? 'pj' : 'pf'}">` : B.seg('pessoa', [['pj', 'Pessoa jurídica'], ['pf', 'Pessoa física']], 'pj'));
     const box = B.drawer({ title: party ? (kind === 'investidor' ? 'Editar investidor' : kind === 'outro' ? 'Editar cadastro' : 'Editar empresa') : (kind === 'investidor' ? 'Novo investidor' : kind === 'outro' ? 'Novo cadastro' : 'Nova empresa'), subtitle: kind === 'outro' ? 'Quem o fundo paga ou de quem recebe fora das operações (fornecedor, prestador, banco…).' : kind === 'investidor' ? 'Dados usados no boletim de subscrição e nos pagamentos.' : kind === 'escriturador' ? 'Os dados entram automaticamente no termo de emissão para assinatura.' : 'Os dados preenchem os contratos automaticamente.',
       body: `<form id="pf" novalidate>
-        <div class="fsec"><h3>Tipo</h3>${pfpj(kind) ? `${party && party.id ? `<div class="tag">${isPj ? 'Pessoa jurídica' : 'Pessoa física'}</div><input type="hidden" name="pessoa" value="${isPj ? 'pj' : 'pf'}">` : B.seg('pessoa', [['pf', 'Pessoa física'], ['pj', 'Pessoa jurídica']], 'pf')}<input type="hidden" name="kind" value="investidor">` : (party && party.id) ? `<div class="tag">${LABEL[kind]}</div><input type="hidden" name="kind" value="${kind}">` : kind === 'escriturador' ? B.seg('kind', [['escriturador', 'Escriturador'], ['originador', 'Originador']], 'escriturador') : B.seg('kind', [['cedente', 'Cedente'], ['sacado', 'Sacado']], kind)}</div>
+        <div class="fsec"><h3>Tipo</h3>${pfpj(kind) ? `${party && party.id ? `<div class="tag">${isPj ? 'Pessoa jurídica' : 'Pessoa física'}</div><input type="hidden" name="pessoa" value="${isPj ? 'pj' : 'pf'}">` : B.seg('pessoa', [['pf', 'Pessoa física'], ['pj', 'Pessoa jurídica']], 'pf')}<input type="hidden" name="kind" value="investidor">` : (party && party.id) ? `<div class="tag">${LABEL[kind]}</div><input type="hidden" name="kind" value="${kind}">` : kind === 'escriturador' ? B.seg('kind', [['escriturador', 'Escriturador'], ['originador', 'Originador']], 'escriturador') : B.seg('kind', [['cedente', 'Cedente'], ['sacado', 'Sacado']], kind)}${kind === 'cedente' || kind === 'sacado' ? pessoaSel() : ''}</div>
         <div class="fsec"><h3>${kind === 'investidor' ? 'Investidor' : kind === 'outro' ? 'Cadastro' : 'Empresa'}</h3><div id="idf">${idFields(kind, isPj, p, !!party)}</div></div>
         <div class="fsec"><h3>Contato</h3><div class="fgrid">
           <div class="field"><label>E-mail</label><input class="input" type="email" name="email" value="${esc(p.email || '')}"></div>
           <div class="field"><label>Telefone</label><input class="input" name="phone" data-mask="phone" value="${esc(p.phone || '')}"></div></div></div>
         ${pfpj(kind) || kind === 'escriturador' ? addrFields(p.address) : ''}
-        ${pfpj(kind) ? '' : `<div class="fsec"><h3>Representantes</h3><div id="reps" class="u-grid12">${(p.representatives && p.representatives.length ? p.representatives : [{}]).map(repRow).join('')}</div>
+        ${pfpj(kind) ? '' : `<div class="fsec" id="reps-sec" ${(kind === 'cedente' || kind === 'sacado') && p.cnpj && !isPj ? 'hidden' : ''}><h3>Representantes</h3><div id="reps" class="u-grid12">${(p.representatives && p.representatives.length ? p.representatives : [{}]).map(repRow).join('')}</div>
           <button type="button" class="linkbtn" id="addrep">+ Adicionar representante</button></div>`}
         <div id="bank-host">${kind === 'cedente' || pfpj(kind) || kind === 'escriturador' ? bankSection(p.bank || {}, kind) : ''}</div>
         ${p.id ? '<div class="fsec"><h3>Documentos</h3><div id="pdocs"></div></div>' : '<div class="fsec"><h3>Documentos</h3><div class="small muted">Salve o cadastro primeiro; depois é só editar para anexar os documentos.</div></div>'}
@@ -125,6 +128,7 @@
       const sel = f.bank_sel; if (!sel) return;
       sel.onchange = () => { box.querySelector('#bank-other').style.display = sel.value === 'other' ? '' : 'none'; };
       B.formInit(bankHost); B.mask.attach(bankHost);
+      B.banks.enhanceAll(bankHost);
     };
     bind(); bindBank();
     if (p.id) partyDocs(box.querySelector('#pdocs'), p.id, kind);
@@ -132,16 +136,45 @@
     if (kind === 'escriturador' && !(party && party.id)) f.addEventListener('change', (ev) => { if (ev.target.name === 'kind' && ev.target.value === 'originador') { closeModal(); B.originatorForm(null, () => { location.hash = '#/cadastros/originador'; }); } });
     kindInput.addEventListener('change', () => { if (kindInput.value !== 'cedente' && kindInput.value !== 'sacado') return; bankHost.innerHTML = kindInput.value === 'cedente' ? bankSection({}) : ''; bindBank(); });
     const ar = box.querySelector('#addrep'); if (ar) ar.onclick = () => { reps.insertAdjacentHTML('beforeend', repRow()); B.mask.attach(reps); bind(); };
+    if (kind === 'cedente' || kind === 'sacado') {
+      const rs = box.querySelector('#reps-sec');
+      if (f.pessoa) f.pessoa.addEventListener('change', () => { const pj = f.pessoa.value === 'pj'; box.querySelector('#idf').innerHTML = idFields(kind, pj, {}, false); B.mask.attach(box.querySelector('#idf')); B.formInit(box.querySelector('#idf')); if (rs) rs.hidden = !pj; });
+    }
     if (pfpj(kind) || kind === 'escriturador') {
       if (f.pessoa) f.pessoa.addEventListener('change', () => { const pj = f.pessoa.value === 'pj'; box.querySelector('#idf').innerHTML = idFields(kind, pj, {}, false); B.mask.attach(box.querySelector('#idf')); B.formInit(box.querySelector('#idf')); });
       const zip = f.a_zip;
       zip.addEventListener('input', () => { const d = zip.value.replace(/\D/g, '').slice(0, 8); zip.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; });
       zip.addEventListener('blur', async () => { const d = zip.value.replace(/\D/g, ''); if (d.length !== 8) return; try { const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${d}`); if (r.ok) { const j = await r.json(); if (!f.a_street.value) f.a_street.value = j.street || ''; if (!f.a_district.value) f.a_district.value = j.neighborhood || ''; if (!f.a_city.value) f.a_city.value = j.city || ''; if (j.state) f.a_uf.value = j.state; f.a_number.focus(); } } catch (_) { /* digitação manual */ } });
     }
+    /* CPF/CNPJ digitado: avisa se já existe na mesma modalidade; se existe em outra, puxa os dados */
+    const isNew = !(party && party.id);
+    let found = [], dupBlock = false, filledFor = '';
+    const dup = document.createElement('div'); dup.id = 'dup'; box.querySelector('#idf').insertAdjacentElement('afterend', dup);
+    const setIf = (el, v) => { if (el && !el.value && v) { el.value = v; B.fieldError && B.fieldError(el, ''); } };
+    const applyLookup = () => {
+      const k = kindInput.value, same = found.find((x) => x.kind === k);
+      dupBlock = !!same;
+      dup.innerHTML = same ? `<div class="error-box" style="margin-top:10px">Este documento já está cadastrado como <b>${esc(LABEL[k] || k)}</b>: ${esc(same.legal_name)}. <button type="button" class="linkbtn" id="dup-open">Abrir o cadastro existente</button></div>` : '';
+      const op = dup.querySelector('#dup-open'); if (op) op.onclick = () => { closeModal(); edit(k, same, done); };
+      const src = !same && found.find((x) => x.kind !== k);
+      const key = digits(f.cnpj.value) + '|' + k;
+      if (!src || filledFor === key) return;
+      filledFor = key;
+      setIf(f.legal_name, src.legal_name); setIf(f.email, src.email); setIf(f.phone, src.phone);
+      const a = src.address && typeof src.address === 'object' ? src.address : null;
+      if (a && f.a_zip) { setIf(f.a_zip, a.zip); setIf(f.a_street, a.street); setIf(f.a_number, a.number); setIf(f.a_compl, a.compl); setIf(f.a_district, a.district); setIf(f.a_city, a.city); if (!f.a_uf.value && a.uf) f.a_uf.value = a.uf; }
+      const rr = Array.isArray(src.representatives) ? src.representatives : [];
+      if (rr.length && reps && reps.isConnected && ![...reps.querySelectorAll('[data-r]')].some((i) => i.value.trim())) { reps.innerHTML = rr.map(repRow).join(''); B.mask.attach(reps); bind(); }
+      const bk = src.bank && typeof src.bank === 'object' ? src.bank : null;
+      if (bk && bankHost.innerHTML && f.bank_sel && !f.bank_sel.value && !(f.account_number && f.account_number.value)) { bankHost.innerHTML = bankSection(bk, kind === 'outro' || pfpj(kind) ? kind : k); bindBank(); }
+      if (src.kind !== 'app') B.toast(`Dados puxados do cadastro de ${LABEL[src.kind] || src.kind}. Confira antes de salvar.`);
+    };
+    kindInput.addEventListener('change', () => { if (found.length) applyLookup(); });
     box.querySelector('#idf').addEventListener('blur', async (ev) => {
       if (ev.target.name !== 'cnpj') return;
       const c = digits(f.cnpj.value);
-      if ((!pfpj(kind) || f.pessoa.value === 'pj') && c.length === 14 && !f.legal_name.value) { try { const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`); if (r.ok) { const j = await r.json(); f.legal_name.value = j.razao_social || ''; B.fieldError(f.legal_name, ''); if (!f.email.value && j.email) f.email.value = String(j.email).toLowerCase(); } } catch (_) { /* digitação manual */ } }
+      if (isNew && (c.length === 11 || c.length === 14)) { try { found = await rpc('partner_party_lookup', { p_doc: c }); } catch (_) { found = []; } applyLookup(); } else { found = []; dupBlock = false; dup.innerHTML = ''; }
+      if (!found.length && (!f.pessoa || f.pessoa.value === 'pj') && c.length === 14 && !f.legal_name.value) { try { const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`); if (r.ok) { const j = await r.json(); f.legal_name.value = j.razao_social || ''; B.fieldError(f.legal_name, ''); if (!f.email.value && j.email) f.email.value = String(j.email).toLowerCase(); } } catch (_) { /* digitação manual */ } }
     }, true);
     box.querySelector('[data-act=cancel]').onclick = () => closeModal();
     box.querySelector('[data-act=ok]').onclick = async (ev) => {
@@ -150,14 +183,16 @@
       if (pfpj(kind) || kind === 'escriturador') { body.address = { zip: f.a_zip.value.trim(), street: f.a_street.value.trim(), number: f.a_number.value.trim(), compl: f.a_compl.value.trim(), district: f.a_district.value.trim(), city: f.a_city.value.trim(), uf: f.a_uf.value }; if (!Object.values(body.address).some(Boolean)) delete body.address; }
       if ((body.kind === 'cedente' || pfpj(body.kind) || body.kind === 'escriturador') && f.bank_sel && f.bank_sel.value && f.account_number.value) {
         const other = f.bank_sel.value === 'other';
-        body.bank = { bank_code: other ? f.bank_code.value : f.bank_sel.value, bank_name: other ? f.bank_name.value.trim() : (BANKS.find(([c]) => c === f.bank_sel.value) || [])[1] || '', branch: f.branch.value, account_number: f.account_number.value, account_digit: f.account_digit.value.toUpperCase(), account_type: f.account_type.value };
+        body.bank = { bank_code: other ? f.bank_code.value : f.bank_sel.value, bank_name: other ? f.bank_name.value.trim() : (B.banks.name(f.bank_sel.value) || (BANKS.find(([c]) => c === f.bank_sel.value) || [])[1] || ''), branch: f.branch.value, account_number: f.account_number.value, account_digit: f.account_digit.value.toUpperCase(), account_type: f.account_type.value };
       }
       const pix = f.bank_pix ? f.bank_pix.value.trim() : '';
       if (pix) body.bank = { ...(body.bank || {}), pix_key: pix };
       let bad = false;
-      const need = pfpj(body.kind) && f.pessoa && f.pessoa.value === 'pf' ? 11 : 14; if (body.cnpj.length !== need) { B.fieldError(f.cnpj, need === 11 ? 'Informe um CPF válido' : 'Informe um CNPJ válido'); bad = true; }
+      const need = hasP(body.kind) && f.pessoa && f.pessoa.value === 'pf' ? 11 : 14; if (body.cnpj.length !== need) { B.fieldError(f.cnpj, need === 11 ? 'Informe um CPF válido' : 'Informe um CNPJ válido'); bad = true; }
       if (!body.legal_name) { B.fieldError(f.legal_name, 'Informe a razão social'); bad = true; }
       if (bad) return;
+      if (dupBlock) { err.hidden = false; err.textContent = 'Este CPF/CNPJ já está cadastrado nesta modalidade. Abra o cadastro existente para editar.'; return; }
+      if (isNew) body.new = true;
       if (representatives.some((r) => !r.name || r.cpf.replace(/\D/g, '').length !== 11 || !/^\S+@\S+\.\S+$/.test(r.email || ''))) { err.hidden = false; err.textContent = 'Cada representante precisa de nome, CPF e e-mail válidos.'; return; }
       try { await run(ev.currentTarget, () => rpc('partner_party_save', { p: body }), 'Empresa salva'); closeModal(); done(body.kind); } catch (e) { err.hidden = false; err.textContent = B.message(e); }
     };
@@ -186,7 +221,7 @@
     const f = box.querySelector('#of'), err = box.querySelector('#of-err');
     if (!o) f.addEventListener('change', (ev) => { if (ev.target.name === 'kind' && ev.target.value === 'escriturador') { closeModal(); edit('escriturador', null, () => { location.hash = '#/cadastros/escriturador'; }); } });
     B.mask.attach(f);
-    const obh = box.querySelector('#ob-host'); f.bank_sel.onchange = () => { box.querySelector('#bank-other').style.display = f.bank_sel.value === 'other' ? '' : 'none'; }; B.formInit(obh); B.mask.attach(obh);
+    const obh = box.querySelector('#ob-host'); f.bank_sel.onchange = () => { box.querySelector('#bank-other').style.display = f.bank_sel.value === 'other' ? '' : 'none'; }; B.formInit(obh); B.mask.attach(obh); B.banks.enhanceAll(obh);
     f.default_kind.addEventListener('change', () => { const fx = f.default_kind.value === 'fixed'; box.querySelector('#dv-l').textContent = fx ? 'Valor por operação' : '% sobre o valor da operação'; f.default_value.dataset.mask = fx ? 'money' : 'rate'; f.default_value.value = ''; B.mask.attach(f); });
     box.querySelector('[data-act=cancel]').onclick = () => closeModal();
     box.querySelector('[data-act=ok]').onclick = async (ev) => {
@@ -214,7 +249,7 @@
   async function originadores(el, act) {
     const list = await rpc('partner_originators_list');
     frame(el, 'parceiros', 'originador', 'Novo originador');
-    const pg = B.ui.pager('orig', list.map((o, i) => [o, i]), { unit: list.length === 1 ? 'originador' : 'originadores' });
+    const pg = B.ui.pager('orig', list.map((o, i) => [o, i]), { unit: list.length === 1 ? 'originador' : 'originadores', cols: [([o]) => o.name, ([o]) => commTxt(o), ([o]) => Number(o.deals || 0), ([o]) => Number(o.commission || 0)] });
     el.querySelector('#list').innerHTML = list.length ? `<div class="card"><table><thead><tr><th>Originador</th><th>Comissão padrão</th><th class="num">Negócios</th><th class="num">Comissões</th><th></th></tr></thead><tbody>
         ${pg.rows.map(([o, i]) => `<tr><td><b>${esc(o.name)}</b>${o.active === false ? ' <span class="tag">Inativo</span>' : ''}<div class="small muted">${esc(o.email || o.phone || '')}</div></td><td>${esc(commTxt(o))}</td><td class="num">${esc(o.deals)}</td><td class="num">${B.brl(o.commission)}</td>
           <td class="num"><button class="btn ghost sm" data-e="${i}">Editar</button> <button class="btn ghost sm" data-d="${i}">Excluir</button></td></tr>`).join('')}</tbody></table>${pg.bar}</div>`
@@ -241,19 +276,23 @@
     if (kind === 'originador') return originadores(el, act);
     const tab = kind === 'escriturador' ? 'parceiros' : kind;
     const list = await rpc('partner_parties_list', { p_kind: kind });
+    const scoreList = kind === 'cedente' ? await rpc('partner_cedentes_scores').catch(() => []) : [];
+    const sc = Object.fromEntries(scoreList.map((x) => [x.cnpj, x]));
+    const scoreCell = (x) => { const s = sc[x.cnpj]; if (!s || !(Number(s.coverage) > 0)) return '<span class="small muted">sem dados</span>'; return `${B.tierTag ? B.tierTag(s.tier) : esc(s.tier)} <span class="small muted">${Math.round(Number(s.score))} · ${Math.round(Number(s.coverage) * 100)}% dos dados</span>`; };
     frame(el, tab, kind, NEW_LABEL[kind] || 'Nova empresa', '<input class="input search" id="q" type="search" placeholder="Buscar por nome ou documento" aria-label="Buscar">');
     const doc = kind === 'investidor' || kind === 'outro' ? 'CPF/CNPJ' : 'CNPJ';
     const draw = (q) => {
       const t = (q || '').trim().toLowerCase(), qd = digits(q || '');
       const rows = list.map((x, i) => [x, i]).filter(([x]) => !t || String(x.legal_name || '').toLowerCase().includes(t) || (qd && x.cnpj.includes(qd)));
-      const pg = B.ui.pager('cad:' + kind, rows, { unit: rows.length === 1 ? 'cadastro' : 'cadastros', sig: t });
       const counter = kind === 'investidor' ? 'Integralizações' : kind === 'cedente' || kind === 'sacado' ? 'Operações' : '';
-      el.querySelector('#list').innerHTML = rows.length ? `<div class="card"><table><thead><tr><th>${kind === 'investidor' ? 'Investidor' : kind === 'outro' ? 'Nome' : 'Empresa'}</th><th>${doc}</th>${counter ? `<th class="num">${counter}</th>` : ''}<th></th></tr></thead><tbody>
-        ${pg.rows.map(([x, i]) => `<tr><td><b>${esc(x.legal_name || '—')}</b></td><td class="mono" style="white-space:nowrap">${esc(fmtCnpj(x.cnpj))}</td>
+      const pg = B.ui.pager('cad:' + kind, rows, { unit: rows.length === 1 ? 'cadastro' : 'cadastros', sig: t, cols: [([x]) => x.legal_name, ([x]) => x.cnpj, counter ? ([x]) => Number(x.operations || 0) : null] });
+      el.querySelector('#list').innerHTML = rows.length ? `<div class="card"><table><thead><tr><th>${kind === 'investidor' ? 'Investidor' : kind === 'outro' ? 'Nome' : 'Empresa'}</th><th>${doc}</th>${kind === 'cedente' ? '<th>Score</th>' : ''}${counter ? `<th class="num">${counter}</th>` : ''}<th></th></tr></thead><tbody>
+        ${pg.rows.map(([x, i]) => `<tr><td><b>${esc(x.legal_name || '—')}</b></td><td class="mono" style="white-space:nowrap">${esc(fmtCnpj(x.cnpj))}</td>${kind === 'cedente' ? `<td style="white-space:nowrap">${scoreCell(x)}</td>` : ''}
           ${counter ? `<td class="num">${esc(x.operations)}</td>` : ''}
-          <td class="num">${x.id && kind === 'investidor' ? `<button class="btn ghost sm" data-inv="${i}">Convidar</button> ` : ''}${x.id ? `<button class="btn ghost sm" data-e="${i}">Editar</button> <button class="btn ghost sm" data-d="${i}">Excluir</button>` : `<button class="btn ghost sm" data-e="${i}">Editar</button>`}</td></tr>`).join('')}
+          <td class="num">${kind === 'cedente' && sc[x.cnpj] ? `<button class="btn ghost sm" data-sc="${i}">Score</button> ` : ''}${x.id && kind === 'investidor' ? `<button class="btn ghost sm" data-inv="${i}">Convidar</button> ` : ''}${x.id ? `<button class="btn ghost sm" data-e="${i}">Editar</button> <button class="btn ghost sm" data-d="${i}">Excluir</button>` : `<button class="btn ghost sm" data-e="${i}">Editar</button>`}</td></tr>`).join('')}
         </tbody></table>${pg.bar}</div>` : `<div class="card">${empty(list.length ? 'Nada encontrado para essa busca.' : 'Nenhum cadastro ainda.')}</div>`;
       B.ui.pagerBind(el, 'cad:' + kind, () => draw(q));
+      el.querySelectorAll('[data-sc]').forEach((b) => (b.onclick = () => B.cedenteScore(list[b.dataset.sc].cnpj, list[b.dataset.sc].legal_name, (changed) => { if (changed) again(kind); })));
       el.querySelectorAll('[data-e]').forEach((b) => (b.onclick = () => edit(kind, list[b.dataset.e], again)));
       el.querySelectorAll('[data-inv]').forEach((b) => (b.onclick = () => B.inviteInvestor(list[b.dataset.inv].id, list[b.dataset.inv].legal_name, list[b.dataset.inv].email, b)));
       el.querySelectorAll('[data-d]').forEach((b) => (b.onclick = async () => {
@@ -264,6 +303,15 @@
       }));
     };
     const again = (k) => { if (k === kind) B.views.cadastros(el, [kind]); else location.hash = `#/cadastros/${k}`; };
+    if (kind === 'cedente') {
+      const pend = scoreList.filter((s) => !s.enriched).length;
+      if (pend) {
+        el.querySelector('#list').insertAdjacentHTML('beforebegin', `<div class="card" id="enr-bar" style="padding:12px 16px;margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:220px"><b>${pend} ${pend === 1 ? 'cedente sem' : 'cedentes sem'} dados públicos do CNPJ</b><div class="small muted" id="enr-msg">A nota usa o que houver, mas fica mais precisa com abertura, UF, atividade e porte da Receita.</div></div><button class="btn sm" id="enr-btn">Buscar dados do CNPJ</button></div>`);
+        const go = async () => { const btn = el.querySelector('#enr-btn'); try { el.querySelector('#enr-msg').textContent = 'Consultando a Receita Federal…'; const r = await B.enrichCedentes(btn); if (r) { B.toast(`${r.updated} atualizado${r.updated === 1 ? '' : 's'}${r.failed && r.failed.length ? `, ${r.failed.length} não encontrado${r.failed.length === 1 ? '' : 's'}` : ''}`); again('cedente'); } } catch (_) { /* já avisado */ } };
+        el.querySelector('#enr-btn').onclick = go;
+        if (!B._enrichTried) { B._enrichTried = true; go(); }
+      }
+    }
     draw('');
     el.querySelector('#q').oninput = (e) => draw(e.target.value);
     el.querySelector('#new').onclick = () => edit(kind, null, again);

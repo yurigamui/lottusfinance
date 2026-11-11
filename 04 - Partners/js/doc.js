@@ -90,7 +90,7 @@
     const toData = (url) => fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject(new Error('logo')))).then((b) => new Promise((res) => {
       const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b);
     }));
-    logoCache = await toData('img/logo-rosa.png').catch(() => toData(B.LOGO_URL)).catch(() => null);
+    logoCache = window.LOTTUS_LOGO || await toData('img/logo-rosa.png').catch(() => toData(B.LOGO_URL)).catch(() => null);
     return logoCache;
   };
   B.docHead = (logo, tag) => `<div class="doc-head">${logo ? `<img src="${logo}" alt="Lottus">` : `<img src="${B.LOGO_URL}" alt="Lottus">`}${tag ? `<span class="tag">${esc(tag)}</span>` : ''}</div>`;

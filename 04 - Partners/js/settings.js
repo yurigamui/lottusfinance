@@ -112,43 +112,38 @@
         <div class="table-wrap"><table class="pol ced">
           <thead>
             <tr><th rowspan="2">Nota</th><th rowspan="2">Aceita</th><th colspan="2" class="grp">Crédito</th><th colspan="3" class="grp">Cobrança</th></tr>
-            <tr><th>Taxa (% a.m.)</th><th>Limite por cedente (R$)</th><th>Multa (%)</th><th>Juros de mora (% a.m.)</th><th>Recompra após (dias)</th></tr>
+            <tr><th>Taxa</th><th>Limite por cedente (R$)</th><th>Multa (%)</th><th>Juros de mora (% a.m.)</th><th>Recompra após (dias)</th></tr>
           </thead>
           <tbody>${p.cedente.map((r) => `<tr data-ced="${esc(r.rating)}">
             <td><span class="tag ${tone(r.rating)}">${esc(r.rating)}</span></td>
             <td><label class="mini-switch"><input type="checkbox" name="acc" ${r.accepts ? 'checked' : ''} ${ro}><span aria-hidden="true"></span><span class="sr">Aceita nota ${esc(r.rating)}</span></label></td>
-            <td><input class="input sm" name="rate" inputmode="decimal" value="${pctIn(r.monthly_rate)}" placeholder="${def.monthly_rate != null ? pctIn(def.monthly_rate) : 'padrão'}" ${ro}></td>
+            <td>${B.affix(`<input class="input sm" name="rate" inputmode="decimal" value="${pctIn(r.monthly_rate)}" placeholder="${pctIn(def.monthly_rate != null ? def.monthly_rate : r.tier_rate)}" ${ro}>`, { suf: '% a.m.' })}</td>
             <td><input class="input sm" name="lim" inputmode="decimal" value="${numIn(r.limit_amount)}" placeholder="${def.limit_per_company != null ? numIn(def.limit_per_company) : 'sem limite'}" ${ro}></td>
             <td><input class="input sm xs" name="fine" inputmode="decimal" value="${decIn(r.fine_percent)}" placeholder="${decIn(Number(def.fine_percent).toFixed(2))}" ${ro}></td>
             <td><input class="input sm xs" name="int" inputmode="decimal" value="${decIn(r.interest_monthly_percent)}" placeholder="${decIn(Number(def.interest_monthly_percent).toFixed(2))}" ${ro}></td>
             <td><input class="input sm xs" name="bb" inputmode="numeric" value="${r.buyback_days ?? ''}" placeholder="${def.buyback_days}" ${ro}></td>
           </tr>`).join('')}</tbody></table></div>
 
-        <div class="u-mt8"><h2>Sacados</h2><p class="u-m4t small muted">Nota de risco do sacado, também da Lottus. Você decide se aceita e o limite por sacado.</p></div>
-        <div class="table-wrap"><table class="pol">
-          <thead><tr><th>Nota</th><th>Aceita</th><th>Limite por sacado (R$)</th><th></th></tr></thead>
-          <tbody>${p.sacado.map((r) => `<tr data-sac="${esc(r.rating)}">
-            <td><span class="tag ${['A', 'B'].includes(r.rating) ? 'success' : r.rating === 'C' ? 'warning' : 'danger'}">${esc(r.rating)}</span></td>
-            <td><label class="mini-switch"><input type="checkbox" name="acc" ${r.accepts ? 'checked' : ''} ${ro}><span aria-hidden="true"></span><span class="sr">Aceita nota ${esc(r.rating)}</span></label></td>
-            <td><input class="input sm" name="lim" inputmode="decimal" value="${numIn(r.limit_amount)}" placeholder="${def.limit_per_debtor != null ? numIn(def.limit_per_debtor) : 'sem limite'}" ${ro}></td><td></td>
-          </tr>`).join('')}</tbody></table></div>
 
         ${can ? '<div class="save-bar" style="gap:12px"><button class="btn" type="submit">Salvar política</button></div>' : ''}
       </form>`;
     const f = pane.querySelector('#pf');
+    f.querySelectorAll('[data-ced] [name=rate]').forEach((inp) => {
+      B.rateUnit(inp);
+      const ph = inp.placeholder;
+      inp.addEventListener('change', () => { const m = Number(String(ph).replace(',', '.')) / 100; inp.placeholder = inp.dataset.unit === 'aa' && m ? ((Math.pow(1 + m, 12) - 1) * 100).toFixed(2).replace('.', ',') : ph; });
+    });
     f.onsubmit = (e) => {
       e.preventDefault();
       const ced = [...f.querySelectorAll('[data-ced]')].map((tr) => ({ rating: tr.dataset.ced, accepts: tr.querySelector('[name=acc]').checked,
-        monthly_rate: pctOut(tr.querySelector('[name=rate]').value), limit_amount: numOut(tr.querySelector('[name=lim]').value),
+        monthly_rate: tr.querySelector('[name=rate]').value.trim() === '' ? null : B.rateMonthly(tr.querySelector('[name=rate]')), limit_amount: numOut(tr.querySelector('[name=lim]').value),
         fine_percent: decOut(tr.querySelector('[name=fine]').value), interest_monthly_percent: decOut(tr.querySelector('[name=int]').value),
         buyback_days: intOut(tr.querySelector('[name=bb]').value) }));
-      const sac = [...f.querySelectorAll('[data-sac]')].map((tr) => ({ rating: tr.dataset.sac, accepts: tr.querySelector('[name=acc]').checked,
-        limit_amount: numOut(tr.querySelector('[name=lim]').value) }));
       if (ced.some((r) => r.monthly_rate != null && (Number.isNaN(r.monthly_rate) || r.monthly_rate > 0.2))) return toast('Confira as taxas (até 20% a.m.).', true);
       const bad = ced.find((r) => (r.fine_percent != null && (Number.isNaN(r.fine_percent) || r.fine_percent > 2)) || (r.interest_monthly_percent != null && (Number.isNaN(r.interest_monthly_percent) || r.interest_monthly_percent > 1))
         || (r.buyback_days != null && (r.buyback_days < 1 || r.buyback_days > 90)));
       if (bad) return toast(`Nota ${bad.rating}: multa até 2%, juros até 1% a.m. e recompra entre 1 e 90 dias.`, true);
-      run(f.querySelector('[type=submit]'), () => rpc('partner_save_policy', { p: { cedente: ced, sacado: sac, reminders_on: (pane.querySelector('#rem [name=reminders_on]') || { checked: p.reminders_on !== false }).checked } }), 'Política salva').catch(() => null);
+      run(f.querySelector('[type=submit]'), () => rpc('partner_save_policy', { p: { cedente: ced, reminders_on: (pane.querySelector('#rem [name=reminders_on]') || { checked: p.reminders_on !== false }).checked } }), 'Política salva').catch(() => null);
     };
   }
 
@@ -232,7 +227,7 @@
           <div class="field"><label>Nome da conta</label><input class="input" name="label" maxlength="60" placeholder="Ex.: Conta de recebimentos" value="${esc(v.label || '')}"></div>
           <div class="field"><label>Banco</label><select class="input" name="bank_code"><option value="">Selecione…</option>${ACC_BANKS.map(([c, n]) => `<option value="${c}" ${c === bc ? 'selected' : ''}>${c} · ${n}</option>`).join('')}${bc && !known ? `<option value="${esc(bc)}" selected>${esc(bc)} · ${esc(v.bank_name || '')}</option>` : ''}</select></div>
           <div class="grid-2"><div class="field"><label>Agência</label><input class="input" name="branch" inputmode="numeric" maxlength="5" value="${esc(v.branch || '')}"></div>
-            <div class="field"><label>Conta com dígito</label><input class="input" name="account" maxlength="15" value="${esc(v.account || '')}"></div></div>
+            <div class="field"><label>Conta</label><div class="row" style="gap:8px"><input class="input" name="account" inputmode="numeric" maxlength="13" aria-label="Número da conta" value="${esc(String(v.account || '').split('-')[0])}" style="flex:1"><input class="input" name="account_digit" maxlength="1" aria-label="Dígito" placeholder="Díg." value="${esc(String(v.account || '').split('-')[1] || '')}" style="width:68px;text-align:center"></div></div></div>
           <div class="grid-2"><div class="field"><label>Tipo</label><select class="input" name="account_type"><option value="">—</option><option value="checking" ${v.account_type === 'checking' ? 'selected' : ''}>Conta corrente</option><option value="payment" ${v.account_type === 'payment' ? 'selected' : ''}>Conta de pagamento</option></select></div>
             <div class="field"><label>Chave Pix (opcional)</label><input class="input" name="pix_key" maxlength="80" value="${esc(v.pix_key || '')}"></div></div></div>
         ${prov.fields.length ? `<div class="fsec"><h3>Integração · ${esc(prov.name)}</h3>
@@ -244,6 +239,7 @@
           <div class="grid-2">${B.FEE_TYPES.map(([k, l]) => `<div class="field"><label>${l}</label>${B.affix(`<input class="input" data-fee="${k}" data-mask="money" placeholder="0,00" inputmode="decimal" value="${(v.fees || {})[k] ? esc(B.mask.fmtMoney(v.fees[k])) : ''}">`, { pre: 'R$' })}</div>`).join('')}</div></div>
         <div class="error-box" id="af-err" hidden></div></form>`;
       B.mask.attach(body);
+      B.banks.enhanceAll(body);
     };
     draw();
     okBtn.onclick = async (ev) => {
@@ -251,7 +247,7 @@
       const sel = f.bank_code, secrets = {}, config = {};
       f.querySelectorAll('[data-sec]').forEach((i) => { if (i.value.trim()) secrets[i.dataset.sec] = i.value.trim(); });
       f.querySelectorAll('[data-cfg]').forEach((i) => { if (i.value.trim()) config[i.dataset.cfg] = i.value.trim(); });
-      const p = { id: a && a.id, label: f.label.value.trim(), provider: prov.id, bank_code: sel.value, bank_name: sel.value ? sel.options[sel.selectedIndex].textContent.split('·').slice(1).join('·').trim() : '', branch: f.branch.value.trim(), account: f.account.value.trim(), account_type: f.account_type.value, pix_key: f.pix_key.value.trim(), secrets, config };
+      const p = { id: a && a.id, label: f.label.value.trim(), provider: prov.id, bank_code: sel.value, bank_name: sel.value ? sel.options[sel.selectedIndex].textContent.split('·').slice(1).join('·').trim() : '', branch: f.branch.value.trim(), account: f.account.value.replace(/\D/g, '') + (f.account_digit.value.trim() ? '-' + f.account_digit.value.trim().toUpperCase() : ''), account_type: f.account_type.value, pix_key: f.pix_key.value.trim(), secrets, config };
       const env = f.querySelector('[name=env]:checked'); if (env) p.env = env.value;
       const fees = {}; f.querySelectorAll('[data-fee]').forEach((i) => { const n = B.mask.parse(i.value); if (n > 0) fees[i.dataset.fee] = n; });
       const saveFees = (r) => (r && r.id ? rpc('partner_bank_account_fees', { p_id: r.id, p_fees: fees }) : null);
@@ -260,7 +256,6 @@
         const cid = (secrets.client_id || config.client_id || '').trim(), csec = (secrets.client_secret || '').trim();
         p.secrets = {}; p.config = {};
         if ((cid || csec) && !(cid && csec)) { err.hidden = false; err.textContent = 'Cole o Client ID e a Secret Key.'; return; }
-        if (!a && !(cid && csec)) { err.hidden = false; err.textContent = 'Cole o Client ID e a Secret Key da Trio.'; return; }
         try {
           await saveFees(await run(ev.currentTarget, () => rpc('partner_bank_account_save', { p })));
           if (cid && csec) {

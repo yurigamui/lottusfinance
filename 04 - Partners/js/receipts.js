@@ -129,8 +129,8 @@
     pane.innerHTML = `
       <div class="stack">
         <div class="card stack">
-          <div class="row between" style="align-items:flex-start;gap:12px;flex-wrap:wrap">
-            <div><h2>Importar o extrato</h2><p class="small muted" style="margin:4px 0 0">Exporte do banco do fundo em OFX (Money) ou CSV, ou cole as linhas. Cada cobrança da Lottus tem um identificador de Pix (começa com LT, EN, LR ou LS); quando o banco mostra o identificador, a baixa é certa. Sem ele, o sistema casa pelo CNPJ de quem pagou e pelo valor, e você confere.</p></div>
+          <div class="u-top-wrap row between">
+            <div><h2>Importar o extrato</h2><p class="u-m4t small muted">Exporte do banco do fundo em OFX (Money) ou CSV, ou cole as linhas. Cada cobrança da Lottus tem um identificador de Pix (começa com LT, EN, LR ou LS); quando o banco mostra o identificador, a baixa é certa. Sem ele, o sistema casa pelo CNPJ de quem pagou e pelo valor, e você confere.</p></div>
             ${sum.last_import ? `<span class="small muted">Última importação ${dateTime(sum.last_import)}</span>` : ''}
           </div>
           <div class="drop" id="drop" tabindex="0" role="button" aria-label="Escolher arquivo do extrato">
@@ -138,14 +138,14 @@
             <b>Arraste o arquivo aqui ou clique para escolher</b><span class="small muted">OFX, CSV ou TXT · lançamentos de até 400 dias</span>
           </div>
           <details><summary class="small"><b>Ou cole os lançamentos</b></summary>
-            <textarea class="input" id="paste" rows="5" style="margin-top:8px" placeholder="Data;Descrição;Valor&#10;16/10/2026;PIX RECEBIDO LT51DDD9F1D8F3403597609E2 CLIENTE SA;1.000,00"></textarea>
+            <textarea class="u-mt8 input" id="paste" rows="5" placeholder="Data;Descrição;Valor&#10;16/10/2026;PIX RECEBIDO LT51DDD9F1D8F3403597609E2 CLIENTE SA;1.000,00"></textarea>
             <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn secondary sm" id="go-paste" type="button">Conferir</button></div>
           </details>
           <div id="preview"></div>
         </div>
         <div class="card stack">
-          <div><h2>Baixa por identificador</h2><p class="small muted" style="margin:4px 0 0">Recebeu um Pix e quer dar baixa sem o extrato? Busque pelo identificador do Pix, pela NF-e, pelo sacado ou pelo cedente.</p></div>
-          <form class="row" id="find" style="gap:8px"><input class="input" name="q" placeholder="Ex.: LT51DDD9F1D8F3403597609E2, NF-e 1043, nome do sacado" style="flex:1">
+          <div><h2>Baixa por identificador</h2><p class="u-m4t small muted">Recebeu um Pix e quer dar baixa sem o extrato? Busque pelo identificador do Pix, pela NF-e, pelo sacado ou pelo cedente.</p></div>
+          <form class="u-g8 row" id="find"><input class="u-flex1 input" name="q" placeholder="Ex.: LT51DDD9F1D8F3403597609E2, NF-e 1043, nome do sacado">
             <button class="btn secondary" type="submit">Buscar</button></form>
           <div id="found"></div>
         </div>
@@ -182,12 +182,12 @@
             <td><div class="small" style="max-width:280px;word-break:break-word">${esc(r.memo || r.name || '—')}</div>${r.doc ? `<div class="small muted">${esc(cnpj(r.doc))}</div>` : ''}${r.txid && !String(r.memo || '').toUpperCase().includes(r.txid) ? `<div class="small mono">${esc(r.txid)}</div>` : ''}</td>
             <td><span class="tag ${STATUS[r.status][1]}">${esc(STATUS[r.status][0])}</span>
               <select class="input sm" data-target style="margin-top:6px;max-width:320px">${optList(r)}</select>
-              ${hint(r) ? `<div class="small muted" style="margin-top:4px">${esc(hint(r))}</div>` : ''}</td>
+              ${hint(r) ? `<div class="u-mt4 small muted">${esc(hint(r))}</div>` : ''}</td>
             <td><select class="input sm" data-action style="min-width:180px">
               <option value="apply" ${defAction(r) === 'apply' ? 'selected' : ''}>Dar baixa</option>
               <option value="unidentified" ${defAction(r) === 'unidentified' ? 'selected' : ''}>Guardar para depois</option>
               <option value="ignore">Não é de duplicata</option></select></td></tr>`).join('')}</tbody></table></div>
-          <div class="row" style="justify-content:flex-end;gap:8px">${can(me) ? '<button class="btn" id="apply">Confirmar</button>' : '<span class="small muted">Só aprovadores dão baixa.</span>'}</div>` : ''}`;
+          <div class="u-end8 row">${can(me) ? '<button class="btn" id="apply">Confirmar</button>' : '<span class="small muted">Só aprovadores dão baixa.</span>'}</div>` : ''}`;
       const ab = box.querySelector('#apply');
       if (!ab) return;
       const count = () => {
@@ -286,9 +286,9 @@
       <thead><tr><th>Data</th><th class="num">Valor</th><th>Lançamento</th><th>Ligar a</th><th></th></tr></thead>
       <tbody>${list.map((p, i) => `<tr>
         <td class="nowrap">${date(p.received_on)}</td><td class="num"><b>${brl(p.amount)}</b></td>
-        <td><div class="small" style="max-width:300px;word-break:break-word">${esc(p.memo || p.payer_name || '—')}</div>${p.payer_doc ? `<div class="small muted">${esc(cnpj(p.payer_doc))}</div>` : ''}${p.note ? `<div class="small" style="color:var(--danger)">${esc(p.note)}</div>` : ''}</td>
+        <td><div class="small" style="max-width:300px;word-break:break-word">${esc(p.memo || p.payer_name || '—')}</div>${p.payer_doc ? `<div class="small muted">${esc(cnpj(p.payer_doc))}</div>` : ''}${p.note ? `<div class="u-danger small">${esc(p.note)}</div>` : ''}</td>
         <td><select class="input sm" data-t="${i}" style="max-width:320px"><option value="">Escolha a cobrança…</option>${targets.map((t) => `<option value="${esc(t.kind)}:${esc(t.id)}">${esc(KIND[t.kind])} · ${esc(t.label)} · ${esc(t.company || '')} · ${brl(t.expected)}</option>`).join('')}</select></td>
-        <td class="num"><div class="row" style="justify-content:flex-end;gap:6px">${can(me) ? `<button class="btn sm" data-link="${i}">Dar baixa</button><button class="btn ghost sm" data-ign="${i}">Não é de duplicata</button>` : ''}</div></td></tr>`).join('')}</tbody></table>`}</div></div>`;
+        <td class="num"><div class="u-end6 row">${can(me) ? `<button class="btn sm" data-link="${i}">Dar baixa</button><button class="btn ghost sm" data-ign="${i}">Não é de duplicata</button>` : ''}</div></td></tr>`).join('')}</tbody></table>`}</div></div>`;
     pane.querySelectorAll('[data-link]').forEach((b) => (b.onclick = () => {
       const v = pane.querySelector(`[data-t="${b.dataset.link}"]`).value;
       if (!v) return toast('Escolha a cobrança.', true);
@@ -311,26 +311,26 @@
     const list = await rpc('partner_cases', { p_status: 'all' });
     const open = list.filter((k) => k.status === 'open'), done = list.filter((k) => k.status !== 'open');
     const row = (k) => `<div class="case ${k.status}">
-      <div class="row between" style="align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div class="u-top-wrap row between">
         <div><b>${esc(CASE_KIND[k.kind])}</b> · ${esc(k.company)}${k.nfe ? ` · NF-e ${esc(k.nfe)}` : ''}
           <div class="small muted">${esc(CASE_DIR[k.direction])} · aberta ${dateTime(k.created_at)}${k.status === 'open' ? ` · prazo ${date(k.deadline)}` : ''}${k.note ? ` · ${esc(k.note)}` : ''}</div></div>
-        <div style="text-align:right"><b>${brl(k.amount)}</b><div>${k.status === 'open' ? '<span class="tag warning">Em aberto</span>' : k.status === 'resolved' ? '<span class="tag success">Resolvida</span>' : '<span class="tag">Cancelada</span>'}</div></div>
+        <div class="u-right"><b>${brl(k.amount)}</b><div>${k.status === 'open' ? '<span class="tag warning">Em aberto</span>' : k.status === 'resolved' ? '<span class="tag success">Resolvida</span>' : '<span class="tag">Cancelada</span>'}</div></div>
       </div>
-      ${k.status === 'open' && k.direction !== 'to_fund' && k.pix ? `<div class="pix-box" style="margin-top:10px"><div class="pix-qr">${B.qrSvg(k.pix)}</div>
+      ${k.status === 'open' && k.direction !== 'to_fund' && k.pix ? `<div class="u-mt10 pix-box"><div class="pix-qr">${B.qrSvg(k.pix)}</div>
         <div class="small"><b>Devolva com Pix</b> pelo banco do fundo: chave CNPJ ${esc(cnpj(k.pix_key))} · ${esc(k.pix_name || '')}. Confira o nome antes de confirmar; se a chave não for aceita, peça outra chave a quem recebe.</div>
         <button class="btn secondary sm" type="button" data-copy="${esc(k.id)}">Copiar Pix copia e cola</button></div>` : ''}
-      ${k.status === 'open' && k.direction !== 'to_fund' && !k.pix ? '<p class="small muted" style="margin:8px 0 0">Sem CNPJ de quem pagou: combine a chave Pix para a devolução.</p>' : ''}
-      ${k.status === 'open' && k.direction === 'to_fund' ? `<p class="small muted" style="margin:8px 0 0">O cedente paga pelo app, com o identificador <span class="mono">${esc(k.txid)}</span>. Quando cair, a baixa sai pela importação do extrato, ou registre aqui.</p>` : ''}
-      ${k.reference ? `<div class="small" style="margin-top:6px">ID do Pix: <span class="mono">${esc(k.reference)}</span></div>` : ''}
+      ${k.status === 'open' && k.direction !== 'to_fund' && !k.pix ? '<p class="u-m8t small muted">Sem CNPJ de quem pagou: combine a chave Pix para a devolução.</p>' : ''}
+      ${k.status === 'open' && k.direction === 'to_fund' ? `<p class="u-m8t small muted">O cedente paga pelo app, com o identificador <span class="mono">${esc(k.txid)}</span>. Quando cair, a baixa sai pela importação do extrato, ou registre aqui.</p>` : ''}
+      ${k.reference ? `<div class="u-mt6 small">ID do Pix: <span class="mono">${esc(k.reference)}</span></div>` : ''}
       ${k.status === 'open' && can(me) ? `<div class="row" style="justify-content:flex-end;gap:6px;margin-top:10px">
         <button class="btn ghost sm" data-cancel="${esc(k.id)}">Cancelar</button>
         <button class="btn sm" data-resolve="${esc(k.id)}">${k.direction === 'to_fund' ? 'Repasse recebido' : 'Já devolvi'}</button></div>` : ''}
     </div>`;
     pane.innerHTML = `<div class="stack">
-      ${can(me) ? `<div class="card"><div class="row between" style="gap:12px;flex-wrap:wrap"><div><h2>Pagamento fora do lugar</h2><p class="small muted" style="margin:4px 0 0">O sacado pagou ao cedente? Abra a ocorrência na operação (botão "Registrar ocorrência"): o cedente recebe o link para repassar, e os lembretes ao sacado param.</p></div>
+      ${can(me) ? `<div class="card"><div class="u-g12w row between"><div><h2>Pagamento fora do lugar</h2><p class="u-m4t small muted">O sacado pagou ao cedente? Abra a ocorrência na operação (botão "Registrar ocorrência"): o cedente recebe o link para repassar, e os lembretes ao sacado param.</p></div>
         <a class="btn secondary sm" href="#/assinar/ativo">Ver operações ativas</a></div></div>` : ''}
       <div class="card stack"><h2>Em aberto</h2>${open.length ? open.map(row).join('') : empty('Nenhuma ocorrência em aberto.')}</div>
-      ${done.length ? `<details class="card"><summary><b>Resolvidas e canceladas (${done.length})</b></summary><div class="stack" style="margin-top:12px">${done.map(row).join('')}</div></details>` : ''}
+      ${done.length ? `<details class="card"><summary><b>Resolvidas e canceladas (${done.length})</b></summary><div class="u-mt12 stack">${done.map(row).join('')}</div></details>` : ''}
     </div>`;
     pane.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = () => B.copy(list.find((k) => k.id === b.dataset.copy).pix)));
     pane.querySelectorAll('[data-cancel]').forEach((b) => (b.onclick = async () => {
@@ -375,7 +375,7 @@
     const open = list.filter((b) => b.status === 'open');
     const REASON = { overdue: 'prazo de atraso', voluntary: 'pedida pelo cedente', fund: 'pedida pelo fundo' };
     pane.innerHTML = `<div class="stack">
-      <div class="card"><p class="small muted" style="margin:0">Quando o sacado não paga até o prazo do fundo, o cedente recompra a duplicata pelo valor de face com multa e juros do dia, em até 2 dias úteis. Com a recompra vencida, o cedente não faz novas antecipações. O prazo e as taxas ficam em Configurações → Banco.</p></div>
+      <div class="card"><p class="u-m0 small muted">Quando o sacado não paga até o prazo do fundo, o cedente recompra a duplicata pelo valor de face com multa e juros do dia, em até 2 dias úteis. Com a recompra vencida, o cedente não faz novas antecipações. O prazo e as taxas ficam em Configurações → Banco.</p></div>
       <div class="card flush"><div class="table-wrap">${list.length === 0 ? empty('Nenhuma recompra.') : `<table>
         <thead><tr><th>Cedente</th><th>Duplicata</th><th>Prazo</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead>
         <tbody>${list.map((b, i) => `<tr>
@@ -384,7 +384,7 @@
           <td class="nowrap">${date(b.deadline)}${b.late ? ' <span class="tag danger">vencido</span>' : ''}</td>
           <td class="num"><b>${brl(b.amount)}</b>${b.status === 'open' ? '<div class="small muted">valor de hoje</div>' : ''}</td>
           <td>${b.status === 'open' ? '<span class="tag warning">Em aberto</span>' : b.status === 'paid' ? `<span class="tag success">Paga ${date(b.paid_at)}</span>` : '<span class="tag">Encerrada</span>'}</td>
-          <td class="num"><div class="row" style="justify-content:flex-end;gap:6px"><a class="btn ghost sm" href="#/assinar/${esc(b.operation_id)}">Operação</a>
+          <td class="num"><div class="u-end6 row"><a class="btn ghost sm" href="#/assinar/${esc(b.operation_id)}">Operação</a>
             ${b.status === 'open' && can(me) ? `<button class="btn sm" data-paid="${i}">Recebida</button>` : ''}</div></td></tr>`).join('')}</tbody></table>`}</div></div>
       ${open.length ? `<p class="small muted">Em aberto: ${open.length} · ${brl(open.reduce((t, b) => t + Number(b.amount), 0))} hoje.</p>` : ''}
     </div>`;

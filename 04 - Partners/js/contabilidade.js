@@ -72,8 +72,41 @@
     return out;
   }
 
+  /* ---------------- contraparte: CNPJ do extrato -> nome ---------------- */
+  const cnpjOk = (d) => {
+    if (!/^\d{14}$/.test(d) || /^(\d)\1+$/.test(d)) return false;
+    const dv = (n) => { let s = 0, p = n - 7; for (let i = 0; i < n; i++) { s += +d[i] * p--; if (p < 2) p = 9; } const r = s % 11; return r < 2 ? 0 : 11 - r; };
+    return dv(12) === +d[12] && dv(13) === +d[13];
+  };
+  const cnpjOf = (t) => { const m = String(t || '').match(/(?<!\d)\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}(?!\d)/g) || []; for (const x of m) { const d = x.replace(/\D/g, ''); if (cnpjOk(d)) return d; } return ''; };
+  const nameMem = {}, nameMiss = new Set();
+  /** {cnpj: nome} das linhas: primeiro nos cadastros do fundo, depois na Receita (BrasilAPI), guardando o resultado */
+  async function counterparties(lines) {
+    const docs = [...new Set(lines.map((l) => cnpjOf(l.description)).filter(Boolean))].filter((d) => !nameMem[d]);
+    if (docs.length) {
+      try { Object.assign(nameMem, await rpc('partner_cnpj_names', { p_cnpjs: docs })); } catch (_) { /* segue sem nomes */ }
+      const miss = docs.filter((d) => !nameMem[d] && !nameMiss.has(d)).slice(0, 25), got = {};
+      await Promise.all(miss.map(async (d) => {
+        try { const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 5000); const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${d}`, { signal: ctl.signal }); clearTimeout(t);
+          const j = r.ok ? await r.json() : null, n = j && (j.razao_social || j.nome_fantasia); if (n) { got[d] = String(n).slice(0, 200); nameMem[d] = got[d]; } else nameMiss.add(d); } catch (_) { nameMiss.add(d); }
+      }));
+      if (Object.keys(got).length) rpc('partner_cnpj_name_save', { p_names: got }).catch(() => {});
+    }
+    return (l) => nameMem[cnpjOf(l.description)] || '';
+  }
+  /* tipo da transação: sem o "de/para <contraparte>" (ex.: "Pix Recebido de FULANO" → "Pix Recebido") */
+  const kindOf = (d) => { const s = String(d || '').split(' · ')[0].trim(); return s.replace(/^(.*?(?:recebid[oa]s?|enviad[oa]s?|transf\.?(?:erência)?(?:\s+interna)?))\s+(?:de|da|do|para|a favor de)\s+\S.*$/i, '$1').trim() || s; };
+  /* documento da linha do extrato, já formatado: CNPJ completo ou CPF mascarado (Pix enviado, recebido e tarifa) */
+  const restOf = (d) => { const p = String(d || '').split(' · '); return p.length > 1 && !/^(cpf|cnpj|isp|ag )/i.test(p[1]) ? p[1] : String(d || ''); };
+  const docLabel = (d) => { const c = cnpjOf(d); if (c) return 'CNPJ ' + c.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'); const cpf = (/CPF\s+([\d*.\-]+)/i.exec(d || '') || [])[1]; return cpf ? 'CPF ' + cpf : ''; };
+  const bankOf = (d) => { const m = /Ag\s+(\S+)\s+CC\s+(\S+)/i.exec(d || ''); return m ? `Ag ${m[1]} · CC ${m[2]}` : ''; };
+
   /* ---------------- Conciliação bancária: lançamentos da Lottus × extrato, vários de cada lado ---------------- */
-  const cst = { acc: '', view: 'pending', selL: new Set(), selR: new Set() };
+  const cst = { acc: '', view: 'pending', selL: new Set(), selR: new Set(), f: { q: '', type: '', dir: '', from: '', to: '' } };
+  const KINDL = { pagamento: 'Pagamento', operacao: 'Operação', tranche: 'Pagamento da operação', avulso: 'Avulso', tarifa: 'Tarifa', integralizacao: 'Integralização', parcela: 'Parcela', resgate: 'Resgate', devolucao: 'Devolução' };
+  const fold = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const recFields = (types) => [{ k: 'q', label: 'Nome ou descrição', type: 'text' }, { k: 'type', label: 'Tipo', type: 'select', all: 'Todos os tipos', options: types },
+    { k: 'dir', label: 'Entrada ou saída', type: 'select', all: 'Entradas e saídas', options: [['in', 'Entradas'], ['out', 'Saídas']] }, { k: 'rg', label: 'Data', type: 'range', from: 'from', to: 'to' }];
   const ikey = (i) => `${i.kind}|${i.ref}`;
   async function conciliacao(host, me) {
     await post();
@@ -82,8 +115,11 @@
     if (!accounts.some((a) => a.id === cst.acc)) { cst.acc = accounts[0].id; cst.selL.clear(); cst.selR.clear(); }
     const w = canSign(me), again = () => conciliacao(host, me);
     const pendingView = cst.view === 'pending';
-    const [rec, events, done] = await Promise.all([pendingView ? rpc('partner_bank_recon', { p_account: cst.acc }) : null, pendingView ? rpc('partner_acct_events') : [], pendingView ? null : rpc('partner_bank_lines', { p_account: cst.acc, p_status: cst.view })]);
-    const lines = pendingView ? rec.lines : done.lines, items = pendingView ? rec.items : [];
+    if (cst.view === 'pending' && w) { try { await rpc('partner_bank_auto_classify', { p_account: cst.acc }); } catch (_) { /* sem regras */ } }
+    const [rec, events, done] = await Promise.all([pendingView ? rpc('partner_bank_recon', { p_account: cst.acc }) : null, pendingView ? rpc('partner_acct_events') : [], pendingView ? null : rpc('partner_bank_lines', { p_account: cst.acc, p_status: 'reconciled' })]);
+    const lines = pendingView ? rec.lines : done.lines;
+    const items = pendingView ? rec.items : [];
+    const nameOf = await counterparties(lines);
     const nPend = pendingView ? lines.length : done.summary.pending;
     host.innerHTML = `<div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
         <select class="input" id="acc" style="max-width:280px" aria-label="Conta bancária">${accounts.map((a) => `<option value="${esc(a.id)}" ${a.id === cst.acc ? 'selected' : ''}>${esc(a.label)}</option>`).join('')}</select>
@@ -112,85 +148,166 @@
       host.ondrop = (e) => { e.preventDefault(); take(e.dataTransfer && e.dataTransfer.files[0]); };
     }
     const body = host.querySelector('#body');
-    if (!pendingView) return doneList(body, done.lines, w, again);
+    if (!pendingView) return doneList(body, done.lines, w, again, nameOf);
 
     // ids que sumiram (conciliados) saem da seleção
     const idsR = new Set(lines.map((l) => l.id)), idsL = new Set(items.map(ikey));
     [...cst.selR].forEach((k) => { if (!idsR.has(k)) cst.selR.delete(k); }); [...cst.selL].forEach((k) => { if (!idsL.has(k)) cst.selL.delete(k); });
+    const typeL = (i) => KINDL[i.kind] || (i.kind ? i.kind[0].toUpperCase() + i.kind.slice(1) : 'Lançamento');
+    const typeR = (l) => kindOf(l.description) || (num(l.amount) < 0 ? 'Saída' : 'Entrada');
+    const allTypes = [...new Set([...items.map(typeL), ...lines.map(typeR)])].sort((a, b) => a.localeCompare(b, 'pt-BR')).map((t) => [t, t]);
+    const FIELDS = recFields(allTypes);
+    body.innerHTML = B.ui.filters.html('rec', FIELDS, cst.f) + '<div id="rec-main"></div>';
+    const main = body.querySelector('#rec-main');
+    const okF = (txt, type, amount, dt) => {
+      const f = cst.f, q = fold(f.q);
+      return (!q || fold(txt).includes(q)) && (!f.type || type === f.type) && (!f.dir || (f.dir === 'in' ? num(amount) >= 0 : num(amount) < 0)) && (!f.from || String(dt) >= f.from) && (!f.to || String(dt) <= f.to);
+    };
     const paint = () => {
-      const pl = B.ui.pager('rec-l' + cst.acc, items, { unit: items.length === 1 ? 'lançamento' : 'lançamentos' });
-      const pr = B.ui.pager('rec-r' + cst.acc, lines, { unit: lines.length === 1 ? 'linha' : 'linhas' });
+      const fItems = items.filter((i) => okF(`${i.who} ${i.label}`, typeL(i), i.amount, i.date)), fLines = lines.filter((l) => okF(`${nameOf(l)} ${l.description}`, typeR(l), l.amount, l.date));
+      const pl = B.ui.pager('rec-l' + cst.acc, fItems, { unit: fItems.length === 1 ? 'lançamento' : 'lançamentos', sig: JSON.stringify(cst.f), cols: [null, (i) => i.date, typeL, (i) => i.who || i.label, (i) => num(i.amount)] });
+      const pr = B.ui.pager('rec-r' + cst.acc, fLines, { unit: fLines.length === 1 ? 'linha' : 'linhas', sig: JSON.stringify(cst.f), cols: [null, (l) => l.date, typeR, (l) => nameOf(l) || restOf(l.description), (l) => num(l.amount)] });
       const sumL = items.filter((i) => cst.selL.has(ikey(i))).reduce((t, i) => t + num(i.amount), 0), sumR = lines.filter((l) => cst.selR.has(l.id)).reduce((t, l) => t + num(l.amount), 0);
       const diff = Math.round((sumL - sumR) * 100) / 100, ready = w && cst.selL.size > 0 && cst.selR.size > 0 && Math.abs(diff) < 0.005;
       const one = lines.length && cst.selR.size === 1 ? lines.find((l) => cst.selR.has(l.id)) : null;
       const col = (v) => (num(v) < 0 ? 'var(--danger)' : 'var(--success)');
-      body.innerHTML = `<div class="rec-grid">
-          <div class="u-p0 card"><div class="rec-head"><b>Lançado na Lottus</b><span class="u-g10c row">${w && cst.selL.size ? `<button class="btn ghost sm" type="button" id="dis-l">Remover (${cst.selL.size})</button>` : ''}<label class="small muted"><input type="checkbox" data-all="L" ${pl.rows.length && pl.rows.every((i) => cst.selL.has(ikey(i))) ? 'checked' : ''}> Página</label></span></div>
-            ${pl.rows.length ? pl.rows.map((i) => `<label class="rec-row ${cst.selL.has(ikey(i)) ? 'on' : ''}"><input type="checkbox" data-l="${esc(ikey(i))}" ${cst.selL.has(ikey(i)) ? 'checked' : ''}>
-              <span class="grow"><b>${esc(i.who || i.label)}</b><span class="small muted" style="display:block">${esc(i.who ? i.label : '')}${i.who ? ' · ' : ''}${esc(date(i.date))}${i.state === 'pending' ? ' · <span class="tag warning">A pagar</span>' : ''}${one && Math.abs(num(i.amount) - num(one.amount)) < 0.005 ? ' · <span class="tag success">mesmo valor</span>' : ''}</span></span>
-              ${w && i.state === 'pending' && num(i.amount) < 0 && i.kind !== 'avulso' ? `<a href="#" class="linkbtn" data-pay="${esc(ikey(i))}">Pagar</a>` : ''}<b style="color:${col(i.amount)}">${brl(i.amount)}</b></label>`).join('') : empty('Nenhum lançamento a conciliar.')}
+      const nL = fItems.filter((i) => cst.selL.has(ikey(i))).length, nR = fLines.filter((l) => cst.selR.has(l.id)).length;
+      const chk = (n, tot) => `<th style="width:34px"><input type="checkbox" data-all="__" aria-label="Selecionar todos" ${tot && n === tot ? 'checked' : ''} ${tot ? '' : 'disabled'}></th>`;
+      main.innerHTML = `<div class="rec-grid">
+          <div class="u-p0 card"><div class="rec-head"><b>Lançado na Lottus</b><span class="small muted">${fItems.length}${fItems.length !== items.length ? ` de ${items.length}` : ''}</span></div>
+            ${fItems.length ? `<table class="rec-t"><thead><tr>${chk(nL, fItems.length).replace('__', 'L')}<th>Data</th><th>Tipo</th><th>Nome</th><th class="num">Valor</th></tr></thead><tbody>${pl.rows.map((i) => `<tr class="rec-row ${cst.selL.has(ikey(i)) ? 'on' : ''}" data-rowl="${esc(ikey(i))}"><td><input type="checkbox" data-l="${esc(ikey(i))}" ${cst.selL.has(ikey(i)) ? 'checked' : ''} aria-label="Selecionar"></td>
+              <td class="nowrap">${esc(date(i.date))}</td><td>${esc(typeL(i))}</td>
+              <td><b>${esc(i.who || i.label)}</b><div class="small muted">${esc(i.who ? i.label : '')}${i.state === 'pending' ? `${i.who ? ' · ' : ''}<span class="tag warning">A pagar</span>` : ''}${one && Math.abs(num(i.amount) - num(one.amount)) < 0.005 ? ' · <span class="tag success">mesmo valor</span>' : ''}${w && i.state === 'pending' && num(i.amount) < 0 && i.kind !== 'avulso' ? ` · <a href="#" class="linkbtn" data-pay="${esc(ikey(i))}">Pagar</a>` : ''}</div></td>
+              <td class="num nowrap"><b style="color:${col(i.amount)}">${brl(i.amount)}</b></td></tr>`).join('')}</tbody></table>` : empty(items.length ? 'Nada com esses filtros.' : 'Nenhum lançamento a conciliar.')}
             ${pl.bar}</div>
-          <div class="u-p0 card"><div class="rec-head"><b>Extrato do banco</b><span class="u-g10c row">${w && cst.selR.size ? `<button class="btn ghost sm" type="button" id="del-r">Excluir (${cst.selR.size})</button>` : ''}<label class="small muted"><input type="checkbox" data-all="R" ${pr.rows.length && pr.rows.every((l) => cst.selR.has(l.id)) ? 'checked' : ''}> Página</label></span></div>
-            ${pr.rows.length ? pr.rows.map((l) => `<label class="rec-row ${cst.selR.has(l.id) ? 'on' : ''}"><input type="checkbox" data-r="${esc(l.id)}" ${cst.selR.has(l.id) ? 'checked' : ''}>
-              <span class="grow"><b>${esc(l.description)}</b><span class="small muted" style="display:block">${esc(date(l.date))}${w ? ` · <a href="#" class="linkbtn" data-fix="${esc(l.id)}">Classificar</a>` : ''}</span></span>
-              <b style="color:${col(l.amount)}">${brl(l.amount)}</b></label>`).join('') : empty('Nenhuma linha no extrato. Use “Importar extrato (OFX)” ou arraste o arquivo para cá.')}
+          <div class="u-p0 card"><div class="rec-head"><b>Extrato do banco</b><span class="u-g10c row"><span class="small muted">${fLines.length}${fLines.length !== lines.length ? ` de ${lines.length}` : ''}</span>${w && cst.selR.size ? `<button class="btn ghost sm" type="button" id="del-r">Excluir (${cst.selR.size})</button>` : ''}</span></div>
+            ${fLines.length ? `<table class="rec-t"><thead><tr>${chk(nR, fLines.length).replace('__', 'R')}<th>Data</th><th>Tipo</th><th>Nome</th><th class="num">Valor</th></tr></thead><tbody>${pr.rows.map((l) => `<tr class="rec-row ${cst.selR.has(l.id) ? 'on' : ''}" data-rowr="${esc(l.id)}"><td><input type="checkbox" data-r="${esc(l.id)}" ${cst.selR.has(l.id) ? 'checked' : ''} aria-label="Selecionar"></td>
+              <td class="nowrap">${esc(date(l.date))}</td><td>${esc(typeR(l))}</td>
+              <td><b>${esc(nameOf(l) || docLabel(l.description) || restOf(l.description))}</b>${nameOf(l) ? `<div class="small muted">${esc(docLabel(l.description))}${bankOf(l.description) ? ' · ' + esc(bankOf(l.description)) : ''}</div>` : (bankOf(l.description) ? `<div class="small muted">${esc(bankOf(l.description))}</div>` : '')}</td>
+              <td class="num nowrap"><b style="color:${col(l.amount)}">${brl(l.amount)}</b></td></tr>`).join('')}</tbody></table>` : empty(lines.length ? 'Nada com esses filtros.' : 'Nenhuma linha no extrato. Use “Importar extrato (OFX)” ou arraste o arquivo para cá.')}
             ${pr.bar}</div></div>
         <div class="u-mt14 card rec-foot"><span class="small">Lottus <b>${brl(sumL)}</b> · Extrato <b>${brl(sumR)}</b> · ${cst.selL.size || cst.selR.size ? (Math.abs(diff) < 0.005 ? '<span class="u-success">valores iguais ✓</span>' : `diferença <b class="u-danger">${brl(Math.abs(diff))}</b>`) : '<span class="muted">selecione os dois lados</span>'}</span>
           ${w ? `<button class="btn" id="go" ${ready ? '' : 'disabled'}>Conciliar selecionados</button>` : ''}</div>`;
-      B.ui.pagerBind(body.querySelectorAll('.rec-grid > .card')[0], 'rec-l' + cst.acc, paint);
-      B.ui.pagerBind(body.querySelectorAll('.rec-grid > .card')[1], 'rec-r' + cst.acc, paint);
-      body.querySelectorAll('[data-l]').forEach((c) => (c.onchange = () => { c.checked ? cst.selL.add(c.dataset.l) : cst.selL.delete(c.dataset.l); paint(); }));
-      body.querySelectorAll('[data-r]').forEach((c) => (c.onchange = () => { c.checked ? cst.selR.add(c.dataset.r) : cst.selR.delete(c.dataset.r); paint(); }));
-      body.querySelectorAll('[data-all]').forEach((c) => (c.onchange = () => {
-        const L = c.dataset.all === 'L';
-        (L ? pl.rows.map(ikey) : pr.rows.map((l) => l.id)).forEach((k) => (c.checked ? (L ? cst.selL : cst.selR).add(k) : (L ? cst.selL : cst.selR).delete(k))); paint();
+      const cards = main.querySelectorAll('.rec-grid > .card');
+      B.ui.pagerBind(cards[0], 'rec-l' + cst.acc, paint);
+      B.ui.pagerBind(cards[1], 'rec-r' + cst.acc, paint);
+      main.querySelectorAll('[data-l]').forEach((c) => (c.onchange = () => { c.checked ? cst.selL.add(c.dataset.l) : cst.selL.delete(c.dataset.l); paint(); }));
+      main.querySelectorAll('[data-r]').forEach((c) => (c.onchange = () => { c.checked ? cst.selR.add(c.dataset.r) : cst.selR.delete(c.dataset.r); paint(); }));
+      main.querySelectorAll('tr[data-rowl], tr[data-rowr]').forEach((tr) => (tr.onclick = (e) => { if (e.target.closest('a, button, input')) return; const c = tr.querySelector('input[type=checkbox]'); c.checked = !c.checked; c.dispatchEvent(new Event('change')); }));
+      // "selecionar todos": todos os itens do filtro, não só a página
+      main.querySelectorAll('[data-all]').forEach((c) => (c.onchange = () => {
+        const L = c.dataset.all === 'L', keys = L ? fItems.map(ikey) : fLines.map((l) => l.id), set = L ? cst.selL : cst.selR;
+        keys.forEach((k) => (c.checked ? set.add(k) : set.delete(k))); paint();
       }));
-      body.querySelectorAll('[data-pay]').forEach((a) => (a.onclick = (e) => {
+      main.querySelectorAll('[data-pay]').forEach((a) => (a.onclick = (e) => {
         e.preventDefault(); e.stopPropagation();
         const it = items.find((i) => ikey(i) === a.dataset.pay); if (!it) return;
-        if (it.kind === 'operacao') { location.hash = `#/assinar/${it.ref}/pagar`; return; }
         B.payItem(it.kind, it.ref, me, again);
       }));
-      body.querySelectorAll('[data-fix]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); e.stopPropagation(); fixDrawer(lines.find((l) => l.id === a.dataset.fix), events, again); }));
-      const dl = body.querySelector('#dis-l');
-      if (dl) dl.onclick = async () => {
-        const ok = await B.confirmAction({ title: 'Remover da conciliação', text: `${cst.selL.size} ${cst.selL.size === 1 ? 'lançamento sai' : 'lançamentos saem'} desta lista. O registro original (pagamento, integralização, parcela) não é alterado.`, confirmLabel: 'Remover' });
-        if (ok == null) return;
-        try { await run(dl, () => rpc('partner_bank_recon_dismiss', { p_items: items.filter((i) => cst.selL.has(ikey(i))).map((i) => ({ kind: i.kind, ref: i.ref })) }), 'Removido da lista'); cst.selL.clear(); again(); } catch (_) { /* já avisado */ }
-      };
-      const dr = body.querySelector('#del-r');
+      main.querySelectorAll('[data-fix]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); e.stopPropagation(); fixDrawer(lines.find((l) => l.id === a.dataset.fix), events, again); }));
+      // Lançado na Lottus não se exclui daqui: só as linhas do extrato do banco
+      const dr = main.querySelector('#del-r');
       if (dr) dr.onclick = async () => {
         const ok = await B.confirmAction({ title: 'Excluir do extrato', text: `${cst.selR.size} ${cst.selR.size === 1 ? 'linha é apagada' : 'linhas são apagadas'} do extrato importado. Importar o arquivo de novo traz as linhas de volta.`, confirmLabel: 'Excluir', danger: true });
         if (ok == null) return;
         try { await run(dr, () => rpc('partner_bank_lines_delete', { p_lines: [...cst.selR] }), 'Linhas excluídas'); cst.selR.clear(); again(); } catch (_) { /* já avisado */ }
       };
-      const go = body.querySelector('#go');
+      const go = main.querySelector('#go');
       if (go) go.onclick = async () => {
         try {
-          await run(go, () => rpc('partner_bank_reconcile', { p_account: cst.acc, p_lines: [...cst.selR], p_items: items.filter((i) => cst.selL.has(ikey(i))).map((i) => ({ kind: i.kind, ref: i.ref })) }), 'Conciliado');
+          await run(go, () => rpc('partner_bank_reconcile', { p_account: cst.acc, p_lines: [...cst.selR], p_items: items.filter((i) => cst.selL.has(ikey(i))).flatMap((i) => (i.members || [i]).map((x) => ({ kind: x.kind, ref: x.ref }))) }), 'Conciliado');
           cst.selL.clear(); cst.selR.clear(); again();
         } catch (_) { /* já avisado */ }
       };
     };
+    B.ui.filters.bind(body, 'rec', FIELDS, cst.f, paint);
     paint();
   }
 
   /* Conciliadas: lista com "Desfazer" */
-  function doneList(body, lines, w, again) {
-    const key = 'rec-d' + cst.view + cst.acc;
+
+  /* ---------------- Movimentações: todas as movimentações contábeis, com contraparte e contas movimentadas ---------------- */
+  const mst = { f: { q: '', type: '', acct: '', val: '', from: '', to: '' } };
+  async function movimentacoes(host, me) {
+    await post();
+    const movs = await rpc('partner_acct_movements');
+    const nameOf = await counterparties(movs.filter((m) => m.bank_desc).map((m) => ({ description: m.bank_desc })));
+    const fmtDoc = (d) => { const x = String(d || '').replace(/\D/g, ''); return x.length === 14 ? x.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : x.length === 11 ? x.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : String(d || ''); };
+    // contraparte de cada movimentação: cadastro (nome e documento) ou, no extrato, CNPJ/CPF da descrição
+    const who = (m) => {
+      const ps = m.parties || [];
+      if (ps.length === 1) return { name: ps[0].name || '', doc: fmtDoc(ps[0].doc) };
+      if (ps.length > 1) return { name: `${ps.length} contrapartes: ${ps.slice(0, 2).map((p) => p.name).join(', ')}${ps.length > 2 ? '…' : ''}`, doc: '' };
+      const bd = m.bank_desc || '', c = cnpjOf(bd), cpf = (/CPF\s+([\d*.\-]+)/i.exec(bd) || [])[1] || '';
+      const l = { description: bd };
+      return { name: nameOf(l) || '', doc: c ? fmtDoc(c) : cpf };
+    };
+    const tipoOf = (m) => (m.bank_desc ? kindOf(m.bank_desc) : '') || m.kind || '';
+    const kinds = [...new Set(movs.map(tipoOf))].filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR')).map((k) => [k, k]);
+    const accts = new Map(); movs.forEach((m) => (m.lines || []).forEach((l) => accts.set(l.code, `${l.code} · ${l.name}`)));
+    const FIELDS = [{ k: 'q', label: 'Nome, documento ou descrição', type: 'text' }, { k: 'type', label: 'Tipo', type: 'select', all: 'Todos os tipos', options: kinds },
+      { k: 'acct', label: 'Conta', type: 'select', all: 'Todas as contas', options: [...accts].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })) },
+      { k: 'val', label: 'Valor', type: 'number', placeholder: 'Ex.: 1.000.000,00' }, { k: 'rg', label: 'Data', type: 'range', from: 'from', to: 'to' }];
+    host.innerHTML = B.ui.filters.html('mov', FIELDS, mst.f) + '<div id="ml"></div>';
+    const list = host.querySelector('#ml'), open = new Set();
     const paint = () => {
-      const pg = B.ui.pager(key, lines, { unit: lines.length === 1 ? 'linha' : 'linhas' });
-      body.innerHTML = lines.length ? `<div class="card"><table><thead><tr><th>Data</th><th>Descrição</th><th class="num">Valor</th><th></th></tr></thead><tbody>
-        ${pg.rows.map((l) => `<tr><td>${esc(date(l.date))}</td><td>${esc(l.description)}${l.status === 'reconciled' ? `<div class="small muted">${l.match_kind === 'conta' ? esc(l.entry || 'Classificada') : l.match_kind === 'lote' ? 'Conciliada com lançamentos da Lottus' : 'Conciliada com um pagamento da Tesouraria'}</div>` : ''}</td>
+      const f = mst.f, q = fold(f.q), v = parseNum(f.val), vd = String(f.val || '').replace(/\D/g, '');
+      const shown = movs.filter((m) => {
+        const w = who(m);
+        if (q && !fold(`${m.description} ${w.name} ${w.doc} ${(m.parties || []).map((p) => `${p.name} ${p.doc}`).join(' ')} ${m.bank_desc || ''}`).includes(q) && !String(w.doc).replace(/\D/g, '').includes(q.replace(/\D/g, '') || '§')) return false;
+        if (f.type && tipoOf(m) !== f.type) return false;
+        if (f.acct && !(m.lines || []).some((l) => l.code === f.acct)) return false;
+        if (f.val && !(Number.isFinite(v) ? (m.lines || []).some((l) => Math.abs(num(l.debit) + num(l.credit) - Math.abs(v)) < 0.005) || Math.abs(num(m.amount) - Math.abs(v)) < 0.005 : String(num(m.amount).toFixed(2)).replace(/\D/g, '').includes(vd))) return false;
+        return (!f.from || String(m.date) >= f.from) && (!f.to || String(m.date) <= f.to);
+      });
+      const pg = B.ui.pager('mov-ac', shown, { unit: shown.length === 1 ? 'movimentação' : 'movimentações', sig: JSON.stringify(f), cols: [(m) => m.date, (m) => m.description, (m) => num(m.amount)] });
+      const body = (m) => `<table class="mov-t"><thead><tr><th>Código da Conta</th><th>Conta</th><th>Natureza</th><th class="num">Valor</th></tr></thead><tbody>${(m.lines || []).map((l) => `<tr><td class="mono small nowrap">${esc(l.code)}</td><td>${esc(l.name)}</td><td>${num(l.debit) > 0 ? 'Débito' : 'Crédito'}</td><td class="num">${brl(num(l.debit) > 0 ? l.debit : l.credit)}</td></tr>`).join('')}</tbody></table>
+        ${m.bank_desc ? `<div class="small muted" style="margin-top:8px">Extrato: ${esc(m.bank_desc)}${m.bank_lines > 1 ? ` (+${m.bank_lines - 1} ${m.bank_lines === 2 ? 'linha' : 'linhas'})` : ''}</div>` : ''}`;
+      list.innerHTML = shown.length ? `<div class="card" style="padding:0">${pg.rows.map((m) => { const w = who(m), on = open.has(m.key); return `<div class="mov" style="border-bottom:1px solid var(--line)">
+          <button type="button" data-mv="${esc(m.key)}" aria-expanded="${on}" style="display:grid;grid-template-columns:96px 128px 1fr auto 20px;gap:12px;align-items:center;width:100%;padding:12px 16px;background:none;border:0;text-align:left;cursor:pointer;font:inherit;color:inherit">
+            <span class="nowrap small">${esc(date(m.date))}</span>
+            <span class="small"><span class="tag">${esc(tipoOf(m))}</span></span>
+            <span><b>${esc(m.description)}</b><div class="small muted">${[w.name, w.doc].filter(Boolean).map(esc).join(' · ')}</div></span>
+            <b class="nowrap">${brl(m.amount)}</b><span aria-hidden="true">${on ? '▾' : '▸'}</span></button>
+          <div ${on ? '' : 'hidden'} style="padding:0 16px 14px 252px">${body(m)}</div></div>`; }).join('')}${pg.bar}</div>` : `<div class="card">${empty(movs.length ? 'Nada com esses filtros.' : 'Nenhuma movimentação contábil ainda.')}</div>`;
+      B.ui.pagerBind(list, 'mov-ac', paint);
+      list.querySelectorAll('[data-mv]').forEach((b) => (b.onclick = () => { open.has(b.dataset.mv) ? open.delete(b.dataset.mv) : open.add(b.dataset.mv); paint(); }));
+    };
+    B.ui.filters.bind(host, 'mov', FIELDS, mst.f, paint);
+    paint();
+  }
+
+  function doneList(body, lines, w, again, nameOf) {
+    const key = 'rec-d' + cst.view + cst.acc;
+    const typeR = (l) => kindOf(l.description) || (num(l.amount) < 0 ? 'Saída' : 'Entrada');
+    const fmtD = (d) => { const x = String(d || '').replace(/\D/g, ''); return x.length === 14 ? x.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : x.length === 11 ? x.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : String(d || ''); };
+    const whoL = (l) => {
+      const ps = l.parties || [];
+      if (ps.length === 1) return { name: ps[0].name || '', doc: fmtD(ps[0].doc) };
+      if (ps.length > 1) return { name: `${ps.length} contrapartes`, doc: '' };
+      const c = cnpjOf(l.description), cpf = (/CPF\s+([\d*.\-]+)/i.exec(l.description || '') || [])[1] || '';
+      return { name: nameOf(l) || '', doc: c ? fmtD(c) : cpf };
+    };
+    const cnpjFmt = (l) => whoL(l).doc || '—';
+    const FIELDS = recFields([...new Set(lines.map(typeR))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map((t) => [t, t]));
+    body.innerHTML = B.ui.filters.html('recd', FIELDS, cst.f) + '<div id="dl"></div>';
+    const host = body.querySelector('#dl');
+    const paint = () => {
+      const f = cst.f, q = fold(f.q);
+      const shown = lines.filter((l) => (!q || fold(`${nameOf(l)} ${l.description} ${whoL(l).name} ${whoL(l).doc}`).includes(q)) && (!f.type || typeR(l) === f.type) && (!f.dir || (f.dir === 'in' ? num(l.amount) >= 0 : num(l.amount) < 0)) && (!f.from || String(l.date) >= f.from) && (!f.to || String(l.date) <= f.to));
+      const pg = B.ui.pager(key, shown, { unit: shown.length === 1 ? 'linha' : 'linhas', sig: JSON.stringify(f), cols: [(l) => l.date, typeR, (l) => nameOf(l) || restOf(l.description), (l) => num(l.amount)] });
+      host.innerHTML = shown.length ? `<div class="card"><table><thead><tr><th>Data</th><th>CNPJ da contraparte</th><th>Descrição</th><th class="num">Valor</th><th></th></tr></thead><tbody>
+        ${pg.rows.map((l) => `<tr><td class="nowrap">${esc(date(l.date))}</td><td class="nowrap">${esc(cnpjFmt(l))}${whoL(l).name ? `<div class="small muted">${esc(whoL(l).name)}</div>` : ''}</td><td>${esc(typeR(l))}</td>
           <td class="num" style="color:${num(l.amount) < 0 ? 'var(--danger)' : 'var(--success)'}"><b>${brl(l.amount)}</b></td>
-          <td class="num">${w ? `<button class="btn ghost sm" data-undo="${esc(l.id)}">Desfazer</button>` : ''}</td></tr>`).join('')}</tbody></table>${pg.bar}</div>` : `<div class="card">${empty('Nenhuma linha ainda.')}</div>`;
-      B.ui.pagerBind(body, key, paint);
-      body.querySelectorAll('[data-undo]').forEach((b) => (b.onclick = async () => {
+          <td class="num">${w ? `<button class="btn ghost sm" data-undo="${esc(l.id)}">Desfazer</button>` : ''}</td></tr>`).join('')}</tbody></table>${pg.bar}</div>` : `<div class="card">${empty(lines.length ? 'Nada com esses filtros.' : 'Nenhuma linha ainda.')}</div>`;
+      B.ui.pagerBind(host, key, paint);
+      host.querySelectorAll('[data-undo]').forEach((b) => (b.onclick = async () => {
         const ok = await B.confirmAction({ title: 'Desfazer a conciliação', text: 'O que foi gerado por ela é desfeito e a linha (e as outras conciliadas junto) volta para "A conciliar".', confirmLabel: 'Desfazer' });
         if (ok == null) return;
         try { await run(b, () => rpc('partner_bank_line_undo', { p_line: b.dataset.undo }), 'Conciliação desfeita'); again(); } catch (_) { /* já avisado */ }
       }));
     };
+    B.ui.filters.bind(body, 'recd', FIELDS, cst.f, paint);
     paint();
   }
 
@@ -198,18 +315,26 @@
     const out = num(l.amount) < 0;
     const cands = out ? await rpc('partner_bank_line_candidates', { p_line: l.id }).catch(() => []) : [];
     const evs = events.filter((e) => e.active && e.has_bank && e.kind === (out ? 'pagamento' : 'recebimento'));
+    const parties = await rpc('partner_counterparties').catch(() => []);
+    const cd = cnpjOf(l.description), cpHit = cd ? parties.find((p) => String(p.document || '').replace(/\D/g, '') === cd) : null;
     const box = B.drawer({ title: out ? 'Conciliar saída' : 'Conciliar entrada', subtitle: `${esc(date(l.date))} · ${esc(l.description)} · <b>${brl(l.amount)}</b>`,
       body: `${cands.length ? `<div class="fsec"><h3>É um pagamento da Tesouraria?</h3><div class="u-p0 card">${cands.map((c, i) => `<div class="row between" style="gap:12px;padding:10px 14px;${i ? 'border-top:1px solid var(--line)' : ''}"><span><b>${esc(c.who)}</b><br><span class="small muted">${esc(c.label)}</span></span>${c.kind === 'operacao' ? '<span class="small muted">Pague pela operação</span>' : `<button class="btn sm" data-m="${esc(c.kind)}|${esc(c.ref_id)}">É este</button>`}</div>`).join('')}</div></div>` : ''}
-        <div class="fsec"><h3>${cands.length ? 'Ou classifique' : 'O que foi esta movimentação?'}</h3>
+        <div class="fsec"><h3>${cands.length ? 'Ou lance na aba Pagamentos' : out ? 'Lançar este pagamento' : 'Lançar este recebimento'}</h3>
+          <p class="small muted" style="margin:0 0 10px">O lançamento fica em “Lançado na Lottus” para você conciliar com esta linha.</p>
+          <div class="field"><label>Contraparte</label><select class="input" id="cp"><option value="">${cpHit ? '' : 'Pela descrição do extrato'}</option>${parties.map((p) => `<option value="${esc(p.key)}" ${cpHit && cpHit.key === p.key ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></div>
           <div class="field"><label>Evento contábil</label><select class="input" id="ce">${evs.map((e) => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('')}</select></div>
-          <div class="field"><label>Observação <span class="small muted">(opcional)</span></label><input class="input" id="ch" value="${esc(l.description)}"></div>
-          <button class="btn" id="cls">Conciliar</button></div>
+          <div class="field"><label>Observação <span class="small muted">(opcional)</span></label><input class="input" id="ch" maxlength="140" autocomplete="off"></div>
+          <button class="btn" id="cls">${out ? 'Lançar pagamento' : 'Lançar recebimento'}</button></div>
         <div class="row" style="gap:8px;margin-top:6px"><button class="btn ghost sm" id="ign">Ignorar linha</button><button class="btn ghost sm" id="del">Excluir linha</button></div>
         <div class="error-box" id="fe" hidden></div>`, foot: '' });
     const err = box.querySelector('#fe');
     const go = async (btn, fn, ok) => { try { await run(btn, fn, ok); closeModal(); done(); } catch (e) { err.hidden = false; err.textContent = msg(e); } };
     box.querySelectorAll('[data-m]').forEach((b) => (b.onclick = () => { const [k, r] = b.dataset.m.split('|'); go(b, () => rpc('partner_bank_line_match', { p_line: l.id, p_kind: k, p_ref: r }), 'Conciliada'); }));
-    box.querySelector('#cls').onclick = (e) => go(e.currentTarget, () => rpc('partner_bank_line_classify_event', { p_line: l.id, p_event: box.querySelector('#ce').value, p_history: box.querySelector('#ch').value }), 'Conciliada');
+    box.querySelector('#cls').onclick = (e) => {
+      const ev = box.querySelector('#ce').value; if (!ev) { err.hidden = false; err.textContent = 'Cadastre um evento contábil com “Banco” para lançar.'; return; }
+      const p = parties.find((x) => x.key === box.querySelector('#cp').value);
+      go(e.currentTarget, () => rpc('partner_bank_line_launch', { p_line: l.id, p_event: ev, p: { who: p ? p.name : null, document: p ? p.document : null, party_kind: p ? p.kind : null, note: box.querySelector('#ch').value } }), out ? 'Pagamento lançado em Pagamentos' : 'Recebimento lançado em Pagamentos');
+    };
     box.querySelector('#ign').onclick = (e) => go(e.currentTarget, () => rpc('partner_bank_line_ignore', { p_line: l.id }), 'Linha ignorada');
     box.querySelector('#del').onclick = (e) => go(e.currentTarget, () => rpc('partner_bank_line_delete', { p_line: l.id }), 'Linha excluída');
   }
@@ -262,10 +387,10 @@
       const ok = Math.abs(T.d - T.c) < 0.005;
       const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Balancete de verificação · ${esc(date(from))} a ${esc(date(to))}</title>
         <style>${B.DOC_CSS}
-          @page { size: A4; margin: 12mm 12mm 16mm; @bottom-right { content: "Pág. " counter(page) " de " counter(pages); font: 8pt Inter, Arial, sans-serif; color: #6b605a; } }
+          @page { size: A4 landscape; margin: 12mm 12mm 16mm; @bottom-right { content: "Pág. " counter(page) " de " counter(pages); font: 8pt Inter, Arial, sans-serif; color: #6b605a; } }
           .bt { text-align: center; margin: 4px 0 10px; } .bt h1 { font-size: 15pt; margin: 0; letter-spacing: -.01em; } .bt div { font-size: 9.5pt; color: #4a403b; }
           .co { font-size: 8.5pt; color: #4a403b; padding: 6px 0 8px; border-bottom: 1px solid #ece8e1; margin-bottom: 8px; }
-          table.bal { font-size: 7.6pt; margin: 0 0 14px; } table.bal th, table.bal td { padding: 3px 5px; border-bottom: 1px solid #f0ece5; line-height: 1.35; }
+          table.bal { font-size: 7.6pt; margin: 0 0 14px; width: 100%; } table.bal th, table.bal td { padding: 3px 5px; border-bottom: 1px solid #f0ece5; line-height: 1.35; white-space: nowrap; }
           table.bal th { background: #f7f5f1; color: #4a403b; font-size: 7.4pt; text-transform: none; border-bottom: 1.5px solid #c73053; }
           table.bal tr { break-inside: avoid; } table.bal td.code { white-space: nowrap; font-variant-numeric: tabular-nums; }
           table.bal td.c, table.bal th.c { text-align: center; width: 9mm; } table.bal td.num, table.bal th.num { font-variant-numeric: tabular-nums; }
@@ -284,7 +409,7 @@
           ${tops.map((r) => { const n = r.nature === 'C' ? -1 : 1; return sum(r.name, r.nature, { prev: r.prev * n, d: r.d, c: r.c, cur: r.cur * n }); }).join('')}
           ${sum('Contas devedoras', 'D', dv, 'tot')}${sum('Contas credoras', 'C', cr)}${sum('Diferença', '', diff, 'dif')}
         </tbody></table>
-        <div class="stat">${ok ? 'O balancete fecha: o total de débitos é igual ao total de créditos.' : `Atenção: diferença de ${brl(Math.abs(T.d - T.c))} entre débitos e créditos.`}</div>
+        ${ok ? '' : `<div class="stat">Atenção: diferença de ${brl(Math.abs(T.d - T.c))} entre débitos e créditos.</div>`}
         <div class="foot">Gerado pela plataforma Lottus em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}. Saldos mostrados na natureza de cada conta (D = devedora, C = credora).</div>
         </body></html>`;
       w.document.open(); w.document.write(html); w.document.close();
@@ -295,22 +420,57 @@
     }
   }
 
+
+  /* Regras: qual evento contábil cada tipo de lançamento da Lottus e cada tipo de transação do extrato usa */
+  const LOTTUS_TYPES = [
+    ['integralizacao', 'Integralização recebida', 'valor integralizado'], ['comissao_integralizacao', 'Comissão de originação (integralização)', 'comissão provisionada'],
+    ['comissao_operacao', 'Comissão de originação (operação)', 'comissão provisionada'], ['escrituracao', 'Custo de escrituração', 'custo provisionado'],
+    ['operacao', 'Operação paga ao cedente', 'valor de face'], ['resgate', 'Resgate de debêntures', 'valor bruto do resgate'], ['valorizacao', 'Valorização de debêntures', 'valorização positiva do mês'],
+    ['pg_comissao_integralizacao', 'Pagamento de comissão (integralização)', 'valor pago'], ['pg_comissao_operacao', 'Pagamento de comissão (operação)', 'valor pago'],
+    ['pg_resgate', 'Pagamento de resgate', 'valor pago'], ['pg_escrituracao', 'Pagamento de escrituração', 'valor pago'], ['pg_avulso', 'Movimentação avulsa sem evento', 'valor da movimentação'],
+  ];
+  async function rulesPane(pane, adm) {
+    const [events, data] = await Promise.all([rpc('partner_acct_events'), rpc('partner_acct_rules')]);
+    const evs = events.filter((e) => e.active);
+    const cur = { lottus: {}, extrato: {} };
+    data.rules.forEach((r) => { cur[r.scope][r.tx_type] = r.event_id; });
+    const seen = [...new Set(['Entrada', 'Saída', ...data.seen, ...Object.keys(cur.extrato)])];
+    const ro = adm ? '' : 'disabled';
+    const sel = (scope, key) => `<select class="input" data-scope="${scope}" data-k="${esc(key)}" ${ro}><option value="">Padrão do sistema</option>${evs.map((e) => `<option value="${esc(e.id)}" ${cur[scope][key] === e.id ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}</select>`;
+    pane.innerHTML = `<div class="u-g6mb14 row">${SUBS.map(([k, l]) => B.pill('data-csub', k, l, 'regras')).join('')}</div>
+      <form class="card stack" id="rf" novalidate>
+        <div><h2 class="u-m0">Lançamentos da Lottus</h2><p class="u-m4t small muted">Escolha o evento contábil de cada tipo de lançamento. O evento decide as contas movimentadas, com percentuais sobre o valor-base indicado; “Banco” usa a conta bancária do lançamento. Sem escolha, vale o lançamento padrão do sistema.</p></div>
+        <div class="table-wrap"><table class="pol"><thead><tr><th>Tipo de lançamento</th><th>Valor-base</th><th>Evento contábil</th></tr></thead><tbody>
+          ${LOTTUS_TYPES.map(([k, l, b]) => `<tr><td><b>${esc(l)}</b></td><td class="small muted">${esc(b)}</td><td>${sel('lottus', k)}</td></tr>`).join('')}</tbody></table></div>
+        ${adm ? '<div class="save-bar"><button class="btn" type="submit">Salvar regras</button></div>' : ''}
+      </form>`;
+    pane.querySelectorAll('[data-csub]').forEach((b) => (b.onclick = () => { location.hash = `#/config/contabilidade/${b.dataset.csub}`; }));
+    if (!adm) return;
+    pane.querySelector('#rf').onsubmit = (e) => {
+      e.preventDefault();
+      const rules = [...pane.querySelectorAll('select[data-scope]')].filter((x) => x.value).map((x) => ({ scope: x.dataset.scope, tx_type: x.dataset.k, event_id: x.value })).concat(Object.entries(cur.extrato || {}).filter(([, v]) => v).map(([k, v]) => ({ scope: 'extrato', tx_type: k, event_id: v })));
+      run(e.submitter || pane.querySelector('[type=submit]'), () => rpc('partner_acct_rules_save', { p: { rules } }), 'Regras salvas').catch(() => null);
+    };
+  }
+
   /* ---------------- Configurações › Contabilidade: eventos contábeis e plano de contas ---------------- */
-  const SUBS = [['eventos', 'Eventos Contábeis'], ['plano', 'Plano de Contas']];
+  const SUBS = [['eventos', 'Eventos Contábeis'], ['regras', 'Regras de Lançamento'], ['plano', 'Plano de Contas']];
   async function settingsPane(pane, adm, rawSub) {
-    const sub = rawSub === 'plano' ? 'plano' : 'eventos';
+    const sub = rawSub === 'plano' ? 'plano' : rawSub === 'regras' ? 'regras' : 'eventos';
     await post();
+    if (sub === 'regras') return rulesPane(pane, adm);
     const [events, chart] = await Promise.all([rpc('partner_acct_events'), rpc('partner_acct_chart')]);
     const analytic = chart.accounts.filter((a) => a.kind === 'analitica' && a.active && !a.bank_account_id);
     const again = () => settingsPane(pane, adm, sub);
     const pills = `<div class="u-g6mb14 row">${SUBS.map(([k, l]) => B.pill('data-csub', k, l, sub)).join('')}</div>`;
     const head = (title, text, btn) => `<div class="row between" style="gap:12px;flex-wrap:wrap;margin-bottom:12px"><div><h2 class="u-m0">${title}</h2><p class="u-m4t small muted">${text}</p></div>${btn}</div>`;
     if (sub === 'eventos') {
+      const codeOf = (l) => (l.account_id ? (chart.accounts.find((x) => x.id === l.account_id) || {}).code : '') || (l.code || '—');
       const sum = (e) => e.lines.map((l) => `${l.side === 'D' ? 'D' : 'C'} ${esc(l.account)}${num(l.pct) < 100 ? ` (${num(l.pct)}%)` : ''}`).join(' · ');
       const list = events.filter((e) => e.active);
       pane.innerHTML = `${pills}<div class="card">${head('Eventos contábeis', 'Cada movimentação avulsa escolhe um evento, que decide quais contas são movimentadas. “Banco” usa a conta bancária escolhida na movimentação.', adm ? '<button class="btn" id="newev">Novo evento</button>' : '')}
-        <table><thead><tr><th>Evento</th><th>Tipo</th><th>Contas movimentadas</th><th></th></tr></thead><tbody>
-        ${list.map((e) => `<tr><td><b>${esc(e.name)}</b></td><td>${e.kind === 'pagamento' ? 'Pagamento' : 'Recebimento'}</td><td class="small muted">${sum(e)}</td><td class="num">${adm ? `<button class="btn ghost sm" data-ev="${esc(e.id)}">Editar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+        <table><thead><tr><th>Evento</th><th>Tipo</th><th>Código da Conta</th><th>Contas movimentadas</th><th></th></tr></thead><tbody>
+        ${list.map((e) => `<tr><td><b>${esc(e.name)}</b></td><td>${e.kind === 'pagamento' ? 'Pagamento' : 'Recebimento'}</td><td class="small mono">${e.lines.map((l) => `<div>${esc(codeOf(l))}</div>`).join('')}</td><td class="small muted">${e.lines.map((l) => `<div>${l.side === 'D' ? 'D' : 'C'} ${esc(l.account)}${num(l.pct) < 100 ? ` (${num(l.pct)}%)` : ''}</div>`).join('')}</td><td class="num">${adm ? `<button class="btn ghost sm" data-ev="${esc(e.id)}">Editar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
     } else {
       pane.innerHTML = `${pills}<div class="card">${head('Plano de contas', `${chart.accounts.length} contas · contabilidade desde ${esc(date(chart.start))}`, adm ? '<span class="u-g8 row"><button class="btn secondary" id="st">Data de início</button><button class="btn" id="newacc">Nova conta</button></span>' : '')}
         <table><thead><tr><th>Código</th><th>Conta</th><th>Natureza</th><th></th></tr></thead><tbody>
@@ -400,5 +560,5 @@
     };
   }
 
-  B.acct = { conciliacao, balanceteExport, settingsPane };
+  B.acct = { conciliacao, movimentacoes, balanceteExport, settingsPane };
 })();

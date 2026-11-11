@@ -24,6 +24,7 @@
     amount_too_low: 'O valor é menor que o P.U. da série. Aumente o valor.',
     file_too_large: 'O PDF é grande demais. Use um arquivo de até 5 MB.',
     invalid_pdf: 'O arquivo não é um PDF válido.',
+    already_registered: 'Este CPF/CNPJ já está cadastrado nesta modalidade.',
     in_use: 'Este cadastro já tem movimentações e não pode ser excluído.',
     series_required: 'Escolha a série (lastro) da operação antes de aprovar.',
     series_full: 'A série escolhida não comporta o valor desta operação.',
