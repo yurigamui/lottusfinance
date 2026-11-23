@@ -98,7 +98,7 @@
   }
 
   /** Lista com busca, paginação no cliente, tabela (≥641 px) e cartões (≤640 px) no mesmo markup.
-   *  columns: [{key, label, num?, render?(row) → HTML já escapado, card?:false}]; o texto padrão é escapado aqui. */
+   *  columns: [{key, label, num?, render?(row) → HTML já escapado, card?:false, searchText?(row), text?:true}]; a busca usa searchText(row), ou o texto exibido se text:true, ou o valor bruto; o texto padrão é escapado aqui. */
   const registry = new Map();
   const norm = (v) => String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   function list(opts) {
@@ -113,10 +113,23 @@
       : '';
     return `<div class="lt" id="${id}" data-list="${id}">${search}<div class="lt-body" data-list-body>${body(st)}</div></div>`;
   }
+  // Texto que a pessoa vê numa célula (sem as marcas do HTML), para a busca achar 1.234,56 e dd/mm/aaaa
+  const plain = (html) => new DOMParser().parseFromString(String(html == null ? '' : html), 'text/html').body.textContent || '';
+  /** Texto pesquisável da coluna: searchText(row) → texto exibido (text:true) → valor bruto (padrão antigo). */
+  function searchValue(c, r) {
+    if (typeof c.searchText === 'function') return c.searchText(r);
+    if (c.text && c.render) return plain(c.render(r));
+    return r[c.key];
+  }
   function filtered(st) {
     const q = norm(st.q.trim());
     if (!q) return st.o.rows;
-    return st.o.rows.filter((r) => st.o.columns.some((c) => norm(r[c.key]).includes(q)));
+    if (!st.hay) st.hay = new Map();
+    return st.o.rows.filter((r) => {
+      let h = st.hay.get(r);
+      if (h === undefined) { h = st.o.columns.map((c) => norm(searchValue(c, r))).join('\u0001'); st.hay.set(r, h); }
+      return h.includes(q);
+    });
   }
   function body(st) {
     const { o } = st;
@@ -175,7 +188,8 @@
   /** "Ver mais": o que não decide a ação fica recolhido. html é confiável (já escapado por quem chama). */
   const more = (summary, html) => `<details class="more"><summary>${esc(summary)}</summary><div class="more-body">${html}</div></details>`;
   function skeleton(rows = 5) {
-    const n = Math.max(1, Math.min(20, Number(rows) || 5));
+    const r = Number(rows);
+    const n = Number.isFinite(r) ? Math.max(1, Math.min(20, Math.floor(r))) : 5; // 0 ou negativo → 1
     return `<div class="skel" role="status"><span class="ui-sr">Carregando…</span>${'<div class="skel-row" aria-hidden="true"><span></span><span></span></div>'.repeat(n)}</div>`;
   }
 
