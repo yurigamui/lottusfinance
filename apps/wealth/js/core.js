@@ -21,6 +21,7 @@ window.BO = window.BO || {};
     in_use: 'Existem lançamentos nesta conta; exclua-os antes.', plan_required: 'Disponível no plano Fund.',
     doc_invalid: 'CPF ou CNPJ inválido.', zip_invalid: 'CEP inválido.', invalid_name: 'Dê um nome com 2 a 80 caracteres.', user_not_found: 'Não há conta no Wealth com este CPF. Peça para a pessoa criar a conta primeiro.',
     invalid_reference: 'Esse cadastro não pertence a esta carteira. Atualize a página e escolha de novo.',
+    position_negative: 'A venda é maior que a quantidade em carteira nessa data. Confira as compras lançadas antes dela.',
     'Invalid login credentials': 'E-mail ou senha incorretos.', 'Email not confirmed': 'Confirme seu e-mail antes de entrar.', 'User already registered': 'Este e-mail já tem conta. Entre ou recupere a senha.',
   };
   const msgOf = (m) => { m = String(m || ''); if (MSG[m]) return MSG[m]; const k = Object.keys(MSG).find((x) => m.includes(x)); return k ? MSG[k] : 'Algo deu errado. Tente de novo.'; };
@@ -65,7 +66,10 @@ window.BO = window.BO || {};
     const n = Number(s);
     return Number.isFinite(n) ? (neg ? -n : n) : null;
   };
-  W.parseDate = (s) => {
+  // Converte para AAAA-MM-DD e só aceita datas que existem no calendário (31/02 vira null, como no banco).
+  const realDate = (iso) => { if (!iso) return null; const [y, mo, d] = iso.split('-').map(Number); const t = new Date(y, mo - 1, d); return t.getFullYear() === y && t.getMonth() === mo - 1 && t.getDate() === d ? iso : null; };
+  W.parseDate = (s) => realDate(parseDateRaw(s));
+  const parseDateRaw = (s) => {
     s = String(s ?? '').trim(); let m;
     if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return `${m[1]}-${m[2]}-${m[3]}`;
     if ((m = s.match(/^(\d{2})[/.-](\d{2})[/.-](\d{4})/))) return `${m[3]}-${m[2]}-${m[1]}`;

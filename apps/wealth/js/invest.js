@@ -90,7 +90,7 @@
   const txFilter = {};
   W.route('/w/:id/transacoes', async (ctx) => {
     const id = ctx.w.id; txFilter.page = 1; const f = (txFilter[id] = txFilter[id] || {});
-    const [assets, imps] = await Promise.all([W.rpc('w_asset_search', { p_wallet: id, p_q: '' }), W.rpc('w_imports_list', { p_wallet: id })]); W.impList = imps.filter((i) => i.kind === 'investimentos');
+    const [assets, imps] = await Promise.all([W.rpc('w_tx_assets', { p_wallet: id }), W.rpc('w_imports_list', { p_wallet: id })]); W.impList = imps.filter((i) => i.kind === 'investimentos');
     ctx.after = async () => { W.cur = ctx; await loadTx(ctx); if (ctx.q.get('new')) openTx(ctx, null); };
     return `${W.pageHead('Transações', 'Compras, vendas e proventos. Cada linha altera a posição.', ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><button class="btn" data-act="tx-new">${ico('plus')} Nova transação</button>` : '')}
       <form class="filters" data-live="tx"><div class="field"><label>Ativo</label><select class="input" name="asset">${W.opts(assets.map((a) => [a.id, a.ticker || a.name]), f.asset, 'Todos')}</select></div>
@@ -103,7 +103,7 @@
     W.txRows = r.rows;
     document.getElementById('tx-body').innerHTML = r.rows.length ? r.rows.map((t) => `<tr><td>${W.dt(t.date)}</td><td>${tag(TX[t.kind], t.kind === 'compra' ? 'success' : t.kind === 'venda' ? 'brand' : '')}</td><td><a href="#/w/${id}/ativo/${esc(t.asset_id)}">${esc(t.ticker || t.asset)}</a>${t.source !== 'manual' ? `<div class="muted small">via ${esc(t.source)}</div>` : ''}</td><td class="num">${W.qty(t.qty)}</td><td class="num">${W.num(t.unit_price, 4)}</td><td class="num">${W.brl(t.total)}</td><td>${esc(t.custodian || '—')}</td><td class="actions">${ctx.canWrite ? `<button class="btn ghost sm" data-act="tx-edit" data-id="${esc(t.id)}" aria-label="Editar">${ico('pencil')}</button><button class="btn ghost sm" data-act="tx-del" data-id="${esc(t.id)}" aria-label="Excluir">${ico('trash')}</button>` : ''}</td></tr>`).join('') : `<tr><td colspan="8">${empty('Nenhuma transação encontrada.')}</td></tr>`;
     const pages = Math.max(1, Math.ceil(r.total / 50)), pg = r.page;
-    document.getElementById('tx-pager').innerHTML = `<span>${r.total} transações</span><div class="pager"><button class="btn secondary sm" data-act="tx-page" data-n="${pg - 1}"${pg <= 1 ? ' disabled' : ''}>${ico('left')}</button><span>${pg} / ${pages}</span><button class="btn secondary sm" data-act="tx-page" data-n="${pg + 1}"${pg >= pages ? ' disabled' : ''}>${ico('right')}</button></div>`;
+    document.getElementById('tx-pager').innerHTML = `<span>${r.total} transações</span><div class="pager"><button class="btn secondary sm" data-act="tx-page" aria-label="Página anterior" data-n="${pg - 1}"${pg <= 1 ? ' disabled' : ''}>${ico('left')}</button><span>${pg} / ${pages}</span><button class="btn secondary sm" data-act="tx-page" aria-label="Próxima página" data-n="${pg + 1}"${pg >= pages ? ' disabled' : ''}>${ico('right')}</button></div>`;
   }
   W.live.tx = (form) => { const id = curId(); const v = W.form(form); txFilter[id] = { asset: v.asset, kind: v.kind, from: v.from, to: v.to }; txFilter.page = 1; loadTx(W.cur).catch(W.fail); };
   W.acts['tx-page'] = (el) => { txFilter.page = Number(el.dataset.n); loadTx(W.cur).catch(W.fail); };
@@ -137,6 +137,7 @@
     const v = W.form(f); const qty = W.parseNum(v.qty), pu = W.parseNum(v.unit_price);
     if (!v.asset_id) throw new Error('Escolha o ativo na lista que aparece abaixo do campo.');
     if (!(qty > 0) || pu === null || pu < 0) throw new Error('Confira quantidade e P.U.');
+    if (v.date && v.date > W.ymd()) throw new Error('A data não pode ser futura.');
     await W.rpc('w_tx_save', { p_wallet: curId(), p: { id: v.id, asset_id: v.asset_id, kind: v.kind, date: v.date, qty, unit_price: pu, custodian: v.custodian } });
     W.closeModal(); W.toast('Transação salva'); if (document.getElementById('tx-body')) loadTx(W.cur); else W.refresh();
   };

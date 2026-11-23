@@ -58,6 +58,19 @@
   }
   W.refresh = () => route();
 
+
+  /* ---------- acessibilidade: liga cada <label> de .field ao seu campo (leitor de tela anuncia o nome) ---------- */
+  let lblSeq = 0;
+  W.linkLabels = (root) => {
+    (root || document).querySelectorAll('.field').forEach((fd) => {
+      const lb = fd.querySelector(':scope > label'); const ctl = fd.querySelector('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select, textarea');
+      if (!lb || !ctl || lb.htmlFor || lb.contains(ctl)) return;
+      if (!ctl.id) ctl.id = `f-${++lblSeq}`;
+      lb.htmlFor = ctl.id;
+    });
+  };
+  let lblQueued = false;
+  new MutationObserver(() => { if (lblQueued) return; lblQueued = true; requestAnimationFrame(() => { lblQueued = false; W.linkLabels(document); }); }).observe(document.body, { childList: true, subtree: true });
   /* ---------- estrutura ---------- */
   // Ícones do menu: os mesmos traços do Partners/Backoffice
   const NI = {
@@ -387,7 +400,7 @@
       ${plan('pro', 'Pro', W.brl(b.prices.pro), 'por carteira, por mês', ['Carteiras ilimitadas', 'Grupos de carteiras: patrimônio consolidado e pessoas com acesso a todas elas', 'Valor fixo: não varia com o patrimônio', 'Ativa ao criar a 2ª carteira'], '<a class="btn" href="#/carteiras/nova">Criar a 2ª carteira e ativar</a>')}
       ${plan('fund', 'Fund', W.brl(b.prices.fund), 'por carteira, por mês', ['Tudo do Pro', 'White-label: estilo, logo e cores de cada grupo', 'API para integrar os seus sistemas', 'Suporte prioritário'], '<button class="btn" data-act="fund-request">Assinar o Fund</button>')}</div>`;
     const showBilling = b.billed || b.plan !== 'gratis' || b.owned_wallets >= 2 || bp;
-    return `${W.pageHead('Conta e plano', me.email)}
+    return `${W.pageHead('Conta e plano', 'Plano, cobrança, dados pessoais e segurança.')}
       ${planos}
       <div class="kpis"><div class="kpi"><div class="kpi-label">Plano atual</div><div class="big">${planName}</div>${b.billing_status === 'atrasado' ? tag('Pagamento em atraso', 'danger') : tag('Em dia', 'success')}</div>
         <div class="kpi"><div class="kpi-label">Carteiras sob sua cobrança</div><div class="big">${b.owned_wallets}</div></div>
