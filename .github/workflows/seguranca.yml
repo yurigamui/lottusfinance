@@ -23,6 +23,14 @@ jobs:
       - name: Auditoria de dependências npm
         run: npm audit --audit-level=high
 
+  banco-local:
+    name: Migrações em Postgres local
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aplica supabase/migrations num Postgres descartável e roda supabase/tests
+        run: scripts/test-db.sh
+
   segredos:
     name: Varredura de segredos (histórico completo)
     runs-on: ubuntu-latest
