@@ -14,6 +14,8 @@ Versão inicial de 23/11/2026. A parte 1 (dados) vem do levantamento de 19/11; a
 
 ## 2. Navegação entre seções (a preencher em B0)
 
+Bloqueado em 23/11: o front não está no repositório (`depende-de-mim.md`, D-02).
+
 | Seção de origem | Elemento | Destino | Existe volta? | Verificado em |
 | --- | --- | --- | --- | --- |
 | (a levantar) | | | | |
