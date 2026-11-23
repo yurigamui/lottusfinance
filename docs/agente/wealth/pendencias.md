@@ -42,3 +42,5 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-036 | Imprimir/PDF dos relatórios e o gráfico de evolução não foram verificados visualmente em impressão | Baixa | Agente | com o front no ar | auditoria do front 23/11 |
 | W-037 | Desconexão por inatividade (30 min) não testada (exige espera real) | Baixa | Agente | — | auditoria do front 23/11 |
 | W-038 | `w_asset_search` busca nome com `ilike '%q%'` em ~35 mil ativos sem índice de trigramas: medir no branch; se passar de 300 ms, criar índice `pg_trgm` | Média | Agente | branch | auditoria do front 23/11 |
+| W-039 | Grupos de carteiras: Conta e plano e Nova carteira anunciam Grupos no plano Pro, mas `w_group_save`/`_w_group_plan_ok` só liberam no Fund ("Disponível no plano Fund."). Decidir qual plano inclui Grupos e alinhar texto ou banco | Média | Yuri (plano) | antes do lançamento | verificação 23/11 (M5) |
+| W-040 | Modal de dados de cobrança: erros de CPF/CEP aparecem só no aviso flutuante, não ao lado do campo | Baixa | Agente | próxima rodada | verificação 23/11 (B1) |
