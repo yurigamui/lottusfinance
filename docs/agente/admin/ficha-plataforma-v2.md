@@ -51,5 +51,5 @@ Cobrança por Pix/boleto depende da conta Trio e dos segredos no Vault. Texto de
 - **D3 Inadimplência:** carência hoje 15 dias; o que acontece depois (aviso, bloqueio, rebaixa para Grátis)?
 - **D4 Quem pode dar preço personalizado e até quanto desconto** sem segunda aprovação.
 
-## Aprovação do Yuri
-Pendente.
+## Aprovação do Yuri (D1 respondida em 23/11: catálogo único; G1 adotado para as Partes 1 e 2)
+Parcial: D1 aprovada; D2 a D4 pendentes.

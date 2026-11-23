@@ -2,7 +2,7 @@
 
 **Modo:** Beta (código existe; auditoria parcial em `relatorio.md`) + pedido novo de evolução (Admin v2).
 **Leitura adotada (G0, sem resposta ainda):** o Yuri quer (1) reorganizar a UX do Admin, hoje com informação demais numa tela; (2) vincular o Admin a todas as plataformas Lottus; (3) automatizar a cobrança; (4) trocar plano e definir preço personalizado por cliente. Preço, plano e regra de cobrança são decisão dele (manual, seção 15).
-**Fase atual:** Fase 1 (Ficha da Plataforma Admin v2), parada no G1.
+**Fase atual:** Fase 2, Parte 1 (Navegação e organização). D1 decidida (catálogo único). D2 a D4 abertas (travam só a Parte 4).
 
 ## Linha de base (Fase 0, fatos verificados em 23/11/2026)
 - Front: 1 página, 20 módulos JS (~4,8 mil linhas), 89 RPCs chamadas. Menu: 6 grupos, 18 itens (Configurações mistura Motor, Equipe, E-mails, Auditoria, Indicações e Taxa).
