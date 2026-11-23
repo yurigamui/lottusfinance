@@ -11,11 +11,15 @@
   /* ================= Patrimônio ================= */
   const BM = { CDI: 'CDI', IPCA: 'IPCA', nenhum: '' };
   // período da evolução: ?de=&ate= (calendário); padrão: últimos 12 meses; "Desde o início" = de=inicio
-  const periodOf = (ctx) => { const de = ctx.q.get('de'), ate = ctx.q.get('ate'); const ok = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || ''); const to = ok(ate) ? ate : W.ymd();
-    const d = new Date(to + 'T00:00:00'); d.setFullYear(d.getFullYear() - 1); d.setDate(d.getDate() + 1);
-    return { from: de === 'inicio' ? '2000-01-01' : ok(de) ? de : W.ymd(d), to, all: de === 'inicio', picked: ok(de) || de === 'inicio' }; };
+  const periodOf = (ctx) => {
+    const de = ctx.q.get('de'), ate = ctx.q.get('ate'); const today = W.ymd();
+    const ok = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '') && W.parseDate(s.split('-').reverse().join('/')) === s && s <= today;
+    // endereço com data impossível, futura ou invertida volta ao padrão (últimos 12 meses, como o atalho do calendário)
+    let to = ok(ate) ? ate : today; let from = ok(de) ? de : null; if (from && from > to) { from = null; to = today; }
+    const n = new Date(to + 'T00:00:00'); const d12 = W.ymd(new Date(n.getFullYear(), n.getMonth() - 11, 1));
+    return { from: de === 'inicio' ? '2000-01-01' : from || d12, to, all: de === 'inicio' }; };
   const rangeLabel = (r) => (r.step === 'mes' ? (x) => W.monthLabel(x.date) : (x) => W.dt(x.date).slice(0, r.step === 'dia' ? 5 : 8));
-  const periodBar = (ctx, per) => `<div class="range-bar"><div class="field"><label>Período</label>${W.rangeHtml(per.picked && !per.all ? per.from : '', per.picked && !per.all ? per.to : '', [3, 6, 12, 24, 60])}</div></div>`;
+  const periodBar = (ctx, per) => `<div class="range-bar"><div class="field"><label>Período</label>${W.rangeHtml(per.all ? '' : per.from, per.all ? '' : per.to, [3, 6, 12, 24, 60])}</div></div>`;
   // ao escolher no calendário, o período vai para o endereço (F5 e Voltar mantêm)
   document.addEventListener('change', (e) => {
     const box = e.target.closest('[data-evo-range] [data-range]'); if (!box || e.target.name !== 'to') return;
@@ -98,7 +102,7 @@
     const [assets, imps] = await Promise.all([W.rpc('w_tx_assets', { p_wallet: id }), W.rpc('w_imports_list', { p_wallet: id })]); W.impList = imps.filter((i) => i.kind === 'investimentos');
     ctx.after = async () => { W.cur = ctx; await loadTx(ctx); if (ctx.q.get('new')) openTx(ctx, null); };
     return `${W.pageHead('Transações', 'Compras, vendas e proventos. Cada linha altera a posição.', ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><button class="btn" data-act="tx-new">${ico('plus')} Nova transação</button>` : '')}
-      <form class="filters" data-live="tx"><div class="field"><label>Ativo</label><select class="input" name="asset">${W.opts(assets.map((a) => [a.id, a.ticker || a.name]), f.asset, 'Todos')}</select></div>
+      <form class="filters" data-live="tx"><div class="field"><label>Ativo</label><select class="input" name="asset" data-search>${W.opts(assets.map((a) => [a.id, a.ticker || a.name]), f.asset, 'Todos')}</select></div>
         <div class="field"><label>Tipo</label><select class="input" name="kind">${W.opts(Object.entries(TX), f.kind, 'Todos')}</select></div><div class="field"><label>Período</label>${W.rangeHtml(f.from, f.to)}</div></form>
       <div class="card flush"><div class="table-wrap"><table class="tight"><thead><tr><th>Data</th><th>Tipo</th><th>Ativo</th><th class="num">Quantidade</th><th class="num">P.U.</th><th class="num">Total</th><th>Custodiante</th><th></th></tr></thead><tbody id="tx-body"></tbody></table></div><div class="pager-bar" id="tx-pager"></div></div>
       ${W.impList.length ? `<div class="card flush" style="margin-top:16px"><div class="card-head" style="padding:18px 24px 0"><h2>Importações anteriores</h2></div><div class="table-wrap"><table class="tight"><thead><tr><th>Data</th><th>Arquivo</th><th class="num">Linhas</th><th class="num">Novas</th><th class="num">Repetidas</th></tr></thead><tbody>${W.impList.map((i) => `<tr><td>${W.dtm(i.at)}</td><td>${esc(i.filename || '—')}</td><td class="num">${i.total}</td><td class="num">${i.new}</td><td class="num">${i.dup}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
@@ -138,7 +142,7 @@
     const SRC = { b3_cotahist: 'B3', cvm_informe_diario: 'CVM', tesouro_transparente: 'Tesouro Direto', curva: 'calculado pela curva', manual: 'informado', mercado_bitcoin: 'Mercado Bitcoin', anbima: 'ANBIMA', exemplo: 'exemplo' };
     const show = (r, iso) => {
       const box = document.getElementById('pu-day'); if (!box) return;
-      if (!r || !r.found) { box.innerHTML = `<div class="pu-box muted small">Sem P.U. registrado para ${W.dt(iso)}${r && r.valuation === 'manual' ? ' (ativo de valorização manual)' : ''}. Informe o P.U. da operação.</div>`; return; }
+      if (!r || !r.found) { if (!puTouched) puIn.value = ''; box.innerHTML = `<div class="pu-box muted small">Sem P.U. registrado para ${W.dt(iso)}${r && r.valuation === 'manual' ? ' (ativo de valorização manual)' : ''}. Informe o P.U. da operação.</div>`; return; }
       const same = r.date === iso; const val = W.num(r.pu, 4);
       box.innerHTML = `<div class="pu-box"><span>P.U. em <b>${W.dt(r.date)}</b>: <b>R$ ${esc(val)}</b> <span class="muted small">(${esc(SRC[r.source] || r.source)}${same ? '' : `; último antes de ${W.dt(iso)}`})</span></span><button type="button" class="btn secondary sm" data-act="pu-use" data-pu="${esc(val)}">Usar este P.U.</button></div>`;
       if (!puTouched || !puIn.value) { puIn.value = val; puTouched = false; }
@@ -184,7 +188,7 @@
     const list = all.filter((a) => f === 'todos' || (f === 'faltam' ? miss(a) : a.valuation.mode === f));
     const nMiss = all.filter(miss).length;
     ctx.after = () => { W.cur = ctx; const upd = () => { const n = document.querySelectorAll('input[data-pick]:checked').length; const bar = document.getElementById('bulk-bar'); if (bar) { bar.hidden = !n; bar.querySelector('b').textContent = n; } }; document.getElementById('view').addEventListener('change', (e) => { if (e.target.matches('#pick-all')) document.querySelectorAll('input[data-pick]').forEach((c) => { c.checked = e.target.checked; }); if (e.target.matches('input[data-pick],#pick-all')) upd(); }); };
-    const row = (a) => `<tr>${ctx.canWrite ? `<td><input type="checkbox" data-pick value="${esc(a.id)}" aria-label="Selecionar ${esc(a.name)}"></td>` : ''}<td><a href="#/w/${ctx.w.id}/ativo/${esc(a.id)}">${esc(a.name)}</a>${a.ticker ? `<div class="muted small">${esc(a.ticker)}</div>` : ''}</td><td>${esc(KIND[a.kind] || '')}</td>
+    const row = (a) => `<tr>${ctx.canWrite ? `<td class="pick"><label><input type="checkbox" data-pick value="${esc(a.id)}" aria-label="Selecionar ${esc(a.name)}"></label></td>` : ''}<td><a href="#/w/${ctx.w.id}/ativo/${esc(a.id)}">${esc(a.name)}</a>${a.ticker ? `<div class="muted small">${esc(a.ticker)}</div>` : ''}</td><td>${esc(KIND[a.kind] || '')}</td>
       <td>${tag(VAL[a.valuation.mode][0], VAL[a.valuation.mode][1])}${miss(a) ? `<div class="small warn-text">Falta: ${esc(a.valuation.missing.join(', '))}</div>` : ''}</td><td>${a.indexer && a.rate !== null ? remun(a) : '—'}</td><td>${W.dt(a.maturity)}</td>
       <td class="num">${a.qty ? W.brl(a.value) : '—'}</td><td class="num">${a.last_pu === null ? '—' : W.num(a.last_pu, 4)}<div class="muted small">${a.last_date ? W.dt(a.last_date) : ''}</div></td>
       <td class="actions">${ctx.canWrite ? `${a.valuation.mode === 'manual' ? `<button class="btn secondary sm" data-act="price-new" data-id="${esc(a.id)}">Atualizar valor</button>` : ''}<button class="btn ghost sm" data-act="asset-edit" data-id="${esc(a.id)}" aria-label="Editar ${esc(a.name)}">${ico('pencil')}</button>` : ''}</td></tr>`;
@@ -193,7 +197,7 @@
       ${nMiss ? `<div class="banner warn">${ico('alert')}<div class="grow"><b>${nMiss} ${nMiss === 1 ? 'ativo precisa' : 'ativos precisam'} de dados</b> para serem valorizados automaticamente; até lá ficam no preço da última transação. ${ctx.canWrite ? 'Selecione-os e use <b>Editar em lote</b> (por exemplo, todos os CDBs de 100% do CDI de uma vez).' : ''}</div>${f !== 'faltam' ? `<a class="btn secondary sm" href="#/w/${ctx.w.id}/ativos?f=faltam">Ver quais</a>` : ''}</div>` : ''}
       <nav class="period" aria-label="Filtrar ativos" style="margin-bottom:12px">${VAL_F.map(([k, l]) => `<a class="${k === f ? 'active' : ''}" href="#/w/${ctx.w.id}/ativos?f=${k}"${k === f ? ' aria-current="true"' : ''}>${l}</a>`).join('')}</nav>
       ${ctx.canWrite ? `<div class="bulk-bar" id="bulk-bar" hidden><span><b>0</b> selecionados</span><button class="btn sm" data-act="asset-bulk">Editar em lote</button></div>` : ''}
-      <div class="card flush">${list.length ? `<div class="table-wrap"><table class="tight"><thead><tr>${ctx.canWrite ? '<th><input type="checkbox" id="pick-all" aria-label="Selecionar todos"></th>' : ''}<th>Ativo</th><th>Tipo</th><th>Valorização</th><th>Remuneração</th><th>Vencimento</th><th class="num">Posição</th><th class="num">Último P.U.</th><th></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table></div>` : empty(all.length ? 'Nenhum ativo neste filtro.' : 'Nenhum ativo personalizado ainda.', ctx.canWrite && !all.length ? `<button class="btn" data-act="asset-new">${ico('plus')} Novo ativo</button>` : '')}</div>`;
+      <div class="card flush">${list.length ? `<div class="table-wrap"><table class="tight"><thead><tr>${ctx.canWrite ? '<th class="pick"><label><input type="checkbox" id="pick-all" aria-label="Selecionar todos"></label></th>' : ''}<th>Ativo</th><th>Tipo</th><th>Valorização</th><th>Remuneração</th><th>Vencimento</th><th class="num">Posição</th><th class="num">Último P.U.</th><th></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table></div>` : empty(all.length ? 'Nenhum ativo neste filtro.' : 'Nenhum ativo personalizado ainda.', ctx.canWrite && !all.length ? `<button class="btn" data-act="asset-new">${ico('plus')} Novo ativo</button>` : '')}</div>`;
   });
   W.acts['asset-bulk'] = () => {
     const ids = [...document.querySelectorAll('input[data-pick]:checked')].map((c) => c.value); if (!ids.length) return;
@@ -204,9 +208,9 @@
         <div class="field"><label for="bk-mat">Vencimento</label><input class="input" id="bk-mat" name="maturity" data-mask="date"></div>
         <div class="field"><label for="bk-iss">Emissor</label><input class="input" id="bk-iss" name="issuer" maxlength="120"></div>
         <div class="field"><label for="bk-val">Valorização</label><select class="input" id="bk-val" name="valuation">${W.opts([['auto', 'Automática (curva ou cotação)'], ['manual', 'Manual']], '', 'Manter')}</select></div></div>
-      <label class="check"><input type="checkbox" name="issue_ftx" checked> <span>Data de emissão = data da 1ª compra de cada ativo</span></label>
-      <label class="check"><input type="checkbox" name="pu_ftx" checked> <span>P.U. de emissão = preço da 1ª compra de cada ativo</span></label>
-      <div class="help">Para CDB, LCI e LCA comprados na emissão, as duas opções acima completam o que falta sem digitar ativo por ativo.</div>
+      <label class="check"><input type="checkbox" name="issue_ftx" checked> <span>Onde a data de emissão estiver em branco: usar a data da 1ª compra</span></label>
+      <label class="check"><input type="checkbox" name="pu_ftx" checked> <span>Onde a data de emissão estiver em branco: P.U. de emissão = preço da 1ª compra</span></label>
+      <div class="help">Valem só para renda fixa sem emissão informada (como CDBs importados de extrato); quem já tem emissão não muda.</div>
       <div class="modal-foot"><button type="button" class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn" type="submit">Aplicar</button></div></form>` });
   };
   W.forms['asset-bulk'] = async (f) => {
@@ -215,7 +219,7 @@
     if (v.indexer) p.indexer = v.indexer;
     if (v.rate) { const r = W.parseNum(v.rate); if (r === null || r <= 0 || r > 500) W.fieldFail(rateEl, 'Taxa entre 0 e 500%.'); p.rate = r / 100; }
     if ((p.indexer && p.rate === undefined) || (p.rate !== undefined && !p.indexer)) W.fieldFail(rateEl, 'Informe a remuneração e a taxa juntas.');
-    if (v.maturity) p.maturity = v.maturity;
+    if (v.maturity) { if (v.maturity <= '1990-01-01') W.fieldFail(f.querySelector('[name=maturity]'), 'Vencimento inválido.'); p.maturity = v.maturity; }
     if (v.issuer) p.issuer = v.issuer;
     if (v.valuation) p.custom = v.valuation === 'manual';
     if (f.querySelector('[name=issue_ftx]').checked) p.issue_from_first_tx = true;

@@ -15,7 +15,7 @@ window.BO = window.BO || {};
     payment_required: 'Para criar ou assumir mais de uma carteira é preciso assinar o plano Pro.',
     plan_required: 'Disponível nos planos pagos. Assine em Conta > Plano.', billing_required: 'Informe os dados de cobrança para assinar o plano.',
     too_many_wallets: 'Para voltar ao Grátis, fique com uma carteira só (exclua ou arquive as outras).', confirm_mismatch: 'O nome digitado não confere com o da carteira.',
-    unauthorized: 'Chave de API inválida, expirada ou revogada.', too_many_attempts: 'Esta fatura já teve 3 tentativas. Fale com o suporte ou troque a forma de pagamento.',
+    unauthorized: 'Chave de API inválida, expirada ou revogada.', maturity_before_issue: 'Em algum ativo do lote o vencimento ficaria antes da emissão. Confira o vencimento.', too_many_attempts: 'Esta fatura já teve 3 tentativas. Fale com o suporte ou troque a forma de pagamento.',
     profile_required: 'Termine o seu cadastro primeiro.', email_not_confirmed: 'Confirme o e-mail da sua conta primeiro.',
     cpf_invalid: 'CPF inválido.', cpf_in_use: 'Este CPF já está cadastrado em outra conta.', name_required: 'Preencha o nome.', email_invalid: 'E-mail inválido.',
     invalid_role: 'Alçada inválida.', already_member: 'Esta pessoa já tem acesso à carteira.', last_manager: 'A carteira precisa ter ao menos um gestor.',

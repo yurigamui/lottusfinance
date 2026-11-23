@@ -153,7 +153,8 @@ function priceAsset(a: Asset, at: string, curves: ReturnType<typeof makeCurves>,
   return null;
 }
 
-type Cov = Map<string, { first_price: string | null; last_price: string | null; first_tx: string | null }>;
+type CovRow = { first_price: string | null; last_price: string | null; first_tx: string | null; first_pu?: number | null; months?: string[] | null };
+type Cov = Map<string, CovRow>;
 // O que falta buscar de cada ativo: desde a 1ª transação (se ainda não há preço tão antigo) ou desde o último preço guardado.
 async function coverage(ids: string[]): Promise<Cov> {
   const out: Cov = new Map();
@@ -166,7 +167,14 @@ async function coverage(ids: string[]): Promise<Cov> {
 }
 const addDays = (s: string, n: number) => iso(new Date(D(s).getTime() + n * 864e5));
 // data a partir da qual faltam preços: usado → desde a 1ª transação (−5 dias); não usado → só os últimos dias
-function needFrom(c: { first_price: string | null; last_price: string | null; first_tx: string | null } | undefined, today: string, recentDays = 10): string {
+// meses (AAAA-MM) entre a 1ª transação e o mês passado que ainda não têm nenhum preço guardado: buracos do histórico
+function missingMonths(c: CovRow | undefined, today: string): string[] {
+  if (!c?.first_tx) return [];
+  const have = new Set(c.months ?? []); const cur = today.slice(0, 7); const out: string[] = [];
+  for (let d = D(c.first_tx.slice(0, 7) + '-01'); iso(d).slice(0, 7) < cur; d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))) { const m = iso(d).slice(0, 7); if (!have.has(m)) out.push(m); }
+  return out;
+}
+function needFrom(c: CovRow | undefined, today: string, recentDays = 10): string {
   const recent = addDays(today, -recentDays);
   if (!c) return recent;
   if (c.first_tx && (!c.first_price || c.first_price > c.first_tx)) return addDays(c.first_tx, -5);
@@ -239,12 +247,15 @@ async function cvm(assets: Asset[], today: Date, keepAll: Set<string>, cov: Cov)
   const from = new Map(list.filter((a) => keepAll.has(a.id)).map((a) => [a.id, needFrom(cov.get(a.id), todayIso, 40)]));
   const ymOf = (s: string) => s.slice(0, 4) + s.slice(5, 7);
   const months = new Set<string>([ymOf(todayIso)]); if (today.getUTCDate() <= 7) months.add(ymOf(iso(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1)))));
-  const back = [...new Set([...from.values()].map(ymOf))].filter((m) => !months.has(m)).sort().slice(0, Number(Deno.env.get('CVM_BACKFILL_MONTHS') ?? 4));
+  // buracos: todo mês entre a 1ª aplicação e o mês passado sem cota, do mais antigo para o mais novo, alguns por execução
+  const gap = new Map<string, Set<string>>();
+  for (const a of list) if (keepAll.has(a.id)) for (const m of missingMonths(cov.get(a.id), todayIso)) { const k = m.replace('-', ''); if (!months.has(k)) gap.set(k, (gap.get(k) ?? new Set()).add(a.id)); }
+  const back = [...gap.keys()].sort().slice(0, Number(Deno.env.get('CVM_BACKFILL_MONTHS') ?? 4));
   for (const ym of [...months, ...back]) {
     try {
       const text = await cvmFile(ym); if (!text) throw new Error('arquivo indisponível');
       const isCur = months.has(ym);
-      const rows = cvmParse(text, byCnpj, (a, date) => (from.has(a.id) ? date >= from.get(a.id)! : isCur));
+      const rows = cvmParse(text, byCnpj, (a, date) => (isCur ? (from.has(a.id) ? date >= from.get(a.id)! : true) : (gap.get(ym)?.has(a.id) ?? false)));
       // para os fundos do catálogo que ninguém usa, só a cota mais recente
       const latest = new Map<string, any>(); const keep: any[] = [];
       for (const r of rows) { if (from.has(r.asset_id)) keep.push(r); else { const c = latest.get(r.asset_id); if (!c || c.date < r.date) latest.set(r.asset_id, r); } }
@@ -292,11 +303,13 @@ async function b3(assets: Asset[], today: Date, keepAll: Set<string>, cov: Cov) 
   }
   const from = new Map(list.filter((a) => keepAll.has(a.id)).map((a) => [a.id, needFrom(cov.get(a.id), todayIso, 10)]));
   const curYm = todayIso.slice(0, 7);
-  const months = [...new Set([...from.values()].map((s) => s.slice(0, 7)))].filter((m) => m < curYm).sort().slice(0, Number(Deno.env.get('B3_BACKFILL_MONTHS') ?? 3));
+  const gap = new Map<string, Set<string>>();
+  for (const a of list) if (keepAll.has(a.id)) for (const m of missingMonths(cov.get(a.id), todayIso)) gap.set(m, (gap.get(m) ?? new Set()).add(a.id));
+  const months = [...gap.keys()].sort().slice(0, Number(Deno.env.get('B3_BACKFILL_MONTHS') ?? 3));
   for (const ym of months) {
     try {
       const text = await cotahistFile(`COTAHIST_M${ym.slice(5, 7)}${ym.slice(0, 4)}.ZIP`); if (!text) throw new Error('arquivo indisponível');
-      const rows = cotahistParse(text, byTick, (a, date) => from.has(a.id) && date >= from.get(a.id)!);
+      const rows = cotahistParse(text, byTick, (a) => gap.get(ym)!.has(a.id));
       await upsertPrices(rows); log.push(`B3 histórico ${ym}: ${rows.length} preços`);
     } catch (e) { log.push(`B3 histórico ${ym}: falhou (${(e as Error).message})`); }
   }
@@ -382,7 +395,7 @@ async function puAt(req: Request): Promise<Response> {
   if (!tok || typeof wallet !== 'string' || typeof asset !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return jres(req, { ok: false, error: 'invalid_value' }, 400);
   // a conferência de acesso é a mesma da tela: chamamos a RPC como o próprio usuário
   const user = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { auth: { persistSession: false }, global: { headers: { Authorization: `Bearer ${tok}` } } });
-  const first = await user.rpc('w_pu_at', { p_wallet: wallet, p_asset: asset, p_date: date });
+  const first = await user.rpc('w_pu_at', { p_wallet: wallet, p_asset: asset, p_date: date, p_fetch: true }); // exige editor
   if (first.error) return jres(req, { ok: false, error: first.error.message.includes('forbidden') ? 'forbidden' : 'invalid_value' }, first.error.message.includes('forbidden') ? 403 : 400);
   if (first.data?.found && first.data.exact) return jres(req, { ok: true, ...first.data });
   const { data: a } = await sb.from('w_assets').select('id,kind,name,ticker,isin,cnpj_fundo,indexer,rate,issue_date,maturity,pu_inicial,custom').eq('id', asset).single();
@@ -412,7 +425,7 @@ async function puAt(req: Request): Promise<Response> {
     }
     if (rows.length) await upsertPrices(rows);
   } catch (e) { console.error('pu_at', (e as Error).message); }
-  const again = await user.rpc('w_pu_at', { p_wallet: wallet, p_asset: asset, p_date: date });
+  const again = await user.rpc('w_pu_at', { p_wallet: wallet, p_asset: asset, p_date: date, p_fetch: false });
   return jres(req, { ok: true, fetched: rows.length, ...(again.data ?? first.data) });
 }
 
@@ -456,7 +469,10 @@ Deno.serve(async (req) => {
     const rows: any[] = [];
     for (const a of rf) {
       const c = cov.get(a.id);
-      let start = c?.last_price && c.first_price && c.first_price <= a.issue_date! ? addDays(c.last_price, 1) : a.issue_date!;
+      // se taxa, emissão ou P.U. de emissão mudaram (ex.: edição em lote), o P.U. guardado no 1º dia não bate: recalcula tudo desde a emissão
+      const firstOk = !!(c?.first_price && c.first_price <= a.issue_date! && c.first_pu !== null && c.first_pu !== undefined && (() => { const q = priceAsset(a, c.first_price!, curves, null); return !!q && Math.abs(q.pu - Number(c.first_pu)) < 1e-6 * Math.max(1, q.pu); })());
+      if (c && !firstOk && c.first_price) await sb.from('w_asset_prices').delete().eq('asset_id', a.id).eq('source', 'curva');
+      let start = firstOk && c?.last_price ? addDays(c.last_price, 1) : a.issue_date!;
       if (c?.last_price && start > todayIso) start = todayIso; // recalcula o dia de hoje (índice novo pode ter chegado)
       for (let t = D(start); iso(t) <= todayIso; t = new Date(t.getTime() + 864e5)) {
         if (!isBiz(t) && iso(t) !== todayIso) continue;

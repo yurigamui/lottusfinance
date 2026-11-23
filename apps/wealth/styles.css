@@ -1751,3 +1751,11 @@ nav.tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width
 .timeline li::before { content: ''; position: absolute; left: 0; top: 6px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--line); }
 .timeline li.done { color: var(--ink); }
 .timeline li.done::before { background: var(--rosa); border-color: var(--rosa); }
+/* ---------- v3 ciclo 2: tabelas de fatura no celular; alvo das caixas de seleção ---------- */
+.table-wrap > table.fit { min-width: 0 !important; }
+.show-sm { display: none; }
+@media (max-width: 640px) { .hide-sm { display: none; } .show-sm { display: block; } table.fit td, table.fit th { white-space: normal; } }
+td.pick, th.pick { width: 44px; padding: 0 !important; }
+td.pick label, th.pick label { display: grid; place-items: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+td.pick input, th.pick input { width: 20px; height: 20px; }
+@media (max-width: 640px) { .inv-list td.actions { white-space: normal; } .inv-list td.actions .btn { display: flex; justify-content: center; margin: 2px 0; } }

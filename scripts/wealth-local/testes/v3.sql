@@ -116,4 +116,39 @@ begin
   perform public.w_invoice_retry('44444444-0000-4000-8000-000000000001'); update public.w_invoices set payment_error = 'x' where id = '44444444-0000-4000-8000-000000000001';
   perform pg_temp.ok(pg_temp.err($q$select public.w_invoice_retry('44444444-0000-4000-8000-000000000001')$q$) = 'too_many_attempts', 'C3 no máximo 3 novas tentativas');
 end $$;
+-- ciclo 2 da verificação
+do $$
+declare ana uuid := 'a0000000-0000-4000-8000-000000000001'; wid uuid := current_setting('t.wid')::uuid; r jsonb; n jsonb; old uuid := gen_random_uuid(); od uuid := gen_random_uuid(); c3 uuid;
+begin
+  -- A1: faturas que já existiam antes da migração vêm marcadas como avisadas (simula o estado pós-migração)
+  insert into public.w_invoices (id, user_id, ref_month, amount, status, due_date, detail, paid_at, notified) values
+    (old, ana, '2025-01-01', 79, 'paga', '2025-02-10', '[]', '2025-02-05', jsonb_build_object('opened', 'legado', 'reminder', 'legado', 'overdue', 'legado', 'paid', 'legado'));
+  delete from public.email_outbox; n := public.w_billing_notices();
+  perform pg_temp.ok(not exists (select 1 from public.email_outbox where meta->>'invoice' = old::text), 'C4-A1 fatura antiga já paga não recebe recibo retroativo');
+  -- A2: fatura aberta já vencida e nunca avisada: um e-mail de atraso só, sem repetir nos dias seguintes
+  insert into public.w_invoices (id, user_id, ref_month, amount, status, due_date, detail) values (od, ana, '2025-03-01', 79, 'aberta', current_date - 5, '[]');
+  delete from public.email_outbox; perform public.w_billing_notices(); perform public.w_billing_notices(); perform public.w_billing_notices();
+  perform pg_temp.ok((select count(*) from public.email_outbox where meta->>'invoice' = od::text) = 1 and (select kind from public.email_outbox where meta->>'invoice' = od::text) = 'wealth_fatura_overdue', 'C4-A2 atraso avisado uma vez só (3 rodadas)');
+  perform set_config('request.jwt.claims', json_build_object('sub', ana, 'role', 'authenticated')::text, true);
+  -- A4: lote não deixa vencimento antes da emissão (comparando com a emissão de cada ativo)
+  perform pg_temp.ok(pg_temp.err(format('select public.w_assets_bulk_update(%L, %L, %L)', wid, array['33333333-0000-4000-8000-000000000003']::uuid[], '{"maturity":"2020-01-01"}')) = 'maturity_before_issue', 'C4-A4 vencimento antes da emissão recusado no lote');
+  -- A5: com emissão já informada, "pela 1ª compra" não muda nada
+  update public.w_assets set issue_date = '2024-01-10', pu_inicial = 1000 where id = '33333333-0000-4000-8000-000000000003';
+  perform public.w_assets_bulk_update(wid, array['33333333-0000-4000-8000-000000000003']::uuid[], '{"issuer":"Banco X","issue_from_first_tx":true,"pu_from_first_tx":true}');
+  perform pg_temp.ok((select issue_date = '2024-01-10' and pu_inicial = 1000 and issuer = 'Banco X' from public.w_assets where id = '33333333-0000-4000-8000-000000000003'), 'C4-A5 emissão e P.U. de emissão preservados; só o emissor muda');
+  -- B4: limites do lote
+  perform pg_temp.ok(pg_temp.err(format('select public.w_assets_bulk_update(%L, %L, %L)', wid, array['33333333-0000-4000-8000-000000000003']::uuid[], json_build_object('issuer', repeat('x', 500)))) = 'invalid_value', 'C4-B4 emissor longo recusado');
+  perform pg_temp.ok(pg_temp.err(format('select public.w_assets_bulk_update(%L, %L, %L)', wid, array['33333333-0000-4000-8000-000000000003']::uuid[], '{"maturity":"2026-02-30"}')) = 'invalid_value', 'C4-B4 data impossível = invalid_value');
+  -- M1: busca sem acento
+  insert into public.w_custodians (name, kind) values ('Órama DTVM Exemplo', 'dtvm') on conflict do nothing;
+  perform pg_temp.ok(jsonb_array_length(public.w_custodian_search('orama')) >= 1 and jsonb_array_length(public.w_bank_catalog_search('itau')) >= 1, 'C4-M1 "orama" e "itau" encontram Órama e Itaú');
+  perform pg_temp.ok(public.w_custodian_search('o') = '[]'::jsonb, 'C4-T3 com 1 letra o servidor não devolve nomes');
+  -- M4: depois de 3 tentativas o detalhe diz que acabou
+  r := public.w_invoice_get('44444444-0000-4000-8000-000000000001');
+  perform pg_temp.ok(not (r->>'can_retry')::boolean and (r->>'retries')::int = 3, 'C4-M4 can_retry falso após 3 tentativas');
+  -- M7: buscar na fonte exige editor
+  perform set_config('request.jwt.claims', json_build_object('sub', 'c0000000-0000-4000-8000-000000000003', 'role', 'authenticated')::text, true);
+  perform pg_temp.ok(pg_temp.err(format('select public.w_pu_at(%L, %L, %L, true)', wid, '11111111-0000-4000-8000-000000000001', current_date)) = 'forbidden'
+    and pg_temp.err(format('select public.w_pu_at(%L, %L, %L)', wid, '11111111-0000-4000-8000-000000000001', current_date)) = 'ok', 'C4-M7 visualizador consulta, mas não dispara a busca na fonte');
+end $$;
 rollback;

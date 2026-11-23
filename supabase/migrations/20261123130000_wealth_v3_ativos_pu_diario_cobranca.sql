@@ -28,10 +28,14 @@ revoke all on function public._w_valuation(public.w_assets) from public, anon, a
 
 -- regras do cadastro: renda fixa com indexador, taxa e emissão vale "pela curva"; cripto e bolsa com código, "por cotação"
 create or replace function public._w_asset_check(p jsonb) returns void language plpgsql immutable set search_path = '' as $$
+declare d1 date; d2 date;
 begin
+  begin d1 := nullif(p->>'issue_date', '')::date; d2 := nullif(p->>'maturity', '')::date; perform nullif(p->>'rate', '')::numeric, nullif(p->>'pu_inicial', '')::numeric;
+  exception when others then raise exception 'invalid_value'; end;
+  if char_length(coalesce(p->>'issuer', '')) > 120 or char_length(coalesce(p->>'ticker', '')) > 30 or char_length(coalesce(p->>'name', '')) > 200 then raise exception 'invalid_value'; end if;
   if coalesce(p->>'kind', 'outro') not in ('acao', 'fii', 'etf', 'bdr', 'fundo', 'tesouro', 'rf_pre', 'rf_pos', 'rf_ipca', 'cripto', 'imovel', 'veiculo', 'outro') then raise exception 'invalid_value'; end if;
   if nullif(p->>'indexer', '') is not null and p->>'indexer' not in ('PRE', 'CDI', 'IPCA', 'SELIC') then raise exception 'invalid_value'; end if;
-  if nullif(p->>'rate', '') is not null and ((p->>'rate')::numeric < -0.5 or (p->>'rate')::numeric > 5) then raise exception 'invalid_value'; end if;
+  if nullif(p->>'rate', '') is not null and ((p->>'rate')::numeric < -0.1 or (p->>'rate')::numeric > 5) then raise exception 'invalid_value'; end if;
   if nullif(p->>'issue_date', '') is not null and nullif(p->>'maturity', '') is not null and (p->>'maturity')::date <= (p->>'issue_date')::date then raise exception 'invalid_value'; end if;
   if nullif(p->>'pu_inicial', '') is not null and (p->>'pu_inicial')::numeric <= 0 then raise exception 'invalid_value'; end if;
 end $$;
@@ -78,14 +82,15 @@ begin
     issuer = case when p ? 'issuer' then nullif(trim(p->>'issuer'), '') else a.issuer end,
     maturity = case when p ? 'maturity' then nullif(p->>'maturity', '')::date else a.maturity end,
     issue_date = case when coalesce(nullif(p->>'kind', ''), a.kind) not in ('rf_pre', 'rf_pos', 'rf_ipca') then a.issue_date
-                      when coalesce((p->>'issue_from_first_tx')::boolean, false) then coalesce((select min(t.date) from public.w_invest_tx t where t.asset_id = a.id and t.wallet_id = p_wallet and t.kind = 'compra'), a.issue_date)
+                      when coalesce((p->>'issue_from_first_tx')::boolean, false) and a.issue_date is null then coalesce((select min(t.date) from public.w_invest_tx t where t.asset_id = a.id and t.wallet_id = p_wallet and t.kind = 'compra'), a.issue_date)
                       when p ? 'issue_date' then nullif(p->>'issue_date', '')::date else a.issue_date end,
     pu_inicial = case when coalesce(nullif(p->>'kind', ''), a.kind) not in ('rf_pre', 'rf_pos', 'rf_ipca') then a.pu_inicial
-                      when coalesce((p->>'pu_from_first_tx')::boolean, false) then coalesce((select t.unit_price from public.w_invest_tx t where t.asset_id = a.id and t.wallet_id = p_wallet and t.kind = 'compra' order by t.date, t.created_at limit 1), a.pu_inicial)
+                      when coalesce((p->>'pu_from_first_tx')::boolean, false) and a.issue_date is null then coalesce((select t.unit_price from public.w_invest_tx t where t.asset_id = a.id and t.wallet_id = p_wallet and t.kind = 'compra' order by t.date, t.created_at limit 1), a.pu_inicial)
                       else a.pu_inicial end,
     custom = case when coalesce(nullif(p->>'kind', ''), a.kind) in ('imovel', 'veiculo', 'outro') then true else coalesce((p->>'custom')::boolean, a.custom) end
    where a.id = any(p_ids) and a.wallet_id = p_wallet;
   get diagnostics n = row_count;
+  if exists (select 1 from public.w_assets where id = any(p_ids) and maturity is not null and issue_date is not null and maturity <= issue_date) then raise exception 'maturity_before_issue'; end if;
   perform public._w_audit(p_wallet, 'assets_bulk', jsonb_build_object('n', n, 'fields', (select jsonb_agg(k) from jsonb_object_keys(p) k)));
   return jsonb_build_object('updated', n);
 end $$;
@@ -136,11 +141,12 @@ grant execute on function public.w_asset_price_delete(uuid, uuid, date) to authe
 
 -- ============ 2. P.U. numa data ============
 -- último P.U. até a data (até 10 dias antes, para cobrir fins de semana, feriados e atraso da fonte)
-create or replace function public.w_pu_at(p_wallet uuid, p_asset uuid, p_date date)
+-- p_fetch = true: a função de borda vai buscar na fonte; exige editor (quem lança transação)
+create or replace function public.w_pu_at(p_wallet uuid, p_asset uuid, p_date date, p_fetch boolean default false)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare a public.w_assets; r record;
 begin
-  perform public._w_need(p_wallet, 'visualizador');
+  perform public._w_need(p_wallet, case when p_fetch then 'editor' else 'visualizador' end, p_fetch);
   select * into a from public.w_assets where id = p_asset and (wallet_id = p_wallet or wallet_id is null);
   if not found then raise exception 'not_found'; end if;
   if p_date is null or p_date > current_date then raise exception 'invalid_value'; end if;
@@ -148,8 +154,8 @@ begin
   return jsonb_build_object('asset', p_asset, 'date_requested', p_date, 'valuation', public._w_valuation(a)->>'mode',
     'found', r.date is not null, 'date', r.date, 'pu', r.pu, 'source', r.source, 'exact', r.date = p_date);
 end $$;
-revoke all on function public.w_pu_at(uuid, uuid, date) from public, anon;
-grant execute on function public.w_pu_at(uuid, uuid, date) to authenticated;
+revoke all on function public.w_pu_at(uuid, uuid, date, boolean) from public, anon;
+grant execute on function public.w_pu_at(uuid, uuid, date, boolean) to authenticated;
 
 -- ============ 3. Série diária ============
 -- Patrimônio dia a dia entre duas datas (passo: dia até 400 dias, semana até 1.500, mês acima).
@@ -215,6 +221,8 @@ grant execute on function public.w_equity_range(uuid, date, date, text) to authe
 
 -- ============ 4. Cobrança ============
 alter table public.w_invoices add column if not exists notified jsonb not null default '{}'::jsonb;
+-- faturas que já existiam ao aplicar a migração não recebem avisos retroativos
+update public.w_invoices set notified = jsonb_build_object('opened', 'legado', 'reminder', 'legado', 'overdue', 'legado', 'paid', 'legado') where notified = '{}'::jsonb;
 
 -- detalhe de uma fatura do próprio usuário
 create or replace function public.w_invoice_get(p_id uuid)
@@ -227,7 +235,8 @@ begin
   return to_jsonb(i) - 'user_id' - 'provider_charge_id' - 'notified'
     || jsonb_build_object('plan_price', (select public._w_price(p.plan) from public.w_profiles p where p.user_id = auth.uid()),
                           'billing', (select to_jsonb(b) - 'user_id' - 'provider_customer_id' from public.w_billing_profiles b where b.user_id = auth.uid()),
-                          'can_retry', i.status = 'aberta' and i.payment_error is not null);
+                          'can_retry', i.status = 'aberta' and i.payment_error is not null and coalesce((i.notified->>'retries')::int, 0) < 3,
+                          'retries', coalesce((i.notified->>'retries')::int, 0));
 end $$;
 revoke all on function public.w_invoice_get(uuid) from public, anon;
 grant execute on function public.w_invoice_get(uuid) to authenticated;
@@ -258,7 +267,7 @@ begin
   for r in
     select i.*, b.email, b.holder_name, b.method as pay_method from public.w_invoices i join public.w_billing_profiles b on b.user_id = i.user_id
      where i.amount > 0 and (
-       (i.status = 'aberta' and not i.notified ? 'opened') or
+       (i.status = 'aberta' and i.due_date >= current_date and not i.notified ? 'opened') or
        (i.status = 'aberta' and i.due_date - current_date between 0 and 3 and not i.notified ? 'reminder' and i.notified ? 'opened') or
        (i.status = 'aberta' and i.due_date < current_date and not i.notified ? 'overdue') or
        (i.status = 'paga' and not i.notified ? 'paid'))
@@ -276,7 +285,12 @@ begin
     begin
       perform public._send_email(r.email, v_subject, public._email_html(v_subject, v_paras, 'Ver fatura', v_link), v_subject || ': ' || v_link, 'wealth_fatura_' || v_kind,
         jsonb_build_object('invoice', r.id::text, 'transactional', true), v_from);
-      update public.w_invoices set notified = notified || jsonb_build_object(v_kind, now()) || case when v_kind = 'opened' and r.due_date - current_date <= 3 then jsonb_build_object('reminder', now()) else '{}'::jsonb end where id = r.id;
+      -- cada aviso marca também os anteriores: nunca chega um "fatura aberta" depois do "em atraso", nem repete
+      update public.w_invoices set notified = notified || jsonb_build_object(v_kind, now())
+        || case when v_kind = 'opened' and r.due_date - current_date <= 3 then jsonb_build_object('reminder', now()) else '{}'::jsonb end
+        || case when v_kind in ('reminder', 'overdue', 'paid') and not notified ? 'opened' then jsonb_build_object('opened', now()) else '{}'::jsonb end
+        || case when v_kind in ('overdue', 'paid') and not notified ? 'reminder' then jsonb_build_object('reminder', now()) else '{}'::jsonb end
+        || case when v_kind = 'paid' and not notified ? 'overdue' then jsonb_build_object('overdue', now()) else '{}'::jsonb end where id = r.id;
       out := out || jsonb_build_object(v_kind, coalesce((out->>v_kind)::int, 0) + 1);
     exception when others then out := out || jsonb_build_object('erros', coalesce((out->>'erros')::int, 0) + 1);
     end;
@@ -297,12 +311,58 @@ begin
 end $$;
 
 -- ============ 5. Cobertura de preços (para o robô buscar só o que falta) ============
+-- para o robô: primeiro e último preço, a 1ª transação, os meses que já têm preço (para achar buracos no histórico)
+-- e o P.U. guardado no 1º dia (para saber se a curva mudou depois de editar taxa ou emissão)
 create or replace function public.w_price_coverage(p_ids uuid[])
-returns table(asset_id uuid, first_price date, last_price date, first_tx date)
+returns table(asset_id uuid, first_price date, last_price date, first_tx date, first_pu numeric, months text[])
 language sql stable security definer set search_path = '' as $$
-  select a.id, (select min(p.date) from public.w_asset_prices p where p.asset_id = a.id), (select max(p.date) from public.w_asset_prices p where p.asset_id = a.id),
-         (select min(t.date) from public.w_invest_tx t where t.asset_id = a.id)
-    from unnest(p_ids) a(id);
+  select a.id, f.date, (select max(p.date) from public.w_asset_prices p where p.asset_id = a.id),
+         (select min(t.date) from public.w_invest_tx t where t.asset_id = a.id), f.pu,
+         (select array_agg(distinct to_char(p.date, 'YYYY-MM')) from public.w_asset_prices p where p.asset_id = a.id)
+    from unnest(p_ids) a(id) left join lateral (select p.date, p.pu from public.w_asset_prices p where p.asset_id = a.id order by p.date limit 1) f on true;
 $$;
 revoke all on function public.w_price_coverage(uuid[]) from public, anon, authenticated;
 grant execute on function public.w_price_coverage(uuid[]) to service_role;
+
+-- ============ 6. Busca sem acento (ciclo 2 da verificação) ============
+create or replace function public._w_norm(s text) returns text language sql immutable set search_path = '' as $$
+  select lower(translate(coalesce(s, ''), 'ÁÀÂÃÄáàâãäÉÈÊËéèêëÍÌÎÏíìîïÓÒÔÕÖóòôõöÚÙÛÜúùûüÇçÑñ', 'AAAAAaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNn'));
+$$;
+revoke all on function public._w_norm(text) from public, anon;
+grant execute on function public._w_norm(text) to authenticated, service_role;
+
+create or replace function public.w_asset_search(p_wallet uuid, p_q text)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare q text := public._w_norm(trim(coalesce(p_q, '')));
+begin
+  perform public._w_need(p_wallet, 'visualizador');
+  if char_length(q) < 2 then return '[]'::jsonb; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'ticker', ticker, 'kind', kind, 'custom', custom,
+      'last_pu', (select pu from public.w_asset_prices p where p.asset_id = s.id order by date desc limit 1),
+      'last_date', (select date from public.w_asset_prices p where p.asset_id = s.id order by date desc limit 1)))
+    from (select * from public.w_assets where (wallet_id = p_wallet or wallet_id is null)
+            and (public._w_norm(name) like '%' || q || '%' or lower(ticker) like q || '%') order by (lower(ticker) = q) desc, ticker nulls last, name limit 30) s), '[]'::jsonb);
+end $$;
+
+create or replace function public.w_custodian_search(p_q text)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare q text := public._w_norm(trim(coalesce(p_q, '')));
+begin
+  if auth.uid() is null then raise exception 'forbidden'; end if;
+  if char_length(q) < 2 then return '[]'::jsonb; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('name', name, 'kind', kind)) from (
+    select name, kind from public.w_custodians where public._w_norm(name) like '%' || q || '%'
+     order by (public._w_norm(name) like q || '%') desc, name limit 30) s), '[]'::jsonb);
+end $$;
+
+create or replace function public.w_bank_catalog_search(p_q text)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare q text := public._w_norm(trim(coalesce(p_q, '')));
+begin
+  if auth.uid() is null then raise exception 'forbidden'; end if;
+  if char_length(q) < 2 and q !~ '^\d+$' then return '[]'::jsonb; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('code', code, 'name', name)) from (
+    select code, name from public.w_banks
+     where public._w_norm(name) like '%' || q || '%' or public._w_norm(full_name) like '%' || q || '%' or code like q || '%'
+     order by (code = q) desc, name limit 30) s), '[]'::jsonb);
+end $$;

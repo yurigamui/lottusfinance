@@ -55,3 +55,9 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-049 | v2 R1: com duas etapas ativas, código errado na troca de senha deixa a sessão no nível 1 até sair (a senha atual é conferida antes do código). Usar a reautenticação do Supabase (nonce) no lugar de `signInWithPassword` | Média | Agente | próxima rodada | verificação v2 ciclo 2 |
 | W-050 | v2 R2: `w_equity` com benchmark passa de 300 ms com 120 meses × 1.000 lançamentos (398 ms) ou 60 meses × 5.000 (670 ms); somar `tw` uma vez com janela | Média | Agente | próxima rodada | verificação v2 ciclo 2 |
 | W-051 | v2 R3/R4/R5: abas do gráfico quebram em 2 linhas em 320 px; erro de CPF/CNPJ de cobrança só no aviso e CPF/CEP sem máscara no cartão; logo Lottus some do menu até 420 px | Baixa | Agente | próxima rodada | verificação v2 ciclo 2 |
+| W-052 | v3 M6: Ativos personalizados sem paginação (106 linhas numa página com 100 ativos) | Média | Agente | próxima rodada | verificação v3 ciclo 1 |
+| W-053 | v3 M7: `wealth-pu?action=pu_at` sem limite de chamadas por usuário nem cache (agora exige editor) | Média | Agente | antes de publicar a função | verificação v3 ciclo 1 |
+| W-054 | v3 B7: `w_equity_range` 1ª chamada a frio 440 ms (mediana 177 ms); medir no branch com volume real | Baixa | Agente | no branch (D-01) | verificação v3 ciclo 1 |
+| W-055 | v3: mês sem preço na fonte (ativo sem negócio no mês) fica como "buraco" e é baixado de novo a cada execução (limitado a 3–4 arquivos por execução) | Baixa | Agente | próxima rodada | revisão própria |
+| W-056 | v3: textos do recibo e do e-mail de atraso para o jurídico | Média | Yuri (jurídico) | antes de cobrar | verificação v3 ciclo 1 |
+| W-057 | v3 B5: visualizadora vê o formulário de Nova transação por `?new=1` (o servidor nega ao salvar) | Baixa | Agente | próxima rodada | verificação v3 (pré-existente) |
