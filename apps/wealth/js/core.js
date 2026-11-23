@@ -198,7 +198,17 @@ window.BO = window.BO || {};
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
-  W.csv = (rows) => rows.map((r) => r.map((c) => { const s = String(c ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(';')).join('\r\n');
+  // CSV para o Excel em pt-BR: ";" como separador, vírgula decimal nos números e texto que começa com
+  // = + - @ (fórmula) neutralizado com apóstrofo, porque descrições de extrato vêm de terceiros.
+  const NUMERIC = /^-?\d+(\.\d+)?$/;
+  W.csvCell = (c) => {
+    if (typeof c === 'number' && Number.isFinite(c)) return String(c).replace('.', ',');
+    let s = String(c ?? '');
+    if (NUMERIC.test(s)) return s.replace('.', ',');
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  W.csv = (rows) => rows.map((r) => r.map(W.csvCell).join(';')).join('\r\n');
 
   /* ---------- seletor de período: calendário do Partners (js/mask.js) ---------- */
   W.rangeHtml = (from, to) => `<div class="range" data-range><input type="hidden" name="from" value="${esc(from || '')}"><input type="hidden" name="to" value="${esc(to || '')}"><input type="text" class="input" data-rangeinp aria-label="Período"></div>`;

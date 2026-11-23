@@ -53,6 +53,7 @@
     const below = r.bottom + 6, above = r.top - h - 6;
     pop.style.top = `${below + h <= vh - 8 ? below : above >= 8 ? above : Math.max(8, vh - h - 8)}px`;
   }
+  window.addEventListener('hashchange', () => closePop());   // navegar (inclusive Voltar) fecha o calendário
   function openCalendar(el) {
     closePop();
     const start = toIso(el.value) ? new Date(toIso(el.value) + 'T12:00:00') : new Date();
