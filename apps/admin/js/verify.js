@@ -45,7 +45,7 @@
     return `<span class="tag success">Autorizada</span>${n.confirmed ? ' <span class="tag success">Cliente confirmou</span>' : n.acknowledged ? ' <span class="tag">Cliente deu ciência</span>' : ''}${n.cce_count ? ` <span class="tag">${n.cce_count} carta(s) de correção</span>` : ''}`;
   };
   B.nfeRows = (list, manual) => list.map((n) => `<div class="list-row"><div class="grow"><b>NF ${esc(n.number || '—')}</b> <span class="small muted">· ${esc(n.recipient || '')}</span>
-      <div class="small muted">${n.checked_at ? `conferida ${dateTime(n.checked_at)}${n.provider && String(n.provider).startsWith('manual') ? ` · ${esc(n.provider.replace(/^manual:\s*/, 'à mão por '))}` : ''}` : 'ainda não conferida'}${n.error ? ` · ${esc(n.error)}` : ''}</div></div>
+      <div class="small muted">${n.checked_at ? `conferida ${dateTime(n.checked_at)}${n.provider && String(n.provider).startsWith('manual') ? ` · ${esc(n.provider.replace('manual:', 'à mão por'))}` : ''}` : 'ainda não conferida'}${n.error ? ` · ${esc(n.error)}` : ''}</div></div>
       <div style="text-align:right">${nfeState(n)}${manual && (!n.kind || n.kind === 'nfe') ? `<div><button class="btn ghost sm" data-manual="${esc(n.invoice_id)}" data-key="${esc(n.access_key || '')}" data-num="${esc(n.number || '')}">Conferi na SEFAZ</button></div>` : ''}</div></div>`).join('');
 
   /** Conferência manual no portal da NF-e (enquanto a consulta automática não estiver contratada) */
@@ -60,7 +60,7 @@
           <option value="authorized">Autorizada, sem cancelamento nem desconhecimento</option>
           <option value="cancelled">Cancelada (ou com evento de desconhecimento)</option>
           <option value="not_found">Não encontrada</option></select></div>
-        <div class="field"><label for="nm-note">Anotação (obrigatória)</label><textarea class="input" id="nm-note" required minlength="3" maxlength="500" placeholder="Ex.: conferida no portal em 28/10, protocolo 135..."></textarea></div>
+        <div class="field"><label for="nm-note">Anotação (obrigatória)</label><textarea class="input" id="nm-note" placeholder="Ex.: conferida no portal em 28/10, protocolo 135..."></textarea></div>
         <div class="error-box" id="nm-err" hidden></div></div>`,
       foot: '<button class="btn secondary" data-act="cancel">Cancelar</button><button class="btn" data-act="ok">Registrar</button>',
     });

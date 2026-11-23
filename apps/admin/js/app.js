@@ -29,6 +29,7 @@
     collapse: 'M11 19l-7-7 7-7m8 14l-7-7 7-7',
     mail: 'M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z',
     motor: 'M4 19h16M7 16V9m5 7V5m5 11v-4',
+    mensageria: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z',
     emails: 'M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z',
     lock: 'M7 11V8a5 5 0 0110 0v3M6 11h12a1 1 0 011 1v8a1 1 0 01-1 1H6a1 1 0 01-1-1v-8a1 1 0 011-1z',
     eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zm10 3a3 3 0 100-6 3 3 0 000 6z',
@@ -37,7 +38,16 @@
     partes: 'M17 20h5v-2a3 3 0 00-5.4-1.8M9 20H2v-2a3 3 0 015.4-1.8M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0zm9.6 6.2A5 5 0 007.4 16.2M9 20h8',
     crescimento: 'M3 17l6-6 4 4 8-8M15 7h6v6',
     controle: 'M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z',
+    crm: 'M3 4h5v16H3zM10 4h5v10h-5zM17 4h4v6h-4z',
+    planos: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    comercial: 'M3 17l6-6 4 4 8-8M15 7h6v6',
     cobrancas: 'M8 7V3m8 4V3M4 11h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zm4 10l2 2 4-4',
+    faturamento: 'M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z',
+    marketing: 'M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z',
+    clientes: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+    produtos: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+    bell: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
+    plus: 'M12 5v14M5 12h14',
     juridico: 'M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 006 0zm12 0l-3 7a3 3 0 006 0z',
     sun: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
     moon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
@@ -49,36 +59,46 @@
   window.BO.icon = icon;
 
   // Menu em grupos. "empresas" e "parceiros" mantêm o id (links antigos continuam valendo).
+  // Cada grupo é um botão só no menu; as páginas do grupo viram abas no topo da tela (tabs: true)
   const NAV_GROUPS = [
-    { id: 'painel', label: 'Painel', items: [{ id: 'painel', label: 'Painel' }] },
-    { id: 'analises', label: 'Análises', items: [
-      { id: 'identidade', label: 'Identidade', count: 'identity' },
-      { id: 'documentos', label: 'Documentos', count: 'documents' },
-      { id: 'credito', label: 'Crédito', count: 'credit' },
-      { id: 'verificacoes', label: 'Verificações', count: 'verify' },
+    { id: 'painel', label: 'Início', items: [{ id: 'painel', label: 'Início' }] },
+    { id: 'clientes', label: 'Clientes', tabs: true, items: [
+      { id: 'clientes', label: 'Clientes', count: 'red' },
+      { id: 'assinaturas', label: 'Assinaturas', count: 'requests' },
     ] },
-    { id: 'operacoes', label: 'Operações', items: [
-      { id: 'operacoes', label: 'Operações' },
+    { id: 'comercial', label: 'Comercial', tabs: true, items: [
+      { id: 'funil', label: 'Funil' },
+      { id: 'tarefas', label: 'Tarefas', count: 'tasks' },
     ] },
-    { id: 'partes', label: 'Cadastros', items: [
-      { id: 'empresas', label: 'Cedentes' },
-      { id: 'sacados', label: 'Sacados' },
-      { id: 'parceiros', label: 'Fundos' },
-      { id: 'plataformas', label: 'Plataformas (API)' },
+    { id: 'marketing', label: 'Marketing', tabs: true, items: [
+      { id: 'resultados', label: 'Resultados' },
+      { id: 'campanhas', label: 'Campanhas' },
+      { id: 'calendario', label: 'Calendário' },
+      { id: 'contatos', label: 'Contatos' },
     ] },
-    { id: 'juridico', label: 'Jurídico', items: [
-      { id: 'juridico', label: 'Documentos assinados', count: 'legal' },
-      { id: 'contratos', label: 'Modelos de contrato' },
+    { id: 'faturamento', label: 'Financeiro', tabs: true, items: [
+      { id: 'faturas', label: 'A receber', count: 'overdue' },
+      { id: 'pagar', label: 'A pagar', count: 'payables' },
+      { id: 'caixa', label: 'Fluxo de caixa' },
+      { id: 'resultado', label: 'Resultado' },
     ] },
-    { id: 'controle', label: 'Configurações', items: [
-      { id: 'motor', label: 'Motor de crédito' },
-      { id: 'equipe', label: 'Equipe Lottus', admin: true },
+    { id: 'produtos', label: 'Produtos', tabs: true, items: [
+      { id: 'partners', label: 'Partners' },
+      { id: 'sign', label: 'Sign' },
+      { id: 'parceiros', label: 'Gestão dos fundos' },
+    ] },
+    { id: 'controle', label: 'Configurações', tabs: true, items: [
+      { id: 'empresa', label: 'Empresa' },
+      { id: 'equipe', label: 'Equipe', admin: true },
+      { id: 'planos', label: 'Preços e planos' },
+      { id: 'cobranca', label: 'Régua de cobrança' },
       { id: 'emails', label: 'E-mails', admin: true },
+      { id: 'mensageria', label: 'Mensageria (Sign)', admin: true },
+      { id: 'integracoes', label: 'Integrações' },
       { id: 'auditoria', label: 'Auditoria' },
-      { id: 'indicacoes', label: 'Indicações' },
-      { id: 'taxa', label: 'Taxa e repasse' },
     ] },
   ];
+  const groupOf = (v) => NAV_GROUPS.find((g) => g.tabs && g.items.some((x) => x.id === v));
   // Páginas que continuam abrindo por link, fora do menu
   const EXTRA_TITLES = [['representantes', 'Representantes']];
   const NAV = NAV_GROUPS.flatMap((g) => g.items);
@@ -411,7 +431,7 @@
       .map((g) => {
         const on = g.items.some((n) => n.id === active);
         const total = g.items.reduce((t, n) => t + (n.count ? counts[n.count] || 0 : 0), 0);
-        const single = g.items.length === 1;
+        const single = g.items.length === 1 || !!g.tabs;
         const fly = `<div class="flyout" role="menu" aria-label="${esc(g.label)}">
             <div class="flyout-title">${esc(g.label)}</div>
             ${single ? '' : g.items.map((n) => {
@@ -454,6 +474,7 @@
   }
 
   function startShell() {
+    window.BO.me = me;
     const initials = me.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
     const theme = getTheme();
     app.innerHTML = `
@@ -470,6 +491,14 @@
                 <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
               </div>
               <div class="topbar-right">
+                ${me.partner ? '' : `<div class="gsearch"><input class="input search" id="gq" type="search" placeholder="Buscar contato, lead ou fatura" aria-label="Busca" autocomplete="off"><div class="gs-list" id="gl" hidden></div></div>`}
+                ${me.partner ? '' : `<div class="tb-pop"><button class="btn sm" id="newbtn" aria-haspopup="true" aria-expanded="false">${icon('plus', 'ico sm')} Novo</button>
+                  <div class="menu" id="newmenu" hidden>
+                    <a class="menu-item" href="#/faturas/new">Fatura</a><a class="menu-item" href="#/pagar/new">Conta a pagar</a>
+                    <a class="menu-item" href="#/funil/new">Lead</a><a class="menu-item" href="#/tarefas/new">Tarefa</a>
+                    <a class="menu-item" href="#/contatos/new">Contato</a><a class="menu-item" href="#/campanhas/new">Campanha</a><a class="menu-item" href="#/calendario/new">Peça de conteúdo</a></div></div>
+                <div class="tb-pop"><button class="icon-btn" id="bell" aria-haspopup="true" aria-expanded="false" aria-label="Notificações">${icon('bell')}<span class="nav-count" id="bellc" hidden></span></button>
+                  <div class="menu notif" id="notif" hidden></div></div>`}
                 <div class="profile">
                   <button class="avatar" id="avatar" aria-haspopup="true" aria-expanded="false" aria-label="Perfil">${esc(initials)}</button>
                   <div class="menu" id="profile-menu" hidden>
@@ -485,6 +514,48 @@
         </main>
       </div>`;
     document.getElementById('logout').onclick = signOut;
+    const pop = (btnId, menuId, onOpen) => {
+      const b = document.getElementById(btnId), m = document.getElementById(menuId);
+      if (!b) return;
+      b.onclick = (e) => { e.stopPropagation(); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); if (!m.hidden && onOpen) onOpen(m); };
+      m.addEventListener('click', (e) => { if (e.target.closest('a')) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } });
+      document.addEventListener('click', (e) => { if (!m.hidden && !m.contains(e.target) && e.target !== b) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } });
+    };
+    pop('newbtn', 'newmenu');
+    pop('bell', 'notif', async (m) => {
+      m.innerHTML = '<div class="spinner"></div>';
+      try {
+        const n = await rpc('bo_notifications', { p_seen: true });
+        document.getElementById('bellc').hidden = true;
+        m.innerHTML = `<div class="menu-head"><div class="menu-name">Notificações</div></div>${n.rows.length ? n.rows.map((x) => `<a class="menu-item notif-row ${x.new ? 'new' : ''}" href="${esc(x.link || '#/painel')}"><b>${esc(x.title)}</b><span class="small muted">${esc(x.body || '')}</span><span class="small muted">${window.BO.ago(x.at)}</span></a>`).join('') : '<div class="small muted" style="padding:12px 14px">Nada por aqui ainda.</div>'}`;
+      } catch { m.innerHTML = '<div class="small muted" style="padding:12px 14px">Não consegui carregar.</div>'; }
+    });
+    const gq = document.getElementById('gq'), gl = document.getElementById('gl');
+    if (gq) {
+      let t;
+      gq.oninput = () => {
+        clearTimeout(t);
+        const v = gq.value.trim();
+        if (v.length < 2) { gl.hidden = true; return; }
+        t = setTimeout(async () => {
+          const [cus, inv, con, leads] = await Promise.all([
+            rpc('bo_customers').then((r) => r.rows.filter((c) => `${c.name} ${c.legal_name || ''} ${c.doc || ''} ${c.email || ''}`.toLowerCase().includes(v.toLowerCase()) || (v.replace(/\D/g, '').length > 3 && String(c.doc || '').includes(v.replace(/\D/g, ''))))).catch(() => []),
+            rpc('bo_inv_list', { p_status: 'all', p_search: v }).catch(() => []),
+            rpc('bo_mkt_contacts', { p_search: v, p_tag: null, p_status: null }).then((r) => r.rows).catch(() => []),
+            rpc('bo_crm_list').then((r) => r.filter((l) => `${l.name} ${l.email || ''} ${l.doc || ''}`.toLowerCase().includes(v.toLowerCase()))).catch(() => []),
+          ]);
+          const rows = [].concat(
+            cus.slice(0, 3).map((c) => [`clientes/${c.kind}/${c.id}`, c.name, `Cliente · ${c.product}`]),
+            inv.slice(0, 3).map((i) => ['faturas', `${i.number} · ${i.customer_name}`, 'Fatura']),
+            leads.slice(0, 3).map((l) => [`funil/${l.id}`, l.name, 'Lead']),
+            con.slice(0, 3).map((c) => ['contatos', c.name || c.email, 'Contato']));
+          gl.innerHTML = rows.length ? rows.map(([h, t, k]) => `<a href="#/${h}"><b>${esc(t)}</b><span class="small muted">${k}</span></a>`).join('') : '<div class="small muted" style="padding:10px 14px">Nada encontrado.</div>';
+          gl.hidden = false;
+        }, 250);
+      };
+      gl.addEventListener('click', () => { gl.hidden = true; gq.value = ''; });
+      document.addEventListener('click', (e) => { if (!e.target.closest('.gsearch')) gl.hidden = true; });
+    }
     const avatar = document.getElementById('avatar'), menu = document.getElementById('profile-menu');
     avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });
@@ -503,14 +574,11 @@
       return;
     }
     try {
-      const d = await rpc('bo_dashboard');
-      counts = {
-        identity: d.identity, documents: d.documents, credit: d.credit,
-        ops: d.operations_review + d.operations_to_pay, settlements: d.settlements,
-        billing: Number(d.overdue || 0) + Number(d.settlements || 0), legal: Number(d.documents_missing || 0) + Number(d.notices_problem || 0),
-      };
-      counts.verify = await rpc('bo_verify_count').catch(() => 0);
-      window.BO.dashboard = d;
+      const [d, n] = await Promise.all([rpc('bo_home', { p_months: 3 }), rpc('bo_notifications', { p_seen: false }).catch(() => null)]);
+      const t = d.today;
+      counts = { overdue: Number(t.overdue_invoices.count), payables: Number(t.payables_week.count), tasks: Number(t.tasks.count), requests: Number(t.requests), red: Number(t.red_customers) };
+      const bc = document.getElementById('bellc');
+      if (bc && n) { bc.hidden = !n.unread; bc.textContent = n.unread > 99 ? '99+' : n.unread; }
       paintNav(currentView());
     } catch { /* o painel mostra o erro */ }
   }
@@ -530,6 +598,11 @@
     el.scrollTop = 0;
     try {
       await fn(el, params.map(decodeURIComponent), me);
+      const grp = me.partner ? null : groupOf(view);
+      if (grp) {
+        const tab = (x) => { const c = x.count ? counts[x.count] : 0; return `<a href="#/${x.id}" class="${x.id === view ? 'active' : ''}"${x.id === view ? ' aria-current="page"' : ''}>${esc(x.label)}${c ? `<span class="nav-count">${c > 99 ? '99+' : c}</span>` : ''}</a>`; };
+        el.insertAdjacentHTML('afterbegin', `<nav class="settings-nav" aria-label="${esc(grp.label)}">${grp.items.filter((x) => !x.admin || me.level === 'admin').map(tab).join('')}</nav>`);
+      }
     } catch (e) {
       const msg = message(e);
       if (/mfa_required|forbidden|JWT|session/i.test(e.message || '')) { signOut(); return; }
