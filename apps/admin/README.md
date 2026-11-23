@@ -2,7 +2,7 @@
 
 Site da equipe Lottus, publicado em **admin.lottusfinance.com.br**: cadastros, crédito, acompanhamento das operações (só para ver: quem aprova, paga e cobra é o fundo, no Lottus Partners), jurídico, controle e crescimento.
 
-O site dos fundos fica na pasta `lottus-partners`, publicado em partners.lottusfinance.com.br. Representante de fundo que tenta entrar aqui é recusado com o aviso do endereço certo.
+O site dos fundos fica em `apps/partners`, publicado em partners.lottusfinance.com.br. Representante de fundo que tenta entrar aqui é recusado com o aviso do endereço certo.
 
 HTML, CSS e JavaScript puro, sem build. Usa o mesmo projeto Supabase do app.
 
