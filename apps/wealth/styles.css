@@ -310,6 +310,12 @@ tr.link { cursor: pointer; }
 tr.link:hover td { background: var(--hover); }
 
 .table-wrap { overflow-x: auto; }
+/* Indica que a tabela continua para o lado (celular): sombras nas bordas que somem ao chegar no fim */
+.table-wrap { background:
+  linear-gradient(to right, var(--surface, #fff) 30%, rgba(255,255,255,0)) left center / 32px 100% no-repeat local,
+  linear-gradient(to left, var(--surface, #fff) 30%, rgba(255,255,255,0)) right center / 32px 100% no-repeat local,
+  radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.14), rgba(0,0,0,0)) left center / 12px 100% no-repeat scroll,
+  radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.14), rgba(0,0,0,0)) right center / 12px 100% no-repeat scroll; }
 
 .empty { padding: 40px 24px; text-align: center; color: var(--faint); }
 

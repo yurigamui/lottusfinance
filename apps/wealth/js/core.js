@@ -147,7 +147,7 @@ window.BO = window.BO || {};
   W.confirm = (title, text, okLabel = 'Confirmar', danger = false) => new Promise((resolve) => {
     W.modal({ title, body: `<p class="muted">${esc(text)}</p>`, foot: `<button class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn ${danger ? 'danger' : ''}" data-act="confirm-ok">${esc(okLabel)}</button>` });
     const el = current;
-    el.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; resolve(b.dataset.act === 'confirm-ok'); });
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const ok = b.dataset.act === 'confirm-ok'; if (ok) W.closeModal(); resolve(ok); });
     new MutationObserver((_, ob) => { if (!document.body.contains(el)) { resolve(false); ob.disconnect(); } }).observe(document.getElementById('modal-root'), { childList: true });
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') W.closeModal(); });
@@ -157,7 +157,19 @@ window.BO = window.BO || {};
     if (btn) btn.classList.add('loading');
     try { return await fn(); } catch (e) { W.fail(e); } finally { if (btn) btn.classList.remove('loading'); }
   };
-  W.form = (form) => { const o = {}; new FormData(form).forEach((v, k) => { o[k] = typeof v === 'string' ? v.trim() : v; }); form.querySelectorAll('[data-mask=date]').forEach((el) => { if (el.name) o[el.name] = (window.BO.mask && window.BO.mask.toIso(el.value)) || (/^\d{4}-/.test(el.value) ? el.value : ''); }); return o; };
+  W.form = (form) => { const o = {}; new FormData(form).forEach((v, k) => { o[k] = typeof v === 'string' ? v.trim() : v; }); form.querySelectorAll('[data-mask=date]').forEach((el) => {
+      if (!el.name) return;
+      const iso = (window.BO.mask && window.BO.mask.toIso(el.value)) || (/^\d{4}-\d{2}-\d{2}$/.test(el.value) ? el.value : '');
+      W.fieldError(el, '');
+      if (el.value.trim() && !iso) { W.fieldError(el, 'Data inválida. Use dd/mm/aaaa.'); el.focus(); throw new Error('Data inválida. Use dd/mm/aaaa.'); }
+      o[el.name] = iso;
+    }); return o; };
+  // Mensagem de erro ao lado do campo (some na próxima tentativa)
+  W.fieldError = (el, msg) => {
+    const fd = el.closest('.field') || el.parentElement; let m = fd.querySelector(':scope > .field-err');
+    if (!msg) { el.removeAttribute('aria-invalid'); if (m) m.remove(); return; }
+    el.setAttribute('aria-invalid', 'true'); if (!m) { m = document.createElement('div'); m.className = 'field-err small neg'; m.setAttribute('role', 'alert'); fd.appendChild(m); } m.textContent = msg;
+  };
   /** Lista de opções logo abaixo do campo. host = elemento .combo (com um input e um .combo-list). */
   W.combo = (host, { fetch, label, sub, onPick }) => {
     const input = host.querySelector('input[type=text],input[type=search],input:not([type])'), list = host.querySelector('.combo-list');

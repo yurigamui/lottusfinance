@@ -229,6 +229,7 @@
       <label class="check"><input type="checkbox" name="terms" required> <span class="small">Li e aceito os termos de uso e a política de privacidade.</span></label><div id="su-err"></div><button class="btn lg" type="submit">Criar conta</button></form><div class="center">Já tem conta? <a href="#/entrar">Entrar</a></div>`,
       'Depois do e-mail confirmado você completa o cadastro com nome e CPF.');
   }
+  document.addEventListener('input', (e) => { if (e.target.closest('form[data-form=signup]')) { const er = document.getElementById('su-err'); if (er) er.innerHTML = ''; } });
   W.forms.signup = async (f) => {
     const v = W.form(f); const err = document.getElementById('su-err'); err.innerHTML = '';
     if (v.password !== v.password2) { err.innerHTML = '<div class="error-box">As senhas não são iguais.</div>'; return; }
@@ -382,8 +383,8 @@
   W.acts['billing-edit'] = () => billingModal('');
   W.forms['billing-save'] = async (f) => {
     const v = W.form(f); await W.rpc('w_billing_profile_save', { p: { holder_name: v.holder_name, doc: v.doc, email: v.email, zip: v.zip, street: v.street, number: v.number, complement: v.complement, district: v.district, city: v.city, state: v.state, method: v.method } });
-    await W.rpc('w_payment_request'); W.closeModal();
-    W.modal({ title: v.purpose === 'fund' ? 'Pedido do Fund recebido' : 'Dados de cobrança salvos', body: `<p>${v.purpose === 'fund' ? 'A equipe Lottus valida os dados e libera o white-label e a API; você será avisado por e-mail.' : 'A equipe Lottus valida a forma de pagamento e libera a segunda carteira; você será avisado por e-mail.'}</p><p class="muted small">Dúvidas: ${esc(W.cfg.supportEmail)}</p>`, foot: '<button class="btn" data-act="modal-close">Entendi</button>' }); route();
+    await W.rpc('w_payment_request'); W.closeModal(); await route();
+    W.modal({ title: v.purpose === 'fund' ? 'Pedido do Fund recebido' : 'Dados de cobrança salvos', body: `<p>${v.purpose === 'fund' ? 'A equipe Lottus valida os dados e libera o white-label e a API; você será avisado por e-mail.' : 'A equipe Lottus valida a forma de pagamento e libera a segunda carteira; você será avisado por e-mail.'}</p><p class="muted small">Dúvidas: ${esc(W.cfg.supportEmail)}</p>`, foot: '<button class="btn" data-act="modal-close">Entendi</button>' });
   };
 
   /* ---------- conta e plano ---------- */

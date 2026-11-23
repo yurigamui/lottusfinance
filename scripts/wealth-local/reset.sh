@@ -9,7 +9,8 @@ PS="psql -X -q -h 127.0.0.1 -p ${PGPORT:-54340} -U postgres -v ON_ERROR_STOP=1"
 $PS -d postgres -c "drop database if exists wealth with (force)" -c "create database wealth"
 $PS -d wealth -f prelude.sql
 $PS -d wealth -f "$WEALTH_SCHEMA"
-for m in ../../supabase/migrations/*.sql; do grep -q "w_\|legacy_gl\|bo_nfe" "$m" && $PS -d wealth -f "$m" 2>/dev/null || true; done
+# Migrações do Wealth (as do Admin dependem de tabelas que não existem aqui). Erro em qualquer uma interrompe o reset.
+for m in ../../supabase/migrations/*wealth*.sql ../../supabase/migrations/*seguranca*.sql; do echo "· $(basename "$m")" >&2; $PS -d wealth -f "$m"; done
 $PS -d wealth -f post.sql
 $PS -d wealth -f seed.sql >/dev/null
 $PS -d wealth -tAc "select id from public.w_wallets where name = 'Família Exemplo'"

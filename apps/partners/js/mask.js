@@ -134,8 +134,10 @@
     // Ao focar, seleciona a data atual: o que for digitado substitui em vez de ser ignorado.
     el.addEventListener('focus', () => { setTimeout(() => { try { el.select(); } catch { /* campo já saiu */ } }, 0); });
     el.addEventListener('keydown', (e) => { if (/^\d$/.test(e.key) && el.value.replace(/\D/g, '').length >= 8 && el.selectionStart === el.selectionEnd) el.value = ''; if (e.key === 'Tab' || e.key === 'Enter') { if (pop && pop.__input === el) closePop(); } if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); openCalendar(el); } });
-    // O calendário abre por clique (não ao passar pelo campo com o teclado).
-    el.addEventListener('click', () => { if (!pop || pop.__input !== el) openCalendar(el); });
+    // O calendário abre só pelo ícone à direita do campo (ou Alt+↓); clicar no texto é para digitar.
+    // Assim ele nunca fica aberto por acaso por cima do botão Salvar.
+    el.addEventListener('click', (e) => { const r = el.getBoundingClientRect(); if (e.clientX >= r.right - 44 && (!pop || pop.__input !== el)) openCalendar(el); });
+    el.title = el.title || 'Digite a data ou clique no ícone para escolher no calendário';
   }
 
   const docMask = (el) => only(el, /[^0-9a-zA-Z]/g, (v) => { const d = v.replace(/\D/g, ''); return /^\d*$/.test(v) && d.length <= 11 ? d.slice(0, 11).replace(/^(\d{3})(\d{0,3})(\d{0,3})(\d{0,2}).*/, (m, a, b, c, d2) => a + (b ? '.' + b : '') + (c ? '.' + c : '') + (d2 ? '-' + d2 : '')) : v.toUpperCase().slice(0, 14).replace(/^(.{2})(.{0,3})(.{0,3})(.{0,4})(.{0,2}).*/, (m, a, b, c, d3, e) => a + (b ? '.' + b : '') + (c ? '.' + c : '') + (d3 ? '/' + d3 : '') + (e ? '-' + e : '')); });
