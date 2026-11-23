@@ -32,7 +32,8 @@ create table public.w_rules (id uuid primary key default gen_random_uuid(), wall
   group_id uuid references public.w_cadastros(id) on delete set null, active boolean not null default true, created_at timestamptz not null default now());
 create table public.w_assets (id uuid primary key default gen_random_uuid(), wallet_id uuid references public.w_wallets(id));
 create table public.w_invest_tx (id uuid primary key default gen_random_uuid(), wallet_id uuid not null references public.w_wallets(id) on delete cascade,
-  asset_id uuid not null references public.w_assets(id), import_id uuid references public.w_imports(id) on delete set null);
+  asset_id uuid not null references public.w_assets(id), import_id uuid references public.w_imports(id) on delete set null,
+  kind text not null default 'compra', date date not null default current_date, qty numeric not null default 1, unit_price numeric not null default 0);
 create table public.w_other (id uuid primary key default gen_random_uuid(), wallet_id uuid not null references public.w_wallets(id) on delete cascade);
 create table public.w_api_keys (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade);
 create table public.w_group_members (group_id uuid references public.w_groups(id) on delete cascade, user_id uuid not null references auth.users(id) on delete cascade, added_by uuid references auth.users(id));

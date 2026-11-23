@@ -7,7 +7,7 @@ Branch `agentes-autonomo` no GitHub (cópia em `claude/blissful-dijkstra-mw332a`
 | Plataforma | Estado | O que foi feito | O que trava o resto |
 | --- | --- | --- | --- |
 | Repositório | Concluído | Estrutura `apps/`, `docs/`, `scripts/`, `supabase/`; varredura de segredos (nada grave); CSP estrita em todos os fronts; CI gratuito; README com Mermaid; modelos e políticas | Configurações do GitHub e da hospedagem (só você) |
-| Wealth | Banco auditado; telas bloqueadas | RLS/RPCs conferidas; IDOR de referência entre carteiras corrigido; 16 índices; `_guard_delete`; 13 testes | Front `07 - Wealth` fora do repo (D-02); branch (D-01); W-001 |
+| Wealth | **Verificado e aprovado no ambiente local** (9 partes, 4 com ressalvas; 5 ciclos) | Front testado contra as funções reais; corrigidos: calendário que cobria o Salvar, data inválida salva como hoje, venda maior que a posição, filtro com catálogo global, fórmula no CSV, entre outros; 2 migrações novas | Preço (W-031), Grupos Pro×Fund (W-039), termos/LGPD, branch (D-01) e publicação |
 | Partners | Beta parcial | 192 RPCs conferidas; 6 pontos de injeção de HTML corrigidos (inclui a confirmação do Pix) | Telas logadas e lista pré-MVP (P-001, P-002) |
 | Sign | Beta parcial, sem achados nas páginas públicas | 3 páginas verificadas em 7 larguras | Portal logado fora do repo; `signUrl` |
 | Admin | Beta parcial | 89 RPCs conferidas; a que faltava (`bo_nfe_manual_check`) criada | Telas logadas (usuário de equipe no branch) |
@@ -24,7 +24,8 @@ Verificações independentes (subagente Verificador, sem ver o raciocínio do de
 4. Não proteger `w_audit` com `_guard_delete` até a política de exclusão (LGPD) ser decidida.
 5. Não fixar `search_path` em duas funções SQL puras (perderiam o inlining: 19,8 ms → 304 ms medido).
 6. XSS do Partners corrigido chamada a chamada, sem mudar o componente `B.modal` (P-004).
-7. Testes de banco em Postgres local com esquema mínimo, já que o branch do Supabase foi recusado duas vezes pelo conector.
+7. Testes de banco em Postgres local com esquema mínimo, já que o branch do Supabase foi recusado duas vezes pelo conector; para o Wealth, um ambiente local com o esquema real e um Supabase falso (o esquema exportado fica fora do repositório, que é público).
+10. No Wealth, venda maior que a posição passou a ser recusada; o calendário de data abre só pelo ícone e, em modais, embutido no formulário.
 8. Não rodar os geradores do site (`build.py`, `legal.py`): estão atrás do HTML publicado.
 9. Mantive os "limites que nunca se cruzam" mesmo depois da autorização ampla, porque ela não os revogou explicitamente.
 
@@ -40,7 +41,12 @@ Verificações independentes (subagente Verificador, sem ver o raciocínio do de
 - S-02: ligar a proteção contra senhas vazadas.
 
 **Código que falta no repositório (D-02)**
-- `07 - Wealth`, app Invest, app Business, `supabase/functions/` (sem segredos), lista de bloqueios pré-MVP do Partners (P-001).
+- App Invest, app Business, `supabase/functions/` (sem segredos), lista de bloqueios pré-MVP do Partners (P-001). (O Wealth já chegou e foi verificado.)
+
+**Wealth (decisões suas)**
+- W-031: cobrança fixa por carteira (código: Pro R$ 79, Fund R$ 199) × faixas de AuM (decisão de 19/11).
+- W-039: Grupos de carteiras no Pro (como dizem as telas) ou só no Fund (como o banco exige).
+- W-032/W-007/W-008: textos de termos e privacidade do Wealth e DPA.
 
 **Conteúdo e jurídico**
 - CNPJ, endereço, encarregado de dados e comarca (S-001); endereços das redes e das lojas (S-002); versão vigente dos Termos (S-003); pendências jurídicas do Wealth (W-007, W-008, W-021).

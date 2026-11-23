@@ -12,13 +12,19 @@ window.BO = window.BO || {};
   /* ---------- erros ---------- */
   const MSG = {
     forbidden: 'Você não tem permissão para isso.', read_only: 'Esta carteira está somente para visualização (pagamento pendente ou arquivada).',
-    payment_required: 'Para criar ou assumir mais de uma carteira é preciso cadastrar uma forma de pagamento (plano Pro).',
+    payment_required: 'Para criar ou assumir mais de uma carteira é preciso assinar o plano Pro.',
+    plan_required: 'Disponível nos planos pagos. Assine em Conta > Plano.', billing_required: 'Informe os dados de cobrança para assinar o plano.',
+    too_many_wallets: 'Para voltar ao Grátis, fique com uma carteira só (exclua ou arquive as outras).', confirm_mismatch: 'O nome digitado não confere com o da carteira.',
+    unauthorized: 'Chave de API inválida, expirada ou revogada.',
     profile_required: 'Termine o seu cadastro primeiro.', email_not_confirmed: 'Confirme o e-mail da sua conta primeiro.',
     cpf_invalid: 'CPF inválido.', cpf_in_use: 'Este CPF já está cadastrado em outra conta.', name_required: 'Preencha o nome.', email_invalid: 'E-mail inválido.',
     invalid_role: 'Alçada inválida.', already_member: 'Esta pessoa já tem acesso à carteira.', last_manager: 'A carteira precisa ter ao menos um gestor.',
     owner_must_manage: 'O titular da cobrança precisa continuar como gestor.', owner_cannot_leave: 'O titular da cobrança não pode sair; peça a outro gestor para removê-lo ou arquive a carteira.',
     owner_only: 'Só o titular da cobrança pode fazer isso.', not_found: 'Não encontrado.', invalid_value: 'Valor inválido.', invalid_file: 'Arquivo inválido ou grande demais.',
-    in_use: 'Existem lançamentos nesta conta; exclua-os antes.', plan_required: 'Disponível no plano Fund.',
+    in_use: 'Existem lançamentos nesta conta; exclua-os antes.',
+    doc_invalid: 'CPF ou CNPJ inválido.', zip_invalid: 'CEP inválido.', invalid_name: 'Dê um nome com 2 a 80 caracteres.', user_not_found: 'Não há conta no Wealth com este CPF. Peça para a pessoa criar a conta primeiro.',
+    invalid_reference: 'Esse cadastro não pertence a esta carteira. Atualize a página e escolha de novo.',
+    position_negative: 'A venda é maior que a quantidade em carteira nessa data. Confira as compras lançadas antes dela.',
     'Invalid login credentials': 'E-mail ou senha incorretos.', 'Email not confirmed': 'Confirme seu e-mail antes de entrar.', 'User already registered': 'Este e-mail já tem conta. Entre ou recupere a senha.',
   };
   const msgOf = (m) => { m = String(m || ''); if (MSG[m]) return MSG[m]; const k = Object.keys(MSG).find((x) => m.includes(x)); return k ? MSG[k] : 'Algo deu errado. Tente de novo.'; };
@@ -63,7 +69,10 @@ window.BO = window.BO || {};
     const n = Number(s);
     return Number.isFinite(n) ? (neg ? -n : n) : null;
   };
-  W.parseDate = (s) => {
+  // Converte para AAAA-MM-DD e só aceita datas que existem no calendário (31/02 vira null, como no banco).
+  const realDate = (iso) => { if (!iso) return null; const [y, mo, d] = iso.split('-').map(Number); const t = new Date(y, mo - 1, d); return t.getFullYear() === y && t.getMonth() === mo - 1 && t.getDate() === d ? iso : null; };
+  W.parseDate = (s) => realDate(parseDateRaw(s));
+  const parseDateRaw = (s) => {
     s = String(s ?? '').trim(); let m;
     if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return `${m[1]}-${m[2]}-${m[3]}`;
     if ((m = s.match(/^(\d{2})[/.-](\d{2})[/.-](\d{4})/))) return `${m[3]}-${m[2]}-${m[1]}`;
@@ -120,7 +129,7 @@ window.BO = window.BO || {};
     root.appendChild(t);
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 220); }, 4500);
   };
-  W.fail = (e) => W.toast('Não deu certo', e && e.message ? e.message : msgOf(''), 'error');
+  W.fail = (e) => { if (e && e.shownInField) return; W.toast('Não deu certo', e && e.message ? e.message : msgOf(''), 'error'); };
 
   /* ---------- janela / gaveta ---------- */
   let current = null;
@@ -141,7 +150,7 @@ window.BO = window.BO || {};
   W.confirm = (title, text, okLabel = 'Confirmar', danger = false) => new Promise((resolve) => {
     W.modal({ title, body: `<p class="muted">${esc(text)}</p>`, foot: `<button class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn ${danger ? 'danger' : ''}" data-act="confirm-ok">${esc(okLabel)}</button>` });
     const el = current;
-    el.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; resolve(b.dataset.act === 'confirm-ok'); });
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; const ok = b.dataset.act === 'confirm-ok'; if (ok) W.closeModal(); resolve(ok); });
     new MutationObserver((_, ob) => { if (!document.body.contains(el)) { resolve(false); ob.disconnect(); } }).observe(document.getElementById('modal-root'), { childList: true });
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') W.closeModal(); });
@@ -151,7 +160,19 @@ window.BO = window.BO || {};
     if (btn) btn.classList.add('loading');
     try { return await fn(); } catch (e) { W.fail(e); } finally { if (btn) btn.classList.remove('loading'); }
   };
-  W.form = (form) => { const o = {}; new FormData(form).forEach((v, k) => { o[k] = typeof v === 'string' ? v.trim() : v; }); form.querySelectorAll('[data-mask=date]').forEach((el) => { if (el.name) o[el.name] = (window.BO.mask && window.BO.mask.toIso(el.value)) || (/^\d{4}-/.test(el.value) ? el.value : ''); }); return o; };
+  W.form = (form) => { const o = {}; new FormData(form).forEach((v, k) => { o[k] = typeof v === 'string' ? v.trim() : v; }); form.querySelectorAll('[data-mask=date]').forEach((el) => {
+      if (!el.name) return;
+      const iso = (window.BO.mask && window.BO.mask.toIso(el.value)) || (/^\d{4}-\d{2}-\d{2}$/.test(el.value) ? el.value : '');
+      W.fieldError(el, '');
+      if (el.value.trim() && !iso) { W.fieldError(el, 'Data inválida. Use dd/mm/aaaa.'); el.focus(); const er = new Error('Data inválida. Use dd/mm/aaaa.'); er.shownInField = true; throw er; }
+      o[el.name] = iso;
+    }); return o; };
+  // Mensagem de erro ao lado do campo (some na próxima tentativa)
+  W.fieldError = (el, msg) => {
+    const fd = el.closest('.field') || el.parentElement; let m = fd.querySelector(':scope > .field-err');
+    if (!msg) { el.removeAttribute('aria-invalid'); if (m) m.remove(); return; }
+    el.setAttribute('aria-invalid', 'true'); if (!m) { m = document.createElement('div'); m.className = 'field-err small neg'; m.setAttribute('role', 'alert'); fd.appendChild(m); } m.textContent = msg;
+  };
   /** Lista de opções logo abaixo do campo. host = elemento .combo (com um input e um .combo-list). */
   W.combo = (host, { fetch, label, sub, onPick }) => {
     const input = host.querySelector('input[type=text],input[type=search],input:not([type])'), list = host.querySelector('.combo-list');
@@ -180,7 +201,17 @@ window.BO = window.BO || {};
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
-  W.csv = (rows) => rows.map((r) => r.map((c) => { const s = String(c ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(';')).join('\r\n');
+  // CSV para o Excel em pt-BR: ";" como separador, vírgula decimal nos números e texto que começa com
+  // = + - @ (fórmula) neutralizado com apóstrofo, porque descrições de extrato vêm de terceiros.
+  const NUMERIC = /^-?\d+(\.\d+)?$/;
+  W.csvCell = (c) => {
+    if (typeof c === 'number' && Number.isFinite(c)) return String(c).replace('.', ',');
+    let s = String(c ?? '');
+    if (NUMERIC.test(s)) return s.replace('.', ',');
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  W.csv = (rows) => rows.map((r) => r.map(W.csvCell).join(';')).join('\r\n');
 
   /* ---------- seletor de período: calendário do Partners (js/mask.js) ---------- */
   W.rangeHtml = (from, to) => `<div class="range" data-range><input type="hidden" name="from" value="${esc(from || '')}"><input type="hidden" name="to" value="${esc(to || '')}"><input type="text" class="input" data-rangeinp aria-label="Período"></div>`;

@@ -34,10 +34,26 @@
   const toIso = (txt) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(txt || ''); if (!m) return ''; const d = new Date(+m[3], +m[2] - 1, +m[1]); return d.getFullYear() === +m[3] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[1] ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
   const toBr = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
   let pop = null;
-  const closePop = () => { if (pop) { pop.remove(); pop = null; document.removeEventListener('mousedown', outside, true); document.removeEventListener('keydown', esc, true); window.removeEventListener('resize', closePop); } };
+  const closePop = () => { if (pop) { pop.remove(); pop = null; document.removeEventListener('mousedown', outside, true); document.removeEventListener('click', outside, true); document.removeEventListener('keydown', esc, true); window.removeEventListener('resize', closePop); } };
   const outside = (e) => { if (pop && !pop.contains(e.target) && !pop.__input.contains(e.target)) closePop(); };
   const esc = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closePop(); } };
 
+  // Posiciona um calendário flutuante SEMPRE dentro da tela: abaixo do campo, ou acima se não couber;
+  // em tela estreita ou baixa vira folha presa à parte de baixo, com rolagem interna se precisar.
+  function place(pop, el) {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    pop.style.maxHeight = ''; pop.style.overflowY = ''; pop.classList.remove('cal-sheet');
+    let h = pop.offsetHeight; const w = pop.offsetWidth, r = el.getBoundingClientRect();
+    if (vw < 640 || h > vh - 16) {
+      pop.classList.add('cal-sheet'); pop.style.left = ''; pop.style.top = '';
+      pop.style.maxHeight = `${vh - 16}px`; pop.style.overflowY = 'auto';
+      return;
+    }
+    pop.style.left = `${Math.max(8, Math.min(r.left, vw - w - 8))}px`;
+    const below = r.bottom + 6, above = r.top - h - 6;
+    pop.style.top = `${below + h <= vh - 8 ? below : above >= 8 ? above : Math.max(8, vh - h - 8)}px`;
+  }
+  window.addEventListener('hashchange', () => closePop());   // navegar (inclusive Voltar) fecha o calendário
   function openCalendar(el) {
     closePop();
     const start = toIso(el.value) ? new Date(toIso(el.value) + 'T12:00:00') : new Date();
@@ -58,11 +74,18 @@
       pop.querySelector('[data-clear]').onclick = () => { el.value = ''; fire(el); closePop(); };
     };
     paint();
-    document.body.appendChild(pop);
-    const r = el.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
-    pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - w - 8))}px`;
-    pop.style.top = `${r.bottom + h + 12 > window.innerHeight && r.top > h + 12 ? r.top - h - 6 : r.bottom + 6}px`;
-    document.addEventListener('mousedown', outside, true); document.addEventListener('keydown', esc, true); window.addEventListener('resize', closePop);
+    // Dentro de um modal o calendário abre NO FLUXO, logo abaixo do campo: o formulário cresce e empurra o
+    // botão Salvar para baixo, então o calendário nunca fica por cima dele. Fora de modal, flutua como antes.
+    const host = el.closest('.modal') && (el.closest('.field') || el.parentElement);
+    if (host) {
+      pop.classList.add('cal-inline'); host.appendChild(pop);
+      pop.scrollIntoView({ block: 'nearest' });
+    } else {
+      document.body.appendChild(pop);
+      place(pop, el);
+    }
+    // embutido: fecha no "click" (o alvo do clique já foi decidido), para o Salvar não "fugir" do ponteiro
+    document.addEventListener(host ? 'click' : 'mousedown', outside, true); document.addEventListener('keydown', esc, true); window.addEventListener('resize', closePop);
   }
 
   /* ---------------- calendário de período (um calendário, início e fim) ---------------- */
@@ -117,9 +140,7 @@
       };
       paint();
       document.body.appendChild(pop);
-      const r = inp.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
-      pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - w - 8))}px`;
-      pop.style.top = `${r.bottom + h + 12 > window.innerHeight && r.top > h + 12 ? r.top - h - 6 : r.bottom + 6}px`;
+      place(pop, inp);
       document.addEventListener('mousedown', outside, true); document.addEventListener('keydown', esc, true); window.addEventListener('resize', closePop);
     };
     inp.addEventListener('click', open); inp.addEventListener('focus', open);
@@ -129,9 +150,16 @@
   function dateMask(el) {
     el.type = 'text'; el.inputMode = 'numeric'; el.autocomplete = 'off'; el.placeholder = el.placeholder || 'dd/mm/aaaa'; el.classList.add('date-input');
     if (/^\d{4}-/.test(el.value)) el.value = toBr(el.value);
-    el.addEventListener('input', () => { const d = el.value.replace(/\D/g, '').slice(0, 8); el.value = d.replace(/^(\d{2})(\d{0,2})(\d{0,4}).*/, (x, a, b, c) => a + (b ? '/' + b : '') + (c ? '/' + c : '')); });
-    el.addEventListener('focus', () => openCalendar(el));
-    el.addEventListener('click', () => { if (!pop || pop.__input !== el) openCalendar(el); });
+    // Digitar fecha o calendário (ele cobria o botão Salvar e um clique ali trocava a data sem salvar).
+    el.addEventListener('input', () => { if (pop && pop.__input === el) closePop(); const d = el.value.replace(/\D/g, '').slice(0, 8); el.value = d.replace(/^(\d{2})(\d{0,2})(\d{0,4}).*/, (x, a, b, c) => a + (b ? '/' + b : '') + (c ? '/' + c : '')); });
+    // Ao focar, seleciona a data atual: o que for digitado substitui em vez de ser ignorado.
+    el.addEventListener('focus', () => { setTimeout(() => { try { el.select(); } catch { /* campo já saiu */ } }, 0); });
+    el.addEventListener('keydown', (e) => { if (/^\d$/.test(e.key) && el.value.replace(/\D/g, '').length >= 8 && el.selectionStart === el.selectionEnd) el.value = ''; if (e.key === 'Tab' || e.key === 'Enter') { if (pop && pop.__input === el) closePop(); } if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); openCalendar(el); } });
+    // O calendário abre só pelo ícone à direita do campo (ou Alt+↓); clicar no texto é para digitar.
+    // Assim ele nunca fica aberto por acaso por cima do botão Salvar.
+    el.addEventListener('click', (e) => { const r = el.getBoundingClientRect(); if (e.clientX >= r.right - 44 && (!pop || pop.__input !== el)) openCalendar(el); });
+    el.title = el.title || 'Digite a data ou clique no ícone para escolher no calendário';
+    el.addEventListener('mouseup', () => { if (el.getAttribute('aria-invalid') === 'true' && el.selectionStart === el.selectionEnd) el.select(); });
   }
 
   const docMask = (el) => only(el, /[^0-9a-zA-Z]/g, (v) => { const d = v.replace(/\D/g, ''); return /^\d*$/.test(v) && d.length <= 11 ? d.slice(0, 11).replace(/^(\d{3})(\d{0,3})(\d{0,3})(\d{0,2}).*/, (m, a, b, c, d2) => a + (b ? '.' + b : '') + (c ? '.' + c : '') + (d2 ? '-' + d2 : '')) : v.toUpperCase().slice(0, 14).replace(/^(.{2})(.{0,3})(.{0,3})(.{0,4})(.{0,2}).*/, (m, a, b, c, d3, e) => a + (b ? '.' + b : '') + (c ? '.' + c : '') + (d3 ? '/' + d3 : '') + (e ? '-' + e : '')); });

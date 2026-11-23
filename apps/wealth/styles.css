@@ -310,6 +310,12 @@ tr.link { cursor: pointer; }
 tr.link:hover td { background: var(--hover); }
 
 .table-wrap { overflow-x: auto; }
+/* Indica que a tabela continua para o lado (celular): sombras nas bordas que somem ao chegar no fim */
+.table-wrap { background:
+  linear-gradient(to right, var(--surface, #fff) 30%, rgba(255,255,255,0)) left center / 32px 100% no-repeat local,
+  linear-gradient(to left, var(--surface, #fff) 30%, rgba(255,255,255,0)) right center / 32px 100% no-repeat local,
+  radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.14), rgba(0,0,0,0)) left center / 12px 100% no-repeat scroll,
+  radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.14), rgba(0,0,0,0)) right center / 12px 100% no-repeat scroll; }
 
 .empty { padding: 40px 24px; text-align: center; color: var(--faint); }
 
@@ -1065,6 +1071,11 @@ textarea.input.mono { font-size: 12px; resize: vertical; min-height: 72px; }
 /* Calendário próprio (campos de data) */
 .date-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239a8f88' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 7V3m8 4V3M4 11h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; background-size: 18px; padding-right: 42px; }
 
+.cal.cal-sheet { left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); top: auto; width: auto; margin: 0 auto; max-width: 420px; box-shadow: 0 -8px 40px rgba(43, 35, 33, 0.25); }
+.cal.cal-sheet.cal-wide { width: auto; max-width: 560px; flex-direction: column; }
+.cal.cal-inline { position: static; width: 100%; max-width: 320px; box-sizing: border-box; padding: 10px; margin-top: 8px; box-shadow: none; min-width: 0; }
+.cal.cal-inline .cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cal.cal-inline .cal-d { min-width: 0; height: 34px; }
 .cal { position: fixed; z-index: 1000; width: 296px; padding: 14px; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 12px 40px rgba(43, 35, 33, 0.18); font-size: 14px; }
 
 .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -1688,3 +1699,42 @@ svg.ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-wi
 .combo-item small { color: var(--muted, #8a7f78); font-size: 12px; white-space: nowrap; }
 .combo-item:hover, .combo-item.on { background: var(--rosa-tint); }
 .combo-empty { padding: 12px; color: var(--muted, #8a7f78); font-size: 14px; }
+
+/* ---------- v2: abas da Conta, planos, marca, visão a mercado/na curva ---------- */
+.tabs .tab-link { padding: 7px 14px; border-radius: 999px; font-weight: 700; font-size: 12.5px; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.tabs .tab-link:hover { color: var(--ink); }
+.tabs .tab-link.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(43, 35, 33, 0.14); }
+nav.tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 16px; margin-bottom: 24px; }
+.plan.current { border-color: var(--rosa); }
+.org-mark.has-logo { background: #fff; border: 1px solid var(--line); overflow: hidden; padding: 3px; }
+.org-mark.has-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.label-like { font-weight: 700; font-size: 12px; color: var(--muted); padding: 0; margin-bottom: 6px; }
+.code-box { white-space: pre-wrap; word-break: break-all; background: var(--soft); padding: 14px; border-radius: 14px; margin: 0; }
+.line-path.bench { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 2 4; }
+.legend-bench { display: inline-flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend-bench i { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--rosa); vertical-align: middle; margin-right: 6px; }
+.legend-bench i.alt { border-top: 2px dashed var(--ink); }
+.legend-bench i.bench { border-top: 2px dotted var(--muted); }
+.danger-zone { border-color: var(--danger, #c0392b); }
+
+/* ---------- v2 ciclo 2: menu com 6 seções cabe em 320 px; cabeçalho de gráfico e legendas no celular; alvos de 44 px ---------- */
+@media (max-width: 420px) {
+  .sidenav-mark { display: none; }
+  .sidenav { padding: 8px; gap: 0; justify-content: center; overflow-x: visible; }
+  .sidenav-items { gap: 2px; justify-content: center; width: 100%; }
+  .nav-btn { width: 44px; height: 44px; border-radius: 14px; }
+}
+.card-head { flex-wrap: wrap; }
+.card-head > .row { flex-wrap: wrap; gap: 8px; }
+.period { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.period a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--muted); text-decoration: none; font-family: inherit; }
+.period a.active { background: var(--field); color: var(--ink); }
+.tabs button, .tabs .tab-link { min-height: 44px; display: inline-flex; align-items: center; }
+.legend-row { min-width: 0; }
+.legend-row .grow { min-width: 0; overflow-wrap: anywhere; }
+.legend-row b { flex-shrink: 0; margin-left: 6px; }
+@media (max-width: 420px) {
+  .donut-box { flex-direction: column; align-items: stretch; }
+  .donut-box svg { align-self: center; }
+}
