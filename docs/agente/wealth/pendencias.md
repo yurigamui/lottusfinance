@@ -1,0 +1,36 @@
+# PENDENCIAS: Lottus Wealth
+
+Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a classificar" significa que o Verificador define na auditoria. Dono padrão: Yuri, salvo indicação.
+
+| ID | Descrição | Severidade | Dono | Prazo | Origem |
+| --- | --- | --- | --- | --- | --- |
+| W-001 | **Divergência encontrada em 23/11:** os documentos dizem que a migração do Wealth não foi aplicada, mas o histórico do projeto *Lottus Finance* mostra `wealth_1_tabelas_e_ajudantes` a `wealth_12_import_extrato_ocorrencias` aplicadas em 19/11 (27 tabelas `w_`, 1 perfil). Confirmar se foi intencional. Funções `wealth-pu` e `wealth-api` não estão no repositório | Alta | Yuri | imediato | inventário 23/11 |
+| W-002 | Gateway de pagamento: hoje o plano é definido por `w_admin_set_plan` pelo backend | a classificar | Yuri | a definir | lottus-wealth |
+| W-003 | B3 Área do Investidor e Open Investment aparecem como "Em breve" | a classificar | Yuri | a definir | lottus-wealth |
+| W-004 | COTAHIST desligado até confirmar os termos de uso da B3 | a classificar | Yuri / jurídico | a definir | lottus-wealth |
+| W-005 | Rentabilidade ponderada (cota) não implementada | a classificar | Agente | a definir | lottus-wealth |
+| W-006 | Importação de XLSX não implementada | a classificar | Agente | a definir | lottus-wealth |
+| W-007 | Páginas de termos de uso e privacidade ainda por criar | Alta | Yuri / jurídico | antes do lançamento | lottus-wealth |
+| W-008 | DPA e revisão LGPD (guarda de dados, controlador e operador) | Alta | jurídico | antes do lançamento | lottus-wealth |
+| W-009 | Acesso ao Open Finance sem ser instituição autorizada | a classificar | Yuri / jurídico | a definir | lottus-wealth |
+| W-010 | Formato de exportação da B3 e termos das cotações | a classificar | Yuri | a definir | lottus-wealth |
+| W-011 | Tratamento de proventos na v1 | a classificar | Yuri | a definir | lottus-wealth |
+| W-012 | Validar faixas de AuM, mínimo de R$ 200 e carência de 10 dias | Média | Yuri | a definir | lottus-wealth |
+| W-013 | Decidir se o Grátis tem 1 ou 3 carteiras | Média | Yuri | a definir | lottus-wealth |
+| W-014 | Decidir Centro de Custo e Grupo como eixos independentes | Média | Yuri | a definir | lottus-wealth |
+| W-015 | Confirmar 90 dias de guarda de relatórios e 12 meses para "Valor antigo" (sugestões) | Baixa | Yuri | a definir | lottus-wealth |
+| W-016 | `public.legacy_gl_lines` sem RLS: confirmada em 23/11 (sem grant para anon/authenticated, então não exposta hoje). Correção pronta em `20261123121000_seguranca_rls_e_helpers_internos.sql` | Bloqueante | Yuri (aplicar) | antes do lançamento | vinculos-wealth |
+| W-017 | Duplicidade de cadastros: tratar `profiles` como mestre de pessoa e `companies` como mestre de empresa; unicidade por CPF e CNPJ normalizado | Alta | Agente | a definir | vinculos-wealth |
+| W-018 | Banco e custodiante em texto livre em várias tabelas: trocar por referência a `w_banks` e `w_custodians` | Média | Agente | a definir | vinculos-wealth |
+| W-019 | Tabela única de endereços reutilizada por cobrança, contratos e assinatura | Média | Agente | a definir | vinculos-wealth |
+| W-020 | Tabelas gêmeas (`crm_leads` e `lottus_crm_leads`, `bill_invoices` e `lottus_bill_invoices`, `fin_accounts` e `lottus_fin_accounts`, `mkt_*` e `lottus_mkt_*`): confirmar qual está em uso | Média | Agente (relato) e Yuri (OK) | a definir | vinculos-wealth |
+| W-021 | LGPD: o Wealth não deve expor CPF a quem apenas visualiza; documentar a finalidade de cada uso do mesmo dado | Alta | Agente e jurídico | a definir | vinculos-wealth |
+| W-022 | `w_spend_update` e `w_rule_save` aceitavam contraparte/centro/grupo de outra carteira (IDOR de referência). Correção: gatilhos em `20261123120000_wealth_integridade_e_indices.sql` (aprovada com ressalvas) | Alta (corrigida, não aplicada) | Yuri (aplicar) | antes do lançamento | auditoria 23/11 |
+| W-023 | 16 chaves estrangeiras/`wallet_id` sem índice de apoio nas tabelas `w_`. Índices na mesma migração | Média (corrigida, não aplicada) | Yuri (aplicar) | antes do lançamento | auditoria 23/11 |
+| W-024 | `w_invoices` e `w_payment_events` sem `_guard_delete`. Gatilhos na mesma migração | Média (corrigida, não aplicada) | Yuri (aplicar) | antes do lançamento | auditoria 23/11 |
+| W-025 | `w_audit` sem `_guard_delete`: tem `ON DELETE CASCADE` da carteira; proteger depende da política de exclusão de carteira/conta (LGPD) | Média | Yuri / jurídico | a definir | auditoria 23/11 |
+| W-026 | `w_bank_delete` confere "em uso" sem filtrar a carteira (só revela se um id de conta de outra carteira está em uso; id é uuid) | Baixa | Agente | com o front | auditoria 23/11 |
+| W-027 | `_w_cadastro_lock` é INVOKER: se um dia houver escrita direta de `authenticated` em `w_cadastros` (hoje não há grant), a RLS esconderia usos de outras carteiras | Baixa | Agente | se mudar o modelo de acesso | verificação 23/11 (R3) |
+| W-028 | Custodiante em texto livre em `w_invest_tx.custodian` (399 lançamentos); trocar por `custodian_id` → `w_custodians` (parte de W-018) | Média | Agente | com o front | auditoria 23/11 |
+| W-029 | Pessoa duplicada: `w_profiles` guarda `name`, `cpf`, `phone`, que também existem em `profiles` (hoje 0 divergência). Mover para `profiles` exige mudar RPCs e front (parte de W-017) | Alta | Agente | bloqueada até o front chegar | auditoria 23/11 |
+| W-030 | Projeto Supabase separado "Lottus Wealth" (criado em 19/11) com as mesmas tabelas `w_` vazias e sem migrações registradas: duplica o modelo e pode confundir deploys | Média | Yuri | a definir | inventário 23/11 |

@@ -1,0 +1,40 @@
+# Dependências e saídas geradas
+node_modules/
+dist/
+build/
+.cache/
+coverage/
+*.log
+__pycache__/
+*.pyc
+
+# Sistema e editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# Segredos e ambientes locais (use .env.example como modelo)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+supabase/.temp/
+supabase/.branches/
+
+# Arquivos que não devem ir para o repositório
+*.zip
+*.rar
+*.7z
+*.dump
+*.sql.gz
+*.backup
+*.bak
+
+# Capturas e saídas dos testes locais
+.verificacao/

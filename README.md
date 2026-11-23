@@ -1,37 +1,107 @@
-# Lottus Partners
+<p align="center">
+  <img src="apps/site/img/logo-rosa.png" alt="Lottus" width="180">
+</p>
 
-Site dos fundos parceiros, publicado em **partners.lottusfinance.com.br**. Cada representante vê só as operações enviadas ao fundo dele:
+<p align="center">
+  Ecossistema de crédito e investimentos da Lottus: fundos, cedentes, investidores e assinaturas sobre um único login e um único banco.
+</p>
 
-- **Configurações:**
-  - **Conta Lottus:** aberta automaticamente depois da autorização do administrador do fundo (pedida uma vez, ao entrar). Durante a análise, pede os documentos conforme o tipo do fundo e acompanha a prova de vida. Com a conta ativa, aprovar = Pix na hora ao cedente, e as duplicatas viram boletos com Pix. Também define as regras dos boletos (multa, juros, desconto e prazo para pagar).
-  - **Política de crédito:** aceita, taxa e limite por nota da Lottus.
-  - **Equipe:** o administrador do fundo convida pessoas (Administrador, Aprovador com alçada, Consulta), edita, desliga e vê o histórico de alterações. Alertas por e-mail.
-- **Painel:** o que está esperando o fundo (aprovar e pagar), carteira a receber e vencidos, volume cedido, valor pago aos cedentes, taxa e prazo médios, volume pago por mês, recebimentos previstos por mês e os maiores sacados e cedentes da carteira. Período de 6, 12 ou 24 meses.
+---
 
-- **Para aprovar:** valores, sacados com rating, cedente com rating e documentos. "Aprovar" assina o aceite da cessão; "Recusar" passa a operação para o próximo fundo da fila.
-- **A pagar:** por enquanto, o fundo paga pelo próprio banco e registra o pagamento com o comprovante e o boleto (PDF) de cada duplicata. Com a Conta Lottus ligada, o Pix sai pela conta.
-- **Pagas** e **Todas**.
+## Plataformas
 
-Entrada com e-mail, senha e segundo fator. O primeiro acesso de cada fundo sai do Admin (Partes → Fundos → Acesso); depois, o administrador do fundo convida o resto da equipe. Login da equipe Lottus aqui é recusado com o aviso do endereço certo.
+| Plataforma | Para quem | Onde está | Estado |
+| --- | --- | --- | --- |
+| **Partners** | Fundos e gestoras (FIDC, securitizadora) aprovam, pagam e acompanham operações | [`apps/partners`](apps/partners) | Beta |
+| **Sign** | Quem assina e verifica documentos | [`apps/sign`](apps/sign) | Beta |
+| **Admin** | Equipe da Lottus (receita, clientes, comercial, financeiro, produtos) | [`apps/admin`](apps/admin) | Beta |
+| **Wealth** | Investidores e escritórios organizam patrimônio, investimentos e gastos | fora deste repositório | Beta (banco aplicado, front a trazer) |
+| **Invest** | Investidores de debêntures privadas (app Expo) | fora deste repositório | Parcial |
+| **Business** | Cedentes antecipam recebíveis (app) | fora deste repositório | Pausado |
+| **Site** | Visitantes: institucional, termos, privacidade, desenvolvedores, pagamento e ciência de cessão | [`apps/site`](apps/site) | No ar |
+| **News** | Visitantes: previsões do mercado e notícias | [`apps/news`](apps/news) | No ar |
+| **API** | Parceiros integram crédito e cadastro (documentação em `apps/site/desenvolvedores.html`) | Supabase (funções de borda) | Beta |
 
-Só tema claro. HTML, CSS e JavaScript puro, sem build. Usa o mesmo projeto Supabase do app e do Admin.
+```mermaid
+flowchart LR
+  subgraph Front["Fronts estáticos (apps/)"]
+    P[Partners]
+    S[Sign]
+    A[Admin]
+    W[Wealth]
+    SI[Site e News]
+  end
+  subgraph Apps["Apps Expo"]
+    I[Invest]
+    B[Business]
+  end
+  subgraph SB["Supabase (um projeto)"]
+    AU[(Auth<br/>login único)]
+    DB[(Postgres<br/>RLS em tudo)]
+    RPC[RPCs SECURITY DEFINER<br/>bo_ · w_ · invest_ · sign_]
+    EF[Funções de borda<br/>API, P.U., cobrança]
+    CR[pg_cron<br/>rotinas lottus-*]
+  end
+  P & S & A & W & SI & I & B --> AU
+  P & S & A & W & I & B --> RPC --> DB
+  SI --> EF --> DB
+  CR --> DB
+```
 
-## Publicar
+## Stack
 
-1. Publique esta pasta como site estático (Vercel, Netlify, Cloudflare Pages…) com o domínio `partners.lottusfinance.com.br`.
-2. No DNS, crie `partners` como CNAME para o endereço que a hospedagem indicar.
-3. No Supabase → Authentication → URL Configuration, acrescente `https://partners.lottusfinance.com.br/**` em Redirect URLs.
+- **Front:** HTML, CSS e JavaScript puros, sem build. `supabase-js` servido localmente (`js/vendor`), CSP estrita em cada `_headers`.
+- **Banco e back:** Supabase (Postgres 17, Auth com MFA, RLS, RPCs `SECURITY DEFINER`, funções de borda, Vault e `pg_cron`).
+- **Hospedagem:** Cloudflare Pages (lê `_headers` e `_redirects`) ou Vercel (`vercel.json`).
+- **Apps móveis:** Expo com React Native e expo-router (Invest e Business, fora deste repositório).
 
-## Arquivos
+## Rodar localmente
 
-| Arquivo | O que faz |
-|---|---|
-| `js/config.js` | Projeto Supabase e endereços |
-| `js/core.js` | Conexão, formatação, avisos, arquivos |
-| `js/ui.js` | Títulos, abas e listas |
-| `js/charts.js` | Gráfico de colunas (dica ao passar o mouse e tabela) |
-| `js/dashboard.js` | Painel do fundo |
-| `js/reports.js` | Relatório por período (PDF, A4 deitado, com gráficos) e extrato em CSV |
-| `js/settings.js` | Configurações: Conta Lottus e regras dos boletos, política de crédito, equipe e convites |
-| `js/portal.js` | Lista (busca e abas) e detalhe das operações (checklist, seleção de títulos, alçada, saldo da Conta Lottus, aprovar, recusar com motivo, pagar) |
-| `js/app.js` | Login, segundo fator, menu e navegação |
+Não há instalação. Sirva a pasta da plataforma com qualquer servidor estático:
+
+```bash
+python3 -m http.server 8080 --directory apps/partners
+```
+
+Abra `http://localhost:8080`. O front fala com o projeto Supabase configurado em `apps/<plataforma>/js/config.js`. Para testar sem tocar a produção, aponte esse arquivo para um **branch** do Supabase.
+
+Verificações (Node 20 ou mais novo, sem dependências):
+
+```bash
+node scripts/check.mjs
+```
+
+```bash
+node scripts/smoke.mjs partners
+```
+
+O primeiro confere sintaxe, links locais, CSP e segredos. O segundo abre as páginas no navegador (Playwright) de 320 a 1920 px, com a rede externa bloqueada, e aponta rolagem horizontal, cortes, erros de JS e violações de CSP.
+
+## Variáveis de ambiente
+
+Os fronts não usam variáveis de ambiente: só o endereço do projeto e a chave **publicável** (pública por definição) em `js/config.js`. As variáveis dos scripts locais e da CLI estão documentadas em [`.env.example`](.env.example). Segredos ficam no Vault do Supabase, nunca no repositório.
+
+## Estrutura
+
+```text
+apps/
+  admin/      Lottus Admin (backoffice)
+  partners/   Lottus Partners (fundos)
+  sign/       Lottus Sign (assinatura e verificação)
+  site/       site institucional e páginas públicas (gerado por build.py, dev.py e legal.py)
+  news/       Lottus News
+supabase/
+  migrations/ migrações novas, prontas e ainda não aplicadas
+docs/
+  manual-agente-desenvolvedor.md   o processo de desenvolvimento
+  agente/                          progresso, controle por plataforma e relatórios
+scripts/      verificações (check.mjs, smoke.mjs)
+_revisar/     arquivos sem uso aparente, aguardando decisão
+```
+
+## Documentação
+
+- [Manual do Agente Desenvolvedor](docs/manual-agente-desenvolvedor.md) e [`CLAUDE.md`](CLAUDE.md)
+- [Progresso](docs/agente/progresso.md) · [O que depende do Yuri](docs/agente/depende-de-mim.md)
+- [Como contribuir](CONTRIBUTING.md) · [Segurança](SECURITY.md)
+- README de publicação de cada plataforma em `apps/<plataforma>/README.md`

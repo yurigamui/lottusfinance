@@ -1,0 +1,7 @@
+# Dono de todo o repositório: revisa qualquer pull request.
+*                       @yurigamui
+# Áreas sensíveis (banco, segurança, CI) pedem revisão explícita.
+/supabase/              @yurigamui
+/apps/**/_headers       @yurigamui
+/.github/               @yurigamui
+/SECURITY.md            @yurigamui

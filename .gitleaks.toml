@@ -1,0 +1,20 @@
+# Configuração do Gitleaks: regras padrão + exceções documentadas.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Chaves públicas por definição (Supabase anon/publishable): só funcionam com RLS e podem ficar no front."
+regexes = [
+  '''sb_publishable_[A-Za-z0-9_-]+''',
+  # Exemplos fictícios da documentação da API (apps/site/dev.py e desenvolvedores.html):
+  # a chave de exemplo "lt_live_SUA_CHAVE" e o UUID de exemplo do cabeçalho Idempotency-Key.
+  '''lt_(live|test)_SUA_CHAVE''',
+  '''0b8f5a8e-2f8a-4a4f-9c1e-0f7a2c9d1e33''',
+]
+# Pasta "01 - Site" (apagada em 13/10/2026) tinha só a chave anon legada do Supabase (papel "anon", pública).
+# A recomendação de desligar as chaves JWT legadas está em docs/agente/depende-de-mim.md.
+paths = [
+  '''^01 - Site/''',
+  '''(^|/)vendor/''',
+  '''\.min\.js$''',
+]
