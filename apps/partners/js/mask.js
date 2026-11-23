@@ -34,7 +34,7 @@
   const toIso = (txt) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(txt || ''); if (!m) return ''; const d = new Date(+m[3], +m[2] - 1, +m[1]); return d.getFullYear() === +m[3] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[1] ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
   const toBr = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
   let pop = null;
-  const closePop = () => { if (pop) { pop.remove(); pop = null; document.removeEventListener('mousedown', outside, true); document.removeEventListener('keydown', esc, true); window.removeEventListener('resize', closePop); } };
+  const closePop = () => { if (pop) { pop.remove(); pop = null; document.removeEventListener('mousedown', outside, true); document.removeEventListener('click', outside, true); document.removeEventListener('keydown', esc, true); window.removeEventListener('resize', closePop); } };
   const outside = (e) => { if (pop && !pop.contains(e.target) && !pop.__input.contains(e.target)) closePop(); };
   const esc = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closePop(); } };
 
@@ -58,11 +58,20 @@
       pop.querySelector('[data-clear]').onclick = () => { el.value = ''; fire(el); closePop(); };
     };
     paint();
-    document.body.appendChild(pop);
-    const r = el.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
-    pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - w - 8))}px`;
-    pop.style.top = `${r.bottom + h + 12 > window.innerHeight && r.top > h + 12 ? r.top - h - 6 : r.bottom + 6}px`;
-    document.addEventListener('mousedown', outside, true); document.addEventListener('keydown', esc, true); window.addEventListener('resize', closePop);
+    // Dentro de um modal o calendário abre NO FLUXO, logo abaixo do campo: o formulário cresce e empurra o
+    // botão Salvar para baixo, então o calendário nunca fica por cima dele. Fora de modal, flutua como antes.
+    const host = el.closest('.modal') && (el.closest('.field') || el.parentElement);
+    if (host) {
+      pop.classList.add('cal-inline'); host.appendChild(pop);
+      pop.scrollIntoView({ block: 'nearest' });
+    } else {
+      document.body.appendChild(pop);
+      const r = el.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
+      pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - w - 8))}px`;
+      pop.style.top = `${r.bottom + h + 12 > window.innerHeight && r.top > h + 12 ? r.top - h - 6 : r.bottom + 6}px`;
+    }
+    // embutido: fecha no "click" (o alvo do clique já foi decidido), para o Salvar não "fugir" do ponteiro
+    document.addEventListener(host ? 'click' : 'mousedown', outside, true); document.addEventListener('keydown', esc, true); window.addEventListener('resize', closePop);
   }
 
   /* ---------------- calendário de período (um calendário, início e fim) ---------------- */
@@ -138,6 +147,7 @@
     // Assim ele nunca fica aberto por acaso por cima do botão Salvar.
     el.addEventListener('click', (e) => { const r = el.getBoundingClientRect(); if (e.clientX >= r.right - 44 && (!pop || pop.__input !== el)) openCalendar(el); });
     el.title = el.title || 'Digite a data ou clique no ícone para escolher no calendário';
+    el.addEventListener('mouseup', () => { if (el.getAttribute('aria-invalid') === 'true' && el.selectionStart === el.selectionEnd) el.select(); });
   }
 
   const docMask = (el) => only(el, /[^0-9a-zA-Z]/g, (v) => { const d = v.replace(/\D/g, ''); return /^\d*$/.test(v) && d.length <= 11 ? d.slice(0, 11).replace(/^(\d{3})(\d{0,3})(\d{0,3})(\d{0,2}).*/, (m, a, b, c, d2) => a + (b ? '.' + b : '') + (c ? '.' + c : '') + (d2 ? '-' + d2 : '')) : v.toUpperCase().slice(0, 14).replace(/^(.{2})(.{0,3})(.{0,3})(.{0,4})(.{0,2}).*/, (m, a, b, c, d3, e) => a + (b ? '.' + b : '') + (c ? '.' + c : '') + (d3 ? '/' + d3 : '') + (e ? '-' + e : '')); });

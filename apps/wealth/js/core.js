@@ -126,7 +126,7 @@ window.BO = window.BO || {};
     root.appendChild(t);
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 220); }, 4500);
   };
-  W.fail = (e) => W.toast('Não deu certo', e && e.message ? e.message : msgOf(''), 'error');
+  W.fail = (e) => { if (e && e.shownInField) return; W.toast('Não deu certo', e && e.message ? e.message : msgOf(''), 'error'); };
 
   /* ---------- janela / gaveta ---------- */
   let current = null;
@@ -161,7 +161,7 @@ window.BO = window.BO || {};
       if (!el.name) return;
       const iso = (window.BO.mask && window.BO.mask.toIso(el.value)) || (/^\d{4}-\d{2}-\d{2}$/.test(el.value) ? el.value : '');
       W.fieldError(el, '');
-      if (el.value.trim() && !iso) { W.fieldError(el, 'Data inválida. Use dd/mm/aaaa.'); el.focus(); throw new Error('Data inválida. Use dd/mm/aaaa.'); }
+      if (el.value.trim() && !iso) { W.fieldError(el, 'Data inválida. Use dd/mm/aaaa.'); el.focus(); const er = new Error('Data inválida. Use dd/mm/aaaa.'); er.shownInField = true; throw er; }
       o[el.name] = iso;
     }); return o; };
   // Mensagem de erro ao lado do campo (some na próxima tentativa)
