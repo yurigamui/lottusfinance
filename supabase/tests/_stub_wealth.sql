@@ -57,16 +57,16 @@ create function news.log_forecast() returns trigger language plpgsql as $f$ begi
 create trigger log_forecast after insert or update on news.forecasts for each row execute function news.log_forecast();
 
 -- Para 20261123122000 (Admin): equipe, notas e o helper de conferência, reduzidos ao que a RPC usa.
-create table public.staff_users (id uuid primary key default gen_random_uuid(), level text not null);
+create table public.staff_users (user_id uuid primary key default gen_random_uuid(), name text, level text not null, active boolean default true, created_at timestamptz default now());
 create table public.staff_log (id bigserial primary key, staff uuid, action text, entity text, entity_id text, company uuid, details jsonb);
 create table public.invoices (id uuid primary key default gen_random_uuid(), company_id uuid, sefaz_status text);
 create table public.nfe_checks_calls (invoice_id uuid, p jsonb);
 create function public._staff(p_min text) returns public.staff_users language plpgsql as $f$
 declare s public.staff_users; begin
-  select * into s from public.staff_users where id = nullif(current_setting('test.staff', true), '')::uuid;
+  select * into s from public.staff_users where user_id = nullif(current_setting('test.staff', true), '')::uuid;
   if not found then raise exception 'forbidden'; end if; return s; end $f$;
 create function public._staff_log(s public.staff_users, a text, e text, i text, c uuid, d jsonb) returns void language sql as $f$
-  insert into public.staff_log (staff, action, entity, entity_id, company, details) values (s.id, a, e, i, c, d) $f$;
+  insert into public.staff_log (staff, action, entity, entity_id, company, details) values (s.user_id, a, e, i, c, d) $f$;
 create function public._nfe_check_save(p_invoice uuid, p jsonb) returns jsonb language plpgsql as $f$ begin
   insert into public.nfe_checks_calls values (p_invoice, p);
   update public.invoices set sefaz_status = p->>'status' where id = p_invoice;
