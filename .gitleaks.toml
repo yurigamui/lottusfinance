@@ -1,0 +1,16 @@
+# Configuração do Gitleaks: regras padrão + exceções documentadas.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Chaves públicas por definição (Supabase anon/publishable): só funcionam com RLS e podem ficar no front."
+regexes = [
+  '''sb_publishable_[A-Za-z0-9_-]+''',
+]
+# Pasta "01 - Site" (apagada em 13/10/2026) tinha só a chave anon legada do Supabase (papel "anon", pública).
+# A recomendação de desligar as chaves JWT legadas está em docs/agente/depende-de-mim.md.
+paths = [
+  '''^01 - Site/''',
+  '''(^|/)vendor/''',
+  '''\.min\.js$''',
+]

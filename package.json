@@ -1,0 +1,12 @@
+{
+  "name": "lottusfinance",
+  "private": true,
+  "description": "Plataformas web da Lottus (front estático, sem build) e utilitários de verificação.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "node scripts/check.mjs"
+  }
+}
