@@ -19,8 +19,10 @@ Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (enviada ao GitHub; có
 - **Invest:** banco conferido; app fora do repo → bloqueado. `invest/relatorio.md`.
 - **API:** 3 de 22 funções sem JWT lidas e corretas; 19 não avaliadas. `api/relatorio.md`.
 
+- **Partners:** injeção de HTML corrigida (**aprovada com ressalvas**, 2 ciclos); 192 RPCs conferidas. `partners/relatorio.md`.
+
 ## Em andamento
-- **Partners:** correção de injeção de HTML (subtítulos e confirmação de Pix) em reverificação (ciclo 2).
+- Nada. Todo o restante está bloqueado por itens de `depende-de-mim.md` (ver `resumo-final.md`).
 
 ## Próximo passo exato (para "retome")
 1. Se o branch do Supabase existir (D-01): aplicar `supabase/migrations/*.sql` no branch, nesta ordem, e rodar `supabase/tests/*.sql` contra ele; ler os advisors.
