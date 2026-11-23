@@ -24,6 +24,30 @@ Lista consolidada do que o time de agentes não pode ou não deve fazer sozinho.
 - **Por quê:** a chave `anon` é pública por definição e só dá o acesso que a RLS permite; o risco é baixo. Como os fronts já usam a chave publicável nova, dá para desligar as legadas.
 - **Passo a passo:** Supabase → *Project Settings* → **API Keys** → *Legacy API keys* → confirme que nenhum app usa a chave legada → *Disable legacy keys*. O histórico não foi reescrito (regra do time).
 
+### S-02 · Ligar a proteção contra senhas vazadas (alerta do Supabase)
+- **O que:** o alerta de segurança do Supabase aponta `auth_leaked_password_protection` desligado.
+- **Por quê:** impede cadastro e troca de senha com senhas que já vazaram (o manual pede essa proteção ligada).
+- **Passo a passo:** Supabase → *Authentication* → *Providers* → *Email* (ou *Attack Protection*) → ligar *Prevent use of leaked passwords*.
+
+## 2b. Banco de produção: divergência e projeto duplicado
+- **W-001:** os documentos dizem que a migração do Wealth não foi aplicada, mas o histórico do projeto *Lottus Finance* mostra `wealth_1` a `wealth_12` aplicadas em 19/11. Confirme se foi intencional.
+- **W-030:** existe um segundo projeto Supabase, *Lottus Wealth* (us-east-2, criado em 19/11), com as mesmas tabelas `w_` vazias. Decida se ele deve existir; se não, pause-o no painel (o time não apaga nada).
+
+## 2c. Migrações prontas para aplicar (depois do branch, D-01)
+1. `20261123120000_wealth_integridade_e_indices.sql` — cadastros da mesma carteira, 16 índices, `_guard_delete` em `w_invoices` e `w_payment_events`. Diagnóstico antes: a consulta do cabeçalho deve dar 0.
+2. `20261123121000_seguranca_rls_e_helpers_internos.sql` — RLS em `legacy_gl_lines`, 34 helpers `_` sem `anon`, `search_path` em `news.log_forecast`.
+3. `20261123122000_admin_conferencia_manual_nfe.sql` — cria `bo_nfe_manual_check` (o botão da conferência manual da NF-e no Admin hoje sempre falha).
+- **Passo a passo:** no branch, `supabase db push` (ou colar cada arquivo no SQL Editor do branch, nesta ordem) e rodar `supabase/tests/*.sql` contra o branch. Depois, backup e o mesmo em produção, com o seu OK.
+
+## 2d. Dados que só você tem (o time não inventa)
+- **Site (S-001):** CNPJ, endereço da sede, encarregado de dados (LGPD) e comarca — aparecem como `[preencher]` no rodapé da home, nos Termos e na Privacidade.
+- **Site (S-002):** endereços do Instagram, LinkedIn e do app na App Store e no Google Play (hoje apontam para as páginas iniciais genéricas).
+- **Site (S-003):** qual versão dos Termos vale (no ar: 1.2 de 28/10; no gerador: 1.0).
+- **Sign:** quando `sign.lottusfinance.com.br` estiver no ar, acrescentar `signUrl: 'https://sign.lottusfinance.com.br/'` em `apps/partners/js/config.js` (passo 2 do README do Sign). Até lá, as assinaturas abrem no Partners.
+
+## 2e. Para auditar as telas logadas (Partners, Admin, Wealth)
+- Criar, **no branch** (nunca em produção), um usuário de fundo e um da equipe, com MFA, e dados fictícios. Sem isso, as telas depois do login só foram auditadas pelo código e com o Supabase simulado.
+
 ## 3. Configurações do GitHub (só o dono altera)
 
 O repositório é **público**. Em *Settings*:
