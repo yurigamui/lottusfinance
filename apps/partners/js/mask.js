@@ -38,6 +38,21 @@
   const outside = (e) => { if (pop && !pop.contains(e.target) && !pop.__input.contains(e.target)) closePop(); };
   const esc = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closePop(); } };
 
+  // Posiciona um calendário flutuante SEMPRE dentro da tela: abaixo do campo, ou acima se não couber;
+  // em tela estreita ou baixa vira folha presa à parte de baixo, com rolagem interna se precisar.
+  function place(pop, el) {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    pop.style.maxHeight = ''; pop.style.overflowY = ''; pop.classList.remove('cal-sheet');
+    let h = pop.offsetHeight; const w = pop.offsetWidth, r = el.getBoundingClientRect();
+    if (vw < 640 || h > vh - 16) {
+      pop.classList.add('cal-sheet'); pop.style.left = ''; pop.style.top = '';
+      pop.style.maxHeight = `${vh - 16}px`; pop.style.overflowY = 'auto';
+      return;
+    }
+    pop.style.left = `${Math.max(8, Math.min(r.left, vw - w - 8))}px`;
+    const below = r.bottom + 6, above = r.top - h - 6;
+    pop.style.top = `${below + h <= vh - 8 ? below : above >= 8 ? above : Math.max(8, vh - h - 8)}px`;
+  }
   function openCalendar(el) {
     closePop();
     const start = toIso(el.value) ? new Date(toIso(el.value) + 'T12:00:00') : new Date();
@@ -66,9 +81,7 @@
       pop.scrollIntoView({ block: 'nearest' });
     } else {
       document.body.appendChild(pop);
-      const r = el.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
-      pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - w - 8))}px`;
-      pop.style.top = `${r.bottom + h + 12 > window.innerHeight && r.top > h + 12 ? r.top - h - 6 : r.bottom + 6}px`;
+      place(pop, el);
     }
     // embutido: fecha no "click" (o alvo do clique já foi decidido), para o Salvar não "fugir" do ponteiro
     document.addEventListener(host ? 'click' : 'mousedown', outside, true); document.addEventListener('keydown', esc, true); window.addEventListener('resize', closePop);
@@ -126,9 +139,7 @@
       };
       paint();
       document.body.appendChild(pop);
-      const r = inp.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
-      pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - w - 8))}px`;
-      pop.style.top = `${r.bottom + h + 12 > window.innerHeight && r.top > h + 12 ? r.top - h - 6 : r.bottom + 6}px`;
+      place(pop, inp);
       document.addEventListener('mousedown', outside, true); document.addEventListener('keydown', esc, true); window.addEventListener('resize', closePop);
     };
     inp.addEventListener('click', open); inp.addEventListener('focus', open);
