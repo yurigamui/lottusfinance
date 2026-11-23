@@ -50,7 +50,7 @@
       try { await run(ev.currentTarget, () => rpc('partner_treasury_pay', { p: { kind: x.kind, ref_id: x.ref_id, account_id: f.acc.value, date: B.mask.iso(f.on) } }), 'Pagamento registrado'); await saveFee(); closeModal(); again(); } catch (e) { err.hidden = false; err.textContent = B.message(e); }
     };
     api.onclick = async (ev) => {
-      const ok = await B.confirmAction({ title: 'Enviar o Pix agora?', text: `${brl(x.amount)} para ${x.who}, pela conta ${f.acc.selectedOptions[0].textContent}. O Pix não pode ser desfeito.`, confirmLabel: 'Enviar Pix' });
+      const ok = await B.confirmAction({ title: 'Enviar o Pix agora?', text: `${brl(x.amount)} para ${esc(x.who)}, pela conta ${esc(f.acc.selectedOptions[0].textContent)}. O Pix não pode ser desfeito.`, confirmLabel: 'Enviar Pix' });
       if (ok == null) return payModal(x, accounts, f.acc.value, me, again);
       try { await run(ev.currentTarget, () => callEdge({ action: 'treasury_pay', kind: x.kind, ref_id: x.ref_id, account_id: f.acc.value }), 'Pix enviado'); await saveFee(); closeModal(); again(); }
       catch (e) { payModal(x, accounts, f.acc.value, me, again); const e2 = document.querySelector('#pe'); if (e2) { e2.hidden = false; e2.textContent = e.detail || B.message(e); } }

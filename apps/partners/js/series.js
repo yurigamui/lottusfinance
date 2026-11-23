@@ -337,7 +337,7 @@
     const line = B.dline;
     const sent = ctx.bol[x.id];
     const bolTxt = !sent ? 'Não enviado' : sent.status === 'draft' ? 'Rascunho' : (sent.signers || []).every((g) => g.status === 'signed') ? 'Totalmente assinado' : 'Enviado, aguardando assinaturas';
-    const box = B.drawer({ title: x.investor, subtitle: `${serie(x.series)} · integralização de ${date(x.pay_date || x.created_at)}`,
+    const box = B.drawer({ title: x.investor, subtitle: `${esc(serie(x.series))} · integralização de ${esc(date(x.pay_date || x.created_at))}`,
       body: `<div class="mini-row">${kpi('Valor inicial', brl(x.amount), `${esc(x.quantity)} debêntures`)}${kpi('Valor atual', brl(x.value), x.curPu ? 'P.U. hoje R$ ' + pu(x.curPu) : '')}${x.status === 'paid' ? kpi('Rendimento', (gain >= 0 ? '+' : '') + brl(gain), cost ? ((gain / cost) * 100).toFixed(2).replace('.', ',') + '%' : '', gain >= 0 ? '#2e7a57' : '#c73053') : ''}</div>
         <div class="u-mt14">${line('Situação', `<span class="tag ${st[1]}">${x.closed && x.status === 'paid' ? 'Resgatada' : st[0]}</span>`)}${line('P.U. adquirido', 'R$ ' + pu(x.unit_price))}${line('Quantidade adquirida', esc(x.quantity))}${x.status === 'paid' ? line('Quantidade em posição', esc(x.remaining)) : ''}${line('Data da integralização', esc(date(x.pay_date || x.created_at)))}${x.originator ? line('Originador', esc(x.originator)) : ''}${x.commission_amount ? line('Comissão', brl(x.commission_amount)) : ''}${line('Boletim', bolTxt)}</div>`,
       foot: `<button class="btn secondary" data-act="close">Fechar</button><button class="btn danger" data-act="del">Excluir</button><button class="btn secondary" data-act="edit">Editar</button>${x.status === 'pending' ? '<button class="btn secondary" data-act="pix">Pix</button><button class="btn" data-act="pay">Registrar pagamento</button>' : ''}${x.status !== 'cancelled' ? '<button class="btn" data-act="bol">Boletim</button>' : ''}` });
@@ -512,7 +512,7 @@
     const st = RST[x.status] || [x.status, ''];
     const kpi = B.mini;
     const line = B.dline;
-    const box = B.drawer({ title: x.investor, subtitle: `${serie(x.series)} · resgate de ${date(x.pay_date || x.created_at)}`,
+    const box = B.drawer({ title: x.investor, subtitle: `${esc(serie(x.series))} · resgate de ${esc(date(x.pay_date || x.created_at))}`,
       body: `<div id="rd"></div>`,
       foot: '<button class="btn secondary" data-act="close">Fechar</button><button class="btn danger" data-act="del">Excluir</button><button class="btn secondary" data-act="edit">Editar</button><button class="btn" data-act="bol">Boletim</button>' });
     const q = (a) => box.querySelector(`[data-act=${a}]`), host = box.querySelector('#rd');

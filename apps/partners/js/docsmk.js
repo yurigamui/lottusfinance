@@ -235,7 +235,7 @@
   }
   B.boletimDoc = async function (kind, id, item, onDone) {
     const x = await boletimPrep(kind, id, item);
-    B.reviewDoc({ title: x.label, subtitle: `${item.investor} · série ${item.series}`, kind: 'boletim_' + kind, ref_id: id, name: x.name, filename: x.filename, doc: x.doc, signers: x.signers,
+    B.reviewDoc({ title: x.label, subtitle: `${esc(item.investor)} · série ${esc(item.series)}`, kind: 'boletim_' + kind, ref_id: id, name: x.name, filename: x.filename, doc: x.doc, signers: x.signers,
       onDone: onDone || ((r, draft) => { location.hash = draft ? '#/contratos/rascunho' : '#/contratos/enviados'; }) });
   };
 
@@ -358,7 +358,7 @@
       if (esc2) (esc2.representatives || []).filter((r) => r.name).forEach((r) => signers.push({ name: r.name, cpf: r.cpf, email: r.email, phone: r.phone, role: 'Escriturador' }));
       [1, 2].forEach((n) => { if (f['tn' + n] && f['tn' + n].value.trim()) signers.push({ name: f['tn' + n].value.trim(), cpf: f['tc' + n].value, email: f['te' + n].value.trim(), role: 'Testemunha ' + n }); });
       closeModal();
-      B.reviewDoc({ title: KIND[kind], subtitle: data.cedente.legal_name, kind: 'op_' + kind, ref_id: opId, name: `${KIND[kind]} · ${data.cedente.legal_name}`, filename: `${tk}.pdf`,
+      B.reviewDoc({ title: KIND[kind], subtitle: esc(data.cedente.legal_name), kind: 'op_' + kind, ref_id: opId, name: `${KIND[kind]} · ${data.cedente.legal_name}`, filename: `${tk}.pdf`,
         doc: { title: tpl.title, short: KIND[kind], fund: prof.trade_name || prof.legal_name, text, inline: !loan }, signers, onDone });
     };
   };
@@ -371,7 +371,7 @@
     const [cidade, uf] = cityUf(prof.address, ['São Paulo', 'SP']);
     const vars = { cessionaria_razao: prof.legal_name, cessionaria_cnpj: fmtDoc(prof.cnpj), cessionaria_endereco: prof.address || '', cedente_razao: party.legal_name, cedente_cnpj: fmtDoc(party.cnpj),
       representante_nome: r0.name, representante_cpf: fmtDoc(r0.cpf), foro: cidade + '/' + uf, data_extenso: dExt(today()), multa_mora: '2%', juros_mora: '1%' };
-    B.reviewDoc({ title: 'Contrato-mãe', subtitle: party.legal_name, kind: 'contrato_mae', ref_id: party.id, name: `Contrato-mãe · ${party.legal_name}`, filename: 'contrato-mae.pdf',
+    B.reviewDoc({ title: 'Contrato-mãe', subtitle: esc(party.legal_name), kind: 'contrato_mae', ref_id: party.id, name: `Contrato-mãe · ${party.legal_name}`, filename: 'contrato-mae.pdf',
       doc: { title: tpl.title, short: 'Contrato-mãe', fund: prof.trade_name || prof.legal_name, text: render(tpl.body, vars), inline: false },
       signers: [{ auto: true, role: 'Cessionária' }, ...reps.map((r) => ({ name: r.name, cpf: r.cpf, email: r.email, phone: r.phone, role: 'Cedente' }))], onDone });
   };
