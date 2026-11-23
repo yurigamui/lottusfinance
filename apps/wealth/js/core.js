@@ -15,7 +15,7 @@ window.BO = window.BO || {};
     payment_required: 'Para criar ou assumir mais de uma carteira é preciso assinar o plano Pro.',
     plan_required: 'Disponível nos planos pagos. Assine em Conta > Plano.', billing_required: 'Informe os dados de cobrança para assinar o plano.',
     too_many_wallets: 'Para voltar ao Grátis, fique com uma carteira só (exclua ou arquive as outras).', confirm_mismatch: 'O nome digitado não confere com o da carteira.',
-    unauthorized: 'Chave de API inválida, expirada ou revogada.',
+    unauthorized: 'Chave de API inválida, expirada ou revogada.', too_many_attempts: 'Esta fatura já teve 3 tentativas. Fale com o suporte ou troque a forma de pagamento.',
     profile_required: 'Termine o seu cadastro primeiro.', email_not_confirmed: 'Confirme o e-mail da sua conta primeiro.',
     cpf_invalid: 'CPF inválido.', cpf_in_use: 'Este CPF já está cadastrado em outra conta.', name_required: 'Preencha o nome.', email_invalid: 'E-mail inválido.',
     invalid_role: 'Alçada inválida.', already_member: 'Esta pessoa já tem acesso à carteira.', last_manager: 'A carteira precisa ter ao menos um gestor.',
@@ -80,6 +80,7 @@ window.BO = window.BO || {};
     if ((m = s.match(/^(\d{4})(\d{2})(\d{2})/))) return `${m[1]}-${m[2]}-${m[3]}`;   // OFX
     return null;
   };
+  W.docFmt = (d) => { const s = String(d || '').replace(/\D/g, ''); return s.length === 11 ? s.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : s.length === 14 ? s.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : s; };
   W.initials = (s) => String(s || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
 
   /* ---------- ícones (traço 2,2px, estilo Lucide) ---------- */
@@ -105,6 +106,7 @@ window.BO = window.BO || {};
     pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
     mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
     lock: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
     eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
     cal: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
@@ -174,7 +176,8 @@ window.BO = window.BO || {};
     el.setAttribute('aria-invalid', 'true'); if (!m) { m = document.createElement('div'); m.className = 'field-err small neg'; m.setAttribute('role', 'alert'); fd.appendChild(m); } m.textContent = msg;
   };
   /** Lista de opções logo abaixo do campo. host = elemento .combo (com um input e um .combo-list). */
-  W.combo = (host, { fetch, label, sub, onPick }) => {
+  // lista de escolha só aparece depois de min letras digitadas (padrão 2): evita despejar milhares de nomes
+  W.combo = (host, { fetch, label, sub, onPick, min = 2 }) => {
     const input = host.querySelector('input[type=text],input[type=search],input:not([type])'), list = host.querySelector('.combo-list');
     let items = [], active = -1, tm, seq = 0;
     const close = () => { list.hidden = true; active = -1; };
@@ -182,7 +185,8 @@ window.BO = window.BO || {};
       list.innerHTML = items.length ? items.map((it, i) => `<button type="button" class="combo-item${i === active ? ' on' : ''}" data-i="${i}"><span>${esc(label(it))}</span>${sub ? `<small>${esc(sub(it))}</small>` : ''}</button>`).join('') : '<div class="combo-empty">Nada encontrado. Tente outro termo.</div>';
       list.hidden = false;
     };
-    const load = async () => { const n = ++seq; try { const r = await fetch(input.value.trim()); if (n !== seq) return; items = r || []; active = -1; render(); } catch (e) { close(); } };
+    const hint = () => { items = []; list.innerHTML = `<div class="combo-empty">Digite ao menos ${min} letras para ver as opções.</div>`; list.hidden = false; };
+    const load = async () => { if (input.value.trim().length < min) { ++seq; return hint(); } const n = ++seq; try { const r = await fetch(input.value.trim()); if (n !== seq) return; items = r || []; active = -1; render(); } catch (e) { close(); } };
     const pick = (i) => { const it = items[i]; if (!it) return; input.value = label(it); close(); onPick(it); };
     input.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(load, 200); if (host.__onType) host.__onType(); });
     input.addEventListener('focus', load);
@@ -196,6 +200,46 @@ window.BO = window.BO || {};
     document.addEventListener('click', (e) => { if (!host.contains(e.target)) close(); });
     return { close, load };
   };
+  // chama uma função de borda com a sessão do usuário; devolve null se não houver resposta válida (a tela segue sem ela)
+  W.fn = async (path, body) => {
+    try {
+      const { data } = await sb.auth.getSession(); const tok = data.session && data.session.access_token;
+      const r = await fetch(`${W.cfg.supabaseUrl}/functions/v1/${path}`, { method: 'POST', headers: { authorization: `Bearer ${tok}`, apikey: W.cfg.supabaseKey, 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+      if (!r.ok) return null; return await r.json();
+    } catch (e) { return null; }
+  };
+  // <select data-search>: vira campo de busca com a mesma regra (nomes só depois de 2 letras); o select continua sendo o valor do formulário
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  W.enhanceSelect = (sel) => {
+    if (sel.dataset.enh) return; sel.dataset.enh = '1';
+    const opts = [...sel.options]; const blank = opts.find((o) => o.value === '');
+    const host = document.createElement('div'); host.className = 'combo';
+    host.innerHTML = `<input class="input" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="${esc(blank ? blank.text + ' · digite para buscar' : 'Digite para buscar')}"><div class="combo-list" hidden></div>`;
+    sel.before(host); sel.hidden = true; sel.tabIndex = -1;
+    const input = host.firstElementChild; const list = host.lastElementChild; let items = [], active = -1;
+    const cur = () => opts.find((o) => o.value === sel.value);
+    const sync = () => { const o = cur(); input.value = o && o.value !== '' ? o.text : ''; };
+    const close = () => { list.hidden = true; active = -1; input.setAttribute('aria-expanded', 'false'); };
+    const render = () => {
+      const q = norm(input.value.trim());
+      if (q.length < 2) { items = []; list.innerHTML = '<div class="combo-empty">Digite ao menos 2 letras para ver as opções.</div>'; }
+      else { items = opts.filter((o) => o.value !== '' && norm(o.text).includes(q)).slice(0, 30); list.innerHTML = items.length ? items.map((o, i) => `<button type="button" class="combo-item${i === active ? ' on' : ''}" data-i="${i}"><span>${esc(o.text)}</span></button>`).join('') : '<div class="combo-empty">Nada encontrado.</div>'; }
+      list.hidden = false; input.setAttribute('aria-expanded', 'true');
+    };
+    const pick = (o) => { const ch = sel.value !== o.value; sel.value = o.value; sync(); close(); if (ch) sel.dispatchEvent(new Event('change', { bubbles: true })); };
+    input.addEventListener('input', () => { active = -1; render(); });
+    input.addEventListener('focus', () => { input.select(); render(); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (list.hidden) render(); if (items.length) { active = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; render(); } e.preventDefault(); }
+      else if (e.key === 'Enter' && !list.hidden && active >= 0) { pick(items[active]); e.preventDefault(); }
+      else if (e.key === 'Escape') { close(); sync(); e.stopPropagation(); }
+    });
+    list.addEventListener('mousedown', (e) => { const b = e.target.closest('.combo-item'); if (b) { e.preventDefault(); pick(items[Number(b.dataset.i)]); } });
+    // ao sair do campo: vazio volta à opção em branco; se a tela já mudou (navegação), não dispara nada
+    input.addEventListener('blur', () => { setTimeout(() => { if (!sel.isConnected) return; close(); if (!input.value.trim() && sel.value !== '' && blank) pick(blank); else sync(); }, 120); });
+    sync();
+  };
+  new MutationObserver(() => document.querySelectorAll('select[data-search]:not([data-enh])').forEach(W.enhanceSelect)).observe(document.documentElement, { childList: true, subtree: true });
   W.opts = (list, sel, blank) => (blank !== undefined ? `<option value="">${esc(blank)}</option>` : '') + list.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(sel ?? '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
   W.download = (name, text, type = 'text/csv;charset=utf-8') => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove();
@@ -214,7 +258,7 @@ window.BO = window.BO || {};
   W.csv = (rows) => rows.map((r) => r.map(W.csvCell).join(';')).join('\r\n');
 
   /* ---------- seletor de período: calendário do Partners (js/mask.js) ---------- */
-  W.rangeHtml = (from, to) => `<div class="range" data-range><input type="hidden" name="from" value="${esc(from || '')}"><input type="hidden" name="to" value="${esc(to || '')}"><input type="text" class="input" data-rangeinp aria-label="Período"></div>`;
+  W.rangeHtml = (from, to, months) => `<div class="range" data-range${months ? ` data-months="${esc(months.join(','))}"` : ''}><input type="hidden" name="from" value="${esc(from || '')}"><input type="hidden" name="to" value="${esc(to || '')}"><input type="text" class="input" data-rangeinp aria-label="Período"></div>`;
   W.initRanges = (root) => {
     const M = window.BO.mask; if (!M) return;
     (root || document).querySelectorAll('[data-range]').forEach((box) => {
@@ -223,7 +267,7 @@ window.BO = window.BO || {};
       M.rangePicker(inp, {
         get: () => ({ from: f.value, to: t.value }),
         set: (a, b) => { f.value = a || ''; t.value = b || ''; t.dispatchEvent(new Event('change', { bubbles: true })); },
-        presets: M.presetsStd({ months: [6, 12] }), emptyLabel: 'Todo o período',
+        presets: M.presetsStd({ months: box.dataset.months ? box.dataset.months.split(',').map(Number) : [6, 12] }), emptyLabel: 'Todo o período',
       });
     });
   };

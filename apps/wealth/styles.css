@@ -1738,3 +1738,16 @@ nav.tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width
   .donut-box { flex-direction: column; align-items: stretch; }
   .donut-box svg { align-self: center; }
 }
+
+/* ---------- v3: P.U. do dia, edição em lote, avisos de ativos ---------- */
+.pu-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 12px; background: var(--soft); }
+.bulk-bar { position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; margin-bottom: 12px; border-radius: 14px; background: var(--ink); color: var(--bg); }
+.bulk-bar .btn { background: var(--bg); color: var(--ink); }
+.warn-text { color: var(--warning); }
+.range-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.range-bar .field { min-width: 0; }
+.timeline { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.timeline li { display: flex; justify-content: space-between; gap: 10px; padding-left: 18px; position: relative; color: var(--muted); }
+.timeline li::before { content: ''; position: absolute; left: 0; top: 6px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--line); }
+.timeline li.done { color: var(--ink); }
+.timeline li.done::before { background: var(--rosa); border-color: var(--rosa); }
