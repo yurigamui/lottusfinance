@@ -38,3 +38,6 @@ Front verificado em 23/11 no navegador contra as funções reais do banco (Postg
 ## Últimas decisões
 
 Ver `decisoes.md` (documento `claude/wealth-decisoes.md`).
+
+## Wealth v2 (23/11/2026)
+Seções S1–S6 **aprovadas com ressalvas** em 2 ciclos do verificador (ciclo 1 reprovou: 1 bloqueante de segurança e 4 altos, todos corrigidos). S7 (preços) e S8 (cobrança) **não verificadas em execução** (sem Deno, rede e credenciais). Especificação: `v2-especificacao.md`. Migração `20261123125000` (não aplicada); testes `scripts/wealth-local/testes/v2.sql` (55 verificações). Próximo: v3 (`v3-plano.md`).

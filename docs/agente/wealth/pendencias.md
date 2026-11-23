@@ -52,3 +52,6 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-046 | v2: API sem limite de chamadas por minuto e sem escrita | Média | Agente | próxima rodada | v2 23/11 |
 | W-047 | v2: `w_equity` com benchmark faz uma soma por transação por mês; medir com volume real no branch (1.000+ transações, 60 meses) | Média | Agente | no branch (D-01) | v2 23/11 |
 | W-048 | v2: Grupos liberados no Pro e no Fund pelo `_w_group_plan_ok` atual; marca só no Fund (resolve W-039 na tela; confirmar) | Média | Yuri (plano) | antes do lançamento | v2 23/11 |
+| W-049 | v2 R1: com duas etapas ativas, código errado na troca de senha deixa a sessão no nível 1 até sair (a senha atual é conferida antes do código). Usar a reautenticação do Supabase (nonce) no lugar de `signInWithPassword` | Média | Agente | próxima rodada | verificação v2 ciclo 2 |
+| W-050 | v2 R2: `w_equity` com benchmark passa de 300 ms com 120 meses × 1.000 lançamentos (398 ms) ou 60 meses × 5.000 (670 ms); somar `tw` uma vez com janela | Média | Agente | próxima rodada | verificação v2 ciclo 2 |
+| W-051 | v2 R3/R4/R5: abas do gráfico quebram em 2 linhas em 320 px; erro de CPF/CNPJ de cobrança só no aviso e CPF/CEP sem máscara no cartão; logo Lottus some do menu até 420 px | Baixa | Agente | próxima rodada | verificação v2 ciclo 2 |
