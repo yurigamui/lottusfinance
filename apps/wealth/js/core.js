@@ -19,6 +19,8 @@ window.BO = window.BO || {};
     owner_must_manage: 'O titular da cobrança precisa continuar como gestor.', owner_cannot_leave: 'O titular da cobrança não pode sair; peça a outro gestor para removê-lo ou arquive a carteira.',
     owner_only: 'Só o titular da cobrança pode fazer isso.', not_found: 'Não encontrado.', invalid_value: 'Valor inválido.', invalid_file: 'Arquivo inválido ou grande demais.',
     in_use: 'Existem lançamentos nesta conta; exclua-os antes.', plan_required: 'Disponível no plano Fund.',
+    doc_invalid: 'CPF ou CNPJ inválido.', zip_invalid: 'CEP inválido.', invalid_name: 'Dê um nome com 2 a 80 caracteres.', user_not_found: 'Não há conta no Wealth com este CPF. Peça para a pessoa criar a conta primeiro.',
+    invalid_reference: 'Esse cadastro não pertence a esta carteira. Atualize a página e escolha de novo.',
     'Invalid login credentials': 'E-mail ou senha incorretos.', 'Email not confirmed': 'Confirme seu e-mail antes de entrar.', 'User already registered': 'Este e-mail já tem conta. Entre ou recupere a senha.',
   };
   const msgOf = (m) => { m = String(m || ''); if (MSG[m]) return MSG[m]; const k = Object.keys(MSG).find((x) => m.includes(x)); return k ? MSG[k] : 'Algo deu errado. Tente de novo.'; };

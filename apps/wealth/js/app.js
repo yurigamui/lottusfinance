@@ -32,7 +32,7 @@
     const m = path.match(r.re); const params = {}; r.keys.forEach((k, i) => { params[k] = decodeURIComponent(m[i + 1]); });
     W.closeModal();
     if (!r.public) {
-      if (!W.state.me) return W.go('/entrar');
+      if (!W.state.me) { try { sessionStorage.setItem('w_next', path); } catch { /* navegação privada */ } return W.go('/entrar'); }
       if (!W.state.me.profile || !W.state.me.profile.completed) { if (path !== '/finalizar') return W.go('/finalizar'); }
     }
     const ctx = { path, params, q, after: null, can: () => false, w: null, canWrite: false };
@@ -202,7 +202,9 @@
     });
     boxes[0].focus();
   }
-  async function afterLogin() { await loadMe(); W.state.wallets = []; W.go(W.state.me && W.state.me.profile && W.state.me.profile.completed ? '/carteiras' : '/finalizar'); }
+  // Depois de entrar, volta para a tela que a pessoa tentou abrir sem sessão (link de e-mail, favorito), se houver.
+  function nextPath() { let n = null; try { n = sessionStorage.getItem('w_next'); sessionStorage.removeItem('w_next'); } catch { /* navegação privada */ } return n && /^\/[a-z0-9/_-]*$/i.test(n) && n !== '/entrar' ? n : null; }
+  async function afterLogin() { await loadMe(); W.state.wallets = []; const done = W.state.me && W.state.me.profile && W.state.me.profile.completed; W.go(done ? (nextPath() || '/carteiras') : '/finalizar'); }
 
   W.route('/criar-conta', async (ctx) => {
     if (W.state.me) { W.go('/carteiras'); return ''; }
@@ -258,7 +260,7 @@
   }, { public: true, bare: true });
   W.forms.finish = async (f) => {
     const v = W.form(f);
-    try { W.state.me = await W.rpc('w_finish_signup', { p_name: v.name, p_cpf: v.cpf, p_phone: v.phone || null }); W.go('/carteiras'); }
+    try { W.state.me = await W.rpc('w_finish_signup', { p_name: v.name, p_cpf: v.cpf, p_phone: v.phone || null }); W.go(nextPath() || '/carteiras'); }
     catch (e) { document.getElementById('fn-err').innerHTML = `<div class="error-box">${esc(e.message)}</div>`; }
   };
 
