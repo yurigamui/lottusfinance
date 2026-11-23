@@ -1,5 +1,7 @@
 # Site institucional Lottus
 
+> **Atenção (23/11/2026):** `build.py` e `legal.py` estão **desatualizados** em relação ao `index.html` e ao `termos.html` publicados (os Termos no ar são a versão 1.2, de 28/10; o `legal.py` gera a 1.0). Rodar esses geradores agora **apaga mudanças do site**. Edite o HTML direto até alguém trazer as mudanças de volta para os geradores (pendência S-003 em `docs/agente/site/pendencias.md`). O `dev.py` está em dia com `desenvolvedores.html`.
+
 Página única (index.html): topo, Sobre a Lottus, Como funciona, Simulador, Confiança e segurança, Dúvidas e rodapé (Contato).
 Tudo é gerado por build.py: edite e rode `python3 build.py`.
 
