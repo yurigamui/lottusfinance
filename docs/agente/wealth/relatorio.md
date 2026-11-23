@@ -31,12 +31,15 @@
 | M4 | Média | Tabelas no celular rolam de lado sem indicação | Sombra nas bordas indicando rolagem |
 | Diversos | Baixa | "Novo dívida", e-mail capitalizado, texto de cobrança contraditório, "1 ignoradas", confirmação aberta após recusa, alçada do titular habilitada, erro antigo no cadastro | Corrigidos |
 
-Ciclos de verificação: ciclo 1 (Patrimônio reprovada por A1 e A2; demais aprovadas com ressalvas). Resultado do ciclo 2: ver `status.md`.
+Ciclos de verificação: 5. Reprovações e correções: ciclo 1 (calendário cobrindo o Salvar; data inválida salva como hoje), ciclo 2 (calendário aberto pelo ícone ainda cobria), ciclo 3 (calendário de período fora da tela no celular), ciclo 4 (fórmula de planilha no CSV, alto, segurança). **Ciclo 5: todas as partes aprovadas, sem bloqueante nem alto aberto.** Painel em `status.md`.
+
+Achados dos ciclos 3–5 também corrigidos: R1 calendário de período no celular (folha na parte de baixo), X1 CSV neutraliza fórmulas, X2 vírgula decimal, X4 logo só https, V1 calendário fecha ao navegar, X5 aspas preservadas na importação. O componente de data corrigido foi levado também ao Partners.
 
 ## 4. Pendências por severidade (detalhe em `pendencias.md`)
 - **Alta (dependem do Yuri):** W-031 cobrança fixa por carteira × decisão de AuM; W-032 e W-007 termos e privacidade do Wealth (o aceite não tem texto); W-008 DPA/LGPD; W-001 aplicação de 19/11; W-029 pessoa duplicada em `w_profiles`.
 - **Média:** M5/W-039 grupos anunciados no Pro, mas o banco exige Fund; W-038 busca de ativos sem índice de trigramas (medir no branch); W-033 pagamento sem gateway; W-025, W-028, W-030.
-- **Baixa:** B1 erros da cobrança só em aviso flutuante; W-036 impressão de PDF; W-037 inatividade.
+- **Média (código):** W-041 troca de senha sem pedir a atual; M4 tabelas no celular rolam de lado (com indicação).
+- **Baixa:** W-040 erros da cobrança só em aviso flutuante; W-042 Tipo e casas decimais no CSV; W-036 impressão de PDF; W-037 inatividade.
 
 ## 5. O que não foi testado
 Supabase real (e-mails de confirmação, convite e recuperação; MFA de verdade; desempenho com o volume real, ~35 mil ativos e 54 mil preços); função de borda `wealth-pu`/`wealth-api`; contraste AA medido, zoom de 200%, leitor de tela e aparelhos reais; impressão de PDF; 1.000+ lançamentos.
