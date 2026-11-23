@@ -61,3 +61,6 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-055 | v3: mês sem preço na fonte (ativo sem negócio no mês) fica como "buraco" e é baixado de novo a cada execução (limitado a 3–4 arquivos por execução) | Baixa | Agente | próxima rodada | revisão própria |
 | W-056 | v3: textos do recibo e do e-mail de atraso para o jurídico | Média | Yuri (jurídico) | antes de cobrar | verificação v3 ciclo 1 |
 | W-057 | v3 B5: visualizadora vê o formulário de Nova transação por `?new=1` (o servidor nega ao salvar) | Baixa | Agente | próxima rodada | verificação v3 (pré-existente) |
+| W-058 | v3 C2-B2: ao trocar um ativo de manual para "pela curva", o cálculo pode sobrescrever valores informados à mão nas mesmas datas (sem aviso) | Baixa | Agente | próxima rodada | verificação v3 ciclo 2 |
+| W-059 | v3 C2-B6: Gastos > Cadastros em 1280 px esconde botões de uma tabela de meia coluna atrás de rolagem lateral (fora do escopo da v3) | Baixa | Agente | próxima rodada | verificação v3 ciclo 2 |
+| W-038 | **Resolvida na v3:** índice de trigramas (pg_trgm) sobre o nome sem acento; busca em 50 mil ativos ~10 ms | — | — | — | v3 ciclo 3 |

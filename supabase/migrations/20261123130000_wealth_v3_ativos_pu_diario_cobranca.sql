@@ -173,7 +173,7 @@ begin
   v_from := greatest(v_from, coalesce((select least((select min(date) from public.w_invest_tx where wallet_id = p_wallet), (select min(date) from public.w_spend_tx where wallet_id = p_wallet),
                                                       (select min(opening_date) from public.w_bank_accounts where wallet_id = p_wallet))), v_from));
   if v_from > v_to then v_from := v_to; end if;
-  if v_to - v_from > 3700 then v_from := v_to - 3700; end if;
+  if v_to - v_from > 18300 then v_from := v_to - 18300; end if;  -- 50 anos (passo mensal acima de 1.500 dias)
   v_span := v_to - v_from;
   v_step := case when v_span <= 400 then 'dia' when v_span <= 1500 then 'semana' else 'mes' end;
   return jsonb_build_object('from', v_from, 'to', v_to, 'step', v_step, 'mode', m, 'benchmark', bm, 'points', coalesce((
@@ -325,7 +325,8 @@ revoke all on function public.w_price_coverage(uuid[]) from public, anon, authen
 grant execute on function public.w_price_coverage(uuid[]) to service_role;
 
 -- ============ 6. Busca sem acento (ciclo 2 da verificação) ============
-create or replace function public._w_norm(s text) returns text language sql immutable set search_path = '' as $$
+-- sem "set search_path" de propósito: assim o Postgres embute a função na consulta (só usa lower/translate do pg_catalog)
+create or replace function public._w_norm(s text) returns text language sql immutable parallel safe as $$
   select lower(translate(coalesce(s, ''), 'ÁÀÂÃÄáàâãäÉÈÊËéèêëÍÌÎÏíìîïÓÒÔÕÖóòôõöÚÙÛÜúùûüÇçÑñ', 'AAAAAaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNn'));
 $$;
 revoke all on function public._w_norm(text) from public, anon;
@@ -333,7 +334,7 @@ grant execute on function public._w_norm(text) to authenticated, service_role;
 
 create or replace function public.w_asset_search(p_wallet uuid, p_q text)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare q text := public._w_norm(trim(coalesce(p_q, '')));
+declare q text := replace(replace(replace(public._w_norm(trim(coalesce(p_q, ''))), '\', '\\'), '%', '\%'), '_', '\_');
 begin
   perform public._w_need(p_wallet, 'visualizador');
   if char_length(q) < 2 then return '[]'::jsonb; end if;
@@ -346,7 +347,7 @@ end $$;
 
 create or replace function public.w_custodian_search(p_q text)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare q text := public._w_norm(trim(coalesce(p_q, '')));
+declare q text := replace(replace(replace(public._w_norm(trim(coalesce(p_q, ''))), '\', '\\'), '%', '\%'), '_', '\_');
 begin
   if auth.uid() is null then raise exception 'forbidden'; end if;
   if char_length(q) < 2 then return '[]'::jsonb; end if;
@@ -357,7 +358,7 @@ end $$;
 
 create or replace function public.w_bank_catalog_search(p_q text)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare q text := public._w_norm(trim(coalesce(p_q, '')));
+declare q text := replace(replace(replace(public._w_norm(trim(coalesce(p_q, ''))), '\', '\\'), '%', '\%'), '_', '\_');
 begin
   if auth.uid() is null then raise exception 'forbidden'; end if;
   if char_length(q) < 2 and q !~ '^\d+$' then return '[]'::jsonb; end if;
@@ -366,3 +367,28 @@ begin
      where public._w_norm(name) like '%' || q || '%' or public._w_norm(full_name) like '%' || q || '%' or code like q || '%'
      order by (code = q) desc, name limit 30) s), '[]'::jsonb);
 end $$;
+
+-- ============ 7. Histórico de preços: meses já tentados (ciclo 3 da verificação) ============
+-- Um mês que a fonte não tem (arquivo ausente, ativo sem negócio) não pode travar o preenchimento dos demais:
+-- o robô anota a tentativa e só tenta de novo depois de 30 dias.
+create table if not exists public.w_price_backfill (asset_id uuid not null references public.w_assets(id) on delete cascade, month text not null check (month ~ '^\d{4}-\d{2}$'),
+  tried_at timestamptz not null default now(), found boolean not null default false, primary key (asset_id, month));
+alter table public.w_price_backfill enable row level security;
+revoke all on table public.w_price_backfill from anon, authenticated;
+grant select, insert, update, delete on table public.w_price_backfill to service_role;
+
+create or replace function public.w_price_coverage(p_ids uuid[])
+returns table(asset_id uuid, first_price date, last_price date, first_tx date, first_pu numeric, months text[])
+language sql stable security definer set search_path = '' as $$
+  -- meses com preço + meses tentados nos últimos 30 dias (sem dados na fonte): os dois contam como "não falta"
+  select a.id, f.date, (select max(p.date) from public.w_asset_prices p where p.asset_id = a.id),
+         (select min(t.date) from public.w_invest_tx t where t.asset_id = a.id), f.pu,
+         (select array_agg(distinct m) from (select to_char(p.date, 'YYYY-MM') m from public.w_asset_prices p where p.asset_id = a.id
+                                             union all select b.month from public.w_price_backfill b where b.asset_id = a.id and (b.found or b.tried_at > now() - interval '30 days')) x)
+    from unnest(p_ids) a(id) left join lateral (select p.date, p.pu from public.w_asset_prices p where p.asset_id = a.id order by p.date limit 1) f on true;
+$$;
+
+-- ============ 8. Índice da busca sem acento (resolve W-038; pg_trgm vem com o Supabase, não estava ligado) ============
+create extension if not exists pg_trgm with schema extensions;
+create index if not exists w_assets_name_norm_trgm on public.w_assets using gin (public._w_norm(name) extensions.gin_trgm_ops);
+create index if not exists w_custodians_name_norm_trgm on public.w_custodians using gin (public._w_norm(name) extensions.gin_trgm_ops);

@@ -151,4 +151,26 @@ begin
   perform pg_temp.ok(pg_temp.err(format('select public.w_pu_at(%L, %L, %L, true)', wid, '11111111-0000-4000-8000-000000000001', current_date)) = 'forbidden'
     and pg_temp.err(format('select public.w_pu_at(%L, %L, %L)', wid, '11111111-0000-4000-8000-000000000001', current_date)) = 'ok', 'C4-M7 visualizador consulta, mas não dispara a busca na fonte');
 end $$;
+-- ciclo 3 da verificação
+do $$
+declare ana uuid := 'a0000000-0000-4000-8000-000000000001'; wid uuid := current_setting('t.wid')::uuid; c record; t0 timestamptz; ms numeric;
+begin
+  -- C2-A2: mês tentado sem dados deixa de contar como buraco (por 30 dias); o preenchimento segue para o próximo
+  insert into public.w_price_backfill (asset_id, month, found) values ('11111111-0000-4000-8000-000000000002', to_char(current_date - 1200, 'YYYY-MM'), false);
+  select * into c from public.w_price_coverage(array['11111111-0000-4000-8000-000000000002']::uuid[]);
+  perform pg_temp.ok(to_char(current_date - 1200, 'YYYY-MM') = any(c.months), 'C5-A2 mês tentado sem dados não é mais buraco');
+  update public.w_price_backfill set tried_at = now() - interval '31 days' where asset_id = '11111111-0000-4000-8000-000000000002';
+  select * into c from public.w_price_coverage(array['11111111-0000-4000-8000-000000000002']::uuid[]);
+  perform pg_temp.ok(not (to_char(current_date - 1200, 'YYYY-MM') = any(c.months)), 'C5-A2 depois de 30 dias tenta de novo');
+  perform pg_temp.ok(not has_table_privilege('authenticated', 'public.w_price_backfill', 'select') and not has_table_privilege('anon', 'public.w_price_backfill', 'select'), 'C5 registro de tentativas fechado ao navegador');
+  -- C2-B4: curingas digitados são texto
+  perform set_config('request.jwt.claims', json_build_object('sub', ana, 'role', 'authenticated')::text, true);
+  perform pg_temp.ok(public.w_asset_search(wid, '%%') = '[]'::jsonb and public.w_custodian_search('__') = '[]'::jsonb, 'C5-B4 "%%" e "__" não viram curingas');
+  -- C2-M1: busca sem acento rápida com 50 mil ativos no catálogo
+  insert into public.w_assets (kind, name, cnpj_fundo, pu_inicial) select 'fundo', 'Fundo Carga Exemplo Ação ' || g, lpad(g::text, 13, '0') || '7', 1 from generate_series(1, 50000) g;
+  analyze public.w_assets;
+  perform public.w_asset_search(wid, 'carga exemplo acao 4999');
+  t0 := clock_timestamp(); perform public.w_asset_search(wid, 'carga exemplo acao 4999'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
+  perform pg_temp.ok(jsonb_array_length(public.w_asset_search(wid, 'carga exemplo acao 4999')) >= 1 and ms < 150, format('C5-M1 busca sem acento em 50 mil ativos: %s ms', round(ms)));
+end $$;
 rollback;

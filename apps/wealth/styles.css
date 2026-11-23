@@ -1759,3 +1759,13 @@ td.pick, th.pick { width: 44px; padding: 0 !important; }
 td.pick label, th.pick label { display: grid; place-items: center; min-width: 44px; min-height: 44px; cursor: pointer; }
 td.pick input, th.pick input { width: 20px; height: 20px; }
 @media (max-width: 640px) { .inv-list td.actions { white-space: normal; } .inv-list td.actions .btn { display: flex; justify-content: center; margin: 2px 0; } }
+/* ---------- v3 ciclo 3: faturas e ativos sem ações escondidas em nenhuma largura ---------- */
+.inv-list td, .inv-list th { white-space: normal; }
+.inv-list td.actions { white-space: nowrap; }
+.show-md { display: none; }
+@media (max-width: 1100px) { .hide-md { display: none; } .show-md { display: block; } .show-md.row { display: flex; } }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 640px) { .inv-list td.actions { white-space: normal; width: 1%; } .inv-list td.actions .btn { display: flex; justify-content: center; margin: 2px 0; } }
+@media (max-width: 400px) { table.fit td, table.fit th { padding-left: 8px !important; padding-right: 8px !important; } table.fit td.actions .btn { padding-left: 10px; padding-right: 10px; } }
+.show-xs { display: none; }
+@media (max-width: 400px) { .hide-xs { display: none; } .show-xs { display: block; } }

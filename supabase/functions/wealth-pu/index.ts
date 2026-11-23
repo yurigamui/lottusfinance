@@ -233,9 +233,17 @@ function cvmParse(text: string, byCnpj: Map<string, Asset>, want: (a: Asset, dat
 }
 async function cvmFile(ym: string): Promise<string | null> {
   const r = await fetch(`https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/inf_diario_fi_${ym}.zip`);
-  if (!r.ok) return null;
-  const files = unzipSync(new Uint8Array(await r.arrayBuffer()));
-  return new TextDecoder('latin1').decode(Object.values(files)[0]);
+  if (r.ok) { const files = unzipSync(new Uint8Array(await r.arrayBuffer())); return new TextDecoder('latin1').decode(Object.values(files)[0]); }
+  // anos antigos: a CVM guarda em HIST/ um arquivo por ano (vários CSV mensais dentro); usamos só o do mês pedido
+  const h = await fetch(`https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/HIST/inf_diario_fi_${ym.slice(0, 4)}.zip`);
+  if (!h.ok) return null;
+  const files = unzipSync(new Uint8Array(await h.arrayBuffer()));
+  const name = Object.keys(files).find((n) => n.includes(ym)); return name ? new TextDecoder('latin1').decode(files[name]) : null;
+}
+// anota a tentativa de cada ativo naquele mês (achou ou não): mês sem dados não trava o preenchimento dos outros
+async function markTried(month: string, ids: Iterable<string>, found: Set<string>) {
+  const rows = [...ids].map((id) => ({ asset_id: id, month, tried_at: new Date().toISOString(), found: found.has(id) }));
+  for (let i = 0; i < rows.length; i += 500) await sb.from('w_price_backfill').upsert(rows.slice(i, i + 500), { onConflict: 'asset_id,month' });
 }
 // Fundos: cota mais recente de todo o catálogo; para quem usa o fundo, histórico desde a 1ª aplicação
 // (até CVM_BACKFILL_MONTHS arquivos mensais por execução, padrão 4; o resto vem nas próximas execuções).
@@ -253,13 +261,15 @@ async function cvm(assets: Asset[], today: Date, keepAll: Set<string>, cov: Cov)
   const back = [...gap.keys()].sort().slice(0, Number(Deno.env.get('CVM_BACKFILL_MONTHS') ?? 4));
   for (const ym of [...months, ...back]) {
     try {
-      const text = await cvmFile(ym); if (!text) throw new Error('arquivo indisponível');
       const isCur = months.has(ym);
+      const text = await cvmFile(ym);
+      if (!text) { if (!isCur) await markTried(`${ym.slice(0, 4)}-${ym.slice(4)}`, gap.get(ym) ?? [], new Set()); throw new Error('arquivo indisponível'); }
       const rows = cvmParse(text, byCnpj, (a, date) => (isCur ? (from.has(a.id) ? date >= from.get(a.id)! : true) : (gap.get(ym)?.has(a.id) ?? false)));
       // para os fundos do catálogo que ninguém usa, só a cota mais recente
       const latest = new Map<string, any>(); const keep: any[] = [];
       for (const r of rows) { if (from.has(r.asset_id)) keep.push(r); else { const c = latest.get(r.asset_id); if (!c || c.date < r.date) latest.set(r.asset_id, r); } }
       await upsertPrices([...keep, ...latest.values()]);
+      if (!isCur) await markTried(`${ym.slice(0, 4)}-${ym.slice(4)}`, gap.get(ym) ?? [], new Set(keep.map((r) => r.asset_id)));
       log.push(`CVM ${ym}: ${keep.length} cotas de fundos usados, ${latest.size} cotas do catálogo`);
     } catch (e) { log.push(`CVM ${ym}: falhou (${(e as Error).message})`); }
   }
@@ -308,9 +318,11 @@ async function b3(assets: Asset[], today: Date, keepAll: Set<string>, cov: Cov) 
   const months = [...gap.keys()].sort().slice(0, Number(Deno.env.get('B3_BACKFILL_MONTHS') ?? 3));
   for (const ym of months) {
     try {
-      const text = await cotahistFile(`COTAHIST_M${ym.slice(5, 7)}${ym.slice(0, 4)}.ZIP`); if (!text) throw new Error('arquivo indisponível');
+      const text = await cotahistFile(`COTAHIST_M${ym.slice(5, 7)}${ym.slice(0, 4)}.ZIP`);
+      if (!text) { await markTried(ym, gap.get(ym)!, new Set()); throw new Error('arquivo indisponível'); }
       const rows = cotahistParse(text, byTick, (a) => gap.get(ym)!.has(a.id));
-      await upsertPrices(rows); log.push(`B3 histórico ${ym}: ${rows.length} preços`);
+      await upsertPrices(rows); await markTried(ym, gap.get(ym)!, new Set(rows.map((r) => r.asset_id)));
+      log.push(`B3 histórico ${ym}: ${rows.length} preços`);
     } catch (e) { log.push(`B3 histórico ${ym}: falhou (${(e as Error).message})`); }
   }
   // o mês corrente que falta para os ativos usados: arquivos diários (no máximo 25 por execução)
@@ -470,7 +482,8 @@ Deno.serve(async (req) => {
     for (const a of rf) {
       const c = cov.get(a.id);
       // se taxa, emissão ou P.U. de emissão mudaram (ex.: edição em lote), o P.U. guardado no 1º dia não bate: recalcula tudo desde a emissão
-      const firstOk = !!(c?.first_price && c.first_price <= a.issue_date! && c.first_pu !== null && c.first_pu !== undefined && (() => { const q = priceAsset(a, c.first_price!, curves, null); return !!q && Math.abs(q.pu - Number(c.first_pu)) < 1e-6 * Math.max(1, q.pu); })());
+      let firstBiz = D(a.issue_date!); while (!isBiz(firstBiz)) firstBiz = new Date(firstBiz.getTime() + 864e5); // emissão em fim de semana/feriado
+      const firstOk = !!(c?.first_price && c.first_price <= iso(firstBiz) && c.first_pu !== null && c.first_pu !== undefined && (() => { const q = priceAsset(a, c.first_price!, curves, null); return !!q && Math.abs(q.pu - Number(c.first_pu)) < 1e-6 * Math.max(1, q.pu); })());
       if (c && !firstOk && c.first_price) await sb.from('w_asset_prices').delete().eq('asset_id', a.id).eq('source', 'curva');
       let start = firstOk && c?.last_price ? addDays(c.last_price, 1) : a.issue_date!;
       if (c?.last_price && start > todayIso) start = todayIso; // recalcula o dia de hoje (índice novo pode ter chegado)
