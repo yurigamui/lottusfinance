@@ -66,4 +66,4 @@ Não rodado localmente: o binário do Gitleaks (o download foi bloqueado pela po
 `README.md` com propósito, mapa das 8 frentes, diagrama Mermaid, stack, como rodar, variáveis, estrutura e links; README curto em cada `apps/<plataforma>`; `CONTRIBUTING.md`; modelos de issue (defeito, melhoria) e de pull request; padrão de commit `plataforma/seção: o que mudou`. Sem `LICENSE` (G-02). Descrição, tópicos e imagem social prontos em `depende-de-mim.md` (G-01).
 
 ## 5. O que depende do Yuri
-G-04 (acesso de push: **urgente**, o trabalho está só no contêiner), P-01 (apontar a hospedagem para as pastas novas **antes** do merge), P-02, P-03, G-01 a G-03, configurações do GitHub (seção 3 de `depende-de-mim.md`), S-01, S-02, D-01, D-02.
+P-01 (apontar a hospedagem para as pastas novas **antes** do merge), P-02, P-03, G-01 a G-03, configurações do GitHub (seção 3 de `depende-de-mim.md`), S-01, S-02, D-01, D-02.

@@ -88,7 +88,8 @@ O repositório é **público**. Em *Settings*:
 - `_revisar/partners-js-nao-carregados/receipts.js`: o `index.html` do Partners não carrega este arquivo (recebimentos: baixa pelo extrato, ocorrências e recompras). Se era trabalho em andamento, diga para religar.
 - **Passo a passo:** responda "pode apagar `_revisar/...`" ou "religue ...".
 
-### G-04 · Acesso de push do Claude ao repositório (23/11/2026) — URGENTE
+### G-04 · Acesso de push do Claude ao repositório (23/11/2026) — RESOLVIDO
+- **Atualização:** o push voltou a funcionar mais tarde na mesma sessão; a branch `agentes-autonomo` está no GitHub.
 - **O que:** o `git push` da branch `agentes-autonomo` voltou **403** ("Claude doesn't have GitHub access to yurigamui/lottusfinance").
 - **Por quê:** os commits ficam só no contêiner desta sessão, que é apagado por inatividade. Sem o push, o trabalho se perde.
 - **Passo a passo:** reconecte o GitHub em https://claude.ai/connect-github e instale o Claude GitHub App no repositório (https://github.com/apps/claude/installations/select_target). Depois diga "retome" nesta mesma sessão: o primeiro passo é `git push -u origin agentes-autonomo`.

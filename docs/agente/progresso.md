@@ -1,6 +1,6 @@
 # Progresso do time autônomo Lottus
 
-Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (**ainda não enviada ao GitHub**: push recusado com 403, ver `depende-de-mim.md` G-04).
+Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (enviada ao GitHub; cópia em `claude/blissful-dijkstra-mw332a`).
 
 ## Plano (5 linhas)
 1. Repositório público: varrer segredos e dados de negócio primeiro (histórico incluído), depois organizar em `apps/<plataforma>`, `docs/`, `scripts/`, `supabase/migrations`, com `git mv`.
@@ -23,7 +23,6 @@ Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (**ainda não enviada a
 - **Partners:** correção de injeção de HTML (subtítulos e confirmação de Pix) em reverificação (ciclo 2).
 
 ## Próximo passo exato (para "retome")
-1. `git push -u origin agentes-autonomo` (depois do G-04).
-2. Se o branch do Supabase existir (D-01): aplicar `supabase/migrations/*.sql` no branch, nesta ordem, e rodar `supabase/tests/*.sql` contra ele; ler os advisors.
-3. Se o código do Wealth/Invest/funções chegar (D-02): B0 do front do Wealth (`node scripts/smoke.mjs wealth`) e leitura das 19 funções de borda restantes (API-02).
-4. Com usuários de teste no branch (2e): auditar as telas logadas do Partners (10 áreas) e do Admin, seção por seção.
+1. Se o branch do Supabase existir (D-01): aplicar `supabase/migrations/*.sql` no branch, nesta ordem, e rodar `supabase/tests/*.sql` contra ele; ler os advisors.
+2. Se o código do Wealth/Invest/funções chegar (D-02): B0 do front do Wealth (`node scripts/smoke.mjs wealth`) e leitura das 19 funções de borda restantes (API-02).
+3. Com usuários de teste no branch (2e): auditar as telas logadas do Partners (10 áreas) e do Admin, seção por seção.
