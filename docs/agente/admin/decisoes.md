@@ -7,3 +7,4 @@
 | 23/11/2026 | Funções `w_admin_*` seguem só para service_role; Admin as acessa por wrappers `bo_w_*` com checagem de nível e `_staff_log` | Segurança por padrão | Maestro | Dar grant de `w_admin_*` a authenticated |
 | 23/11/2026 | **D1: catálogo único de planos** (uma tabela de planos para Sign, Partners e Wealth + preço personalizado por cliente com validade e motivo) | Uma tela só; preço deixa de ficar espalhado | Yuri | Manter 4 mecanismos |
 | 23/11/2026 | G1 adotado como aprovado para as Partes 1 e 2 (sem regra de negócio), pela resposta a D1; Partes 3 e 4 seguem travadas até D2 a D4 | Yuri respondeu D1 sem ressalvas à Ficha | Maestro (leitura mais razoável) | Esperar aprovação formal |
+| 23/11/2026 | Parte 1 aprovada para construção em 10 seções (ficha-parte-1.md); Indicações dentro de Taxa; limite de 12 itens só para ativos | Proposta do designer; reversível | Maestro | Menu com 14 itens |
