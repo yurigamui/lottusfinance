@@ -10,8 +10,9 @@ Mesma arquitetura dos outros apps da Lottus: HTML/CSS/JS puro (sem build), Supab
 | Entrar, criar conta, recuperar senha, finalizar cadastro, convite | `#/entrar` · `#/criar-conta` · `#/recuperar` · `#/finalizar` · `#/convite/:token` | público |
 | Minhas carteiras (convites + carteiras) · Nova carteira | `#/carteiras` · `#/carteiras/nova` | logado |
 | Patrimônio · Bens e dívidas | `#/w/:id/patrimonio` · `…/bens` | Visualizador+ (edita: Editor+) |
-| Posição · Transações · Ativos personalizados · Detalhe do ativo · Conexões (importar arquivo) | `…/posicao` · `…/transacoes` · `…/ativos` · `…/ativo/:aid` · `…/conexoes` | idem |
-| Gastos: visão geral · transações · importar extrato · cadastros e regras | `…/gastos` · `…/gastos/transacoes` · `…/gastos/importar` · `…/gastos/cadastros` | idem |
+| Investimentos (visão geral) · Posição · Transações · Ativos personalizados · Detalhe do ativo | `…/investimentos` · `…/posicao` · `…/transacoes` · `…/ativos` · `…/ativo/:aid` (importar arquivo é um assistente dentro dessas telas) | idem |
+| Gastos: visão geral · transações · cadastros e regras | `…/gastos` · `…/gastos/transacoes` · `…/gastos/cadastros` (importar extrato é um assistente dentro de Gastos) | idem |
+| Grupo de carteiras (Pro/Fund) | `#/grupos/:id` | dono do grupo |
 | Relatórios (CSV e PDF) | `…/relatorios` | todas as alçadas |
 | Acessos (+ registro de acessos) · Configurações | `…/acessos` · `…/config` | Gestor |
 | Conta e plano (faturas, 2FA opcional) · White-label e integração (Fund) | `#/conta` · `#/white-label` | logado |
@@ -33,14 +34,14 @@ Alçadas: **Visualizador** (vê e extrai relatórios) · **Editor** (adiciona/ed
      ```
      Rode uma vez à mão para carregar CDI/IPCA (histórico de 10 anos) e os primeiros preços.
 3. **Auth** (Supabase → Authentication → URL Configuration): `Site URL` = `https://wealth.lottusfinance.com.br` e inclua o mesmo endereço em *Redirect URLs*. Os e-mails de confirmação e recuperação voltam para a raiz do site.
-4. **Site**: publique esta pasta (`07 - Wealth`) no domínio `wealth.lottusfinance.com.br` como os demais apps (`_headers` já traz a CSP). Se o domínio for outro, ajuste `siteUrl`/`apiUrl` em `js/config.js` e o endereço do convite em `w_invite_create`.
+4. **Site**: publique esta pasta (`apps/wealth`) no domínio `wealth.lottusfinance.com.br` como os demais apps (`_headers` já traz a CSP). Se o domínio for outro, ajuste `siteUrl`/`apiUrl` em `js/config.js` e o endereço do convite em `w_invite_create`.
 5. **Plano Fund / forma de pagamento**: ficam sob controle do backend. Para liberar alguém: `select public.w_admin_set_plan('<user_id>', 'fund', true);` (service role). Para marcar fatura paga: `select public.w_admin_invoice_paid('<invoice_id>');`.
 
 ## Como funciona
 
 - **Patrimônio líquido** = investimentos + saldos das contas (Gastos) + bens − dívidas. Bens e dívidas são manuais e **não** entram na base de cobrança.
-- **Planos**: Grátis (1 carteira criada, convidados ilimitados, importação de arquivo incluída) · Pro (2+ carteiras criadas; ambas passam a ser cobradas) · Fund (white-label + API).
-- **Cobrança Pro**: AuM = investimentos das carteiras sob titularidade do usuário no fechamento do mês anterior. Faixas marginais ao ano, divididas por 12: até R$ 10 mi 0,060% · 10–50 mi 0,040% · 50–200 mi 0,025% · 200 mi–1 bi 0,015% · acima de 1 bi sob contrato. Mínimo **R$ 200/mês**. Fatura vence 10 dias após o fechamento; **10 dias de carência** e, em atraso, todas as carteiras do titular ficam **somente para visualização** para todos (função `_w_need` bloqueia escrita).
+- **Planos (como está no código, `_w_price`)**: Grátis (1 carteira criada, convidados ilimitados, importação de arquivo) · Pro (a partir da 2ª carteira criada; **R$ 79 por carteira ao mês**, todas as carteiras do titular passam a ser cobradas) · Fund (**R$ 199 por carteira ao mês**, white-label + API). Fatura vence 10 dias após o fechamento; **10 dias de carência** e, em atraso, as carteiras do titular ficam **somente para visualização** (`_w_need` bloqueia escrita).
+  - Atenção: a decisão de 19/11 (`docs/agente/wealth/decisoes.md`) descrevia cobrança por faixas de AuM com mínimo de R$ 200; o código implementa valor fixo por carteira. Qual vale é decisão do Yuri (pendência W-031).
 - **P.U. diário** (`wealth-pu`): pré `PU = PU₀·(1+i)^(du/252)` · pós `PU = PU₀·∏(1+p·CDIₖ)` · IPCA+ com IPCA acumulado (mês corrente pro rata) × taxa real; Tesouro Transparente; CVM (informe diário, cotas); B3 COTAHIST (opcional). Pré-fixado “a mercado” é uma **estimativa** (usa a taxa do Tesouro Prefixado de vencimento mais próximo). Dias úteis consideram feriados nacionais.
 - **Convites**: o CPF decide o destino — se já tem conta, vai para o e-mail cadastrado (o gestor vê só uma versão mascarada). O acesso só começa depois do aceite. Editor/Visualizador não veem e-mail/CPF dos outros.
 - **Gastos**: OFX e CSV (colunas reconhecidas automaticamente, conferência antes de importar), duplicados ignorados por impressão digital, transferências entre contas da carteira detectadas (mesmo valor, sinal oposto, ±3 dias), regras de classificação por Contraparte / Centro de custo / Grupo (eixos independentes). Receita/despesa vem do sinal.
@@ -55,7 +56,7 @@ Alçadas: **Visualizador** (vê e extrai relatórios) · **Editor** (adiciona/ed
 - **Rentabilidade** exibida é simples (resultado ÷ aportes líquidos); rentabilidade ponderada pelo tempo (cota) é uma evolução.
 - **Importação de XLSX** (planilhas da B3): exporte como CSV por enquanto.
 - **LGPD**: no Pro/Fund o escritório é controlador e a Lottus, operadora — falta o contrato de operador (DPA) e revisão jurídica dos termos/privacidade linkados no cadastro (hoje só há o aceite; as páginas ainda não existem).
-- A migration e as funções **não foram executadas em produção** e não puderam ser testadas contra um Postgres real nesta sessão (a sintaxe foi validada e o front foi testado com o banco simulado). Rode primeiro num branch.
+- As migrações `wealth_1` a `wealth_12` **já estão aplicadas** no projeto de produção (19/11). Correções novas estão em `supabase/migrations/20261123*` (não aplicadas). O front foi testado em 23/11 contra as funções reais num Postgres local (`scripts/wealth-local`).
 
 ## Estrutura
 

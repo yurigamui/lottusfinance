@@ -129,8 +129,12 @@
   function dateMask(el) {
     el.type = 'text'; el.inputMode = 'numeric'; el.autocomplete = 'off'; el.placeholder = el.placeholder || 'dd/mm/aaaa'; el.classList.add('date-input');
     if (/^\d{4}-/.test(el.value)) el.value = toBr(el.value);
-    el.addEventListener('input', () => { const d = el.value.replace(/\D/g, '').slice(0, 8); el.value = d.replace(/^(\d{2})(\d{0,2})(\d{0,4}).*/, (x, a, b, c) => a + (b ? '/' + b : '') + (c ? '/' + c : '')); });
-    el.addEventListener('focus', () => openCalendar(el));
+    // Digitar fecha o calendário (ele cobria o botão Salvar e um clique ali trocava a data sem salvar).
+    el.addEventListener('input', () => { if (pop && pop.__input === el) closePop(); const d = el.value.replace(/\D/g, '').slice(0, 8); el.value = d.replace(/^(\d{2})(\d{0,2})(\d{0,4}).*/, (x, a, b, c) => a + (b ? '/' + b : '') + (c ? '/' + c : '')); });
+    // Ao focar, seleciona a data atual: o que for digitado substitui em vez de ser ignorado.
+    el.addEventListener('focus', () => { setTimeout(() => { try { el.select(); } catch { /* campo já saiu */ } }, 0); });
+    el.addEventListener('keydown', (e) => { if (/^\d$/.test(e.key) && el.value.replace(/\D/g, '').length >= 8 && el.selectionStart === el.selectionEnd) el.value = ''; if (e.key === 'Tab' || e.key === 'Enter') { if (pop && pop.__input === el) closePop(); } if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); openCalendar(el); } });
+    // O calendário abre por clique (não ao passar pelo campo com o teclado).
     el.addEventListener('click', () => { if (!pop || pop.__input !== el) openCalendar(el); });
   }
 

@@ -4,6 +4,12 @@ Registro de decisões já tomadas, extraído dos documentos do Projeto (decisõe
 
 | Data | Decisão | Motivo | Quem decidiu |
 | --- | --- | --- | --- |
+| 2026-11-23 | Testar o front do Wealth contra as funções REAIS num Postgres local com um Supabase falso (`scripts/wealth-local`), em vez de esperar o branch | O branch foi recusado; o ambiente local pegou 2 defeitos que testes só de banco não pegariam (gatilho adiado rodando como authenticated; filtro com catálogo global) | Time |
+| 2026-11-23 | Não versionar o esquema exportado da produção no repositório (é público); o README do ambiente local explica como exportar | Expõe a lógica interna sem necessidade | Time |
+| 2026-11-23 | Venda maior que a posição é recusada (gatilho adiado `position_negative`), em vez de só avisar | Posição negativa corrompe patrimônio, pesos e rentabilidade; nenhuma posição negativa existe hoje em produção | Time (contestável: Yuri) |
+| 2026-11-23 | Verificação do Wealth por parte (várias seções de uma vez) com o mesmo checklist, em vez de 21 ciclos separados | Volume de seções e telas que compartilham componentes; cada micro-especificação continua listada no relatório | Time |
+| 2026-11-23 | Calendário de data abre por clique, não ao focar; digitar fecha o calendário e substitui a data | O calendário cobria o botão Salvar e trocava a data sem salvar | Time |
+| 2026-11-23 | README do Wealth descreve a cobrança como está no código (valor fixo) e aponta a divergência com a decisão de 19/11 | Documentação deve refletir o sistema; preço continua com o Yuri (W-031) | Time |
 | 2026-11-23 | Validar referências de `w_cadastros` por gatilho, não reescrevendo `w_spend_update`/`w_rule_save` | Corrige todo caminho de escrita com mudança mínima e testável sem o código das RPCs no repositório | Time (arquiteto) |
 | 2026-11-23 | Validar no UPDATE só a coluna que mudou | Dado antigo inconsistente não pode travar exclusão de cadastro nem edição de outra coluna (achado A1 do verificador) | Time (verificador) |
 | 2026-11-23 | Não proteger `w_audit` com `_guard_delete` agora | Bloquearia a exclusão em cascata da carteira, cuja política (LGPD) ainda não foi decidida | Time; decisão final do Yuri |
