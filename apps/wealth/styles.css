@@ -1699,3 +1699,21 @@ svg.ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-wi
 .combo-item small { color: var(--muted, #8a7f78); font-size: 12px; white-space: nowrap; }
 .combo-item:hover, .combo-item.on { background: var(--rosa-tint); }
 .combo-empty { padding: 12px; color: var(--muted, #8a7f78); font-size: 14px; }
+
+/* ---------- v2: abas da Conta, planos, marca, visão a mercado/na curva ---------- */
+.tabs .tab-link { padding: 7px 14px; border-radius: 999px; font-weight: 700; font-size: 12.5px; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.tabs .tab-link:hover { color: var(--ink); }
+.tabs .tab-link.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(43, 35, 33, 0.14); }
+nav.tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 16px; margin-bottom: 24px; }
+.plan.current { border-color: var(--rosa); }
+.org-mark.has-logo { background: #fff; border: 1px solid var(--line); overflow: hidden; padding: 3px; }
+.org-mark.has-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.label-like { font-weight: 700; font-size: 12px; color: var(--muted); padding: 0; margin-bottom: 6px; }
+.code-box { white-space: pre-wrap; word-break: break-all; background: var(--soft); padding: 14px; border-radius: 14px; margin: 0; }
+.line-path.bench { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 2 4; }
+.legend-bench { display: inline-flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend-bench i { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--rosa); vertical-align: middle; margin-right: 6px; }
+.legend-bench i.alt { border-top: 2px dashed var(--ink); }
+.legend-bench i.bench { border-top: 2px dotted var(--muted); }
+.danger-zone { border-color: var(--danger, #c0392b); }

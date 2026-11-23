@@ -9,79 +9,69 @@
   const clsDelta = (v) => `<span class="${W.cls(v)}">${v === null || v === undefined ? '—' : W.sign(v, W.brl)}</span>`;
 
   /* ================= Patrimônio ================= */
+  const BM = { CDI: 'CDI', IPCA: 'IPCA', nenhum: '' };
+  const periodChips = (ctx, base, months) => `<div class="tabs">${[12, 24, 36, 60].map((m) => `<a class="chip${m === months ? ' active' : ''}" href="#${base}?${W.qs(ctx, 'm', m)}">${m < 24 ? '12 meses' : m / 12 + ' anos'}</a>`).join('')}</div>`;
+  // rendimento do benchmark no período, aplicado aos aportes (mesmo dinheiro, mesmas datas)
+  const benchKpi = (eq, bm) => { const l = eq[eq.length - 1]; if (!bm || !l || l.benchmark === null || l.benchmark === undefined || !(Number(l.aportes) > 0)) return null; return { val: Number(l.benchmark), diff: Number(l.investimentos) - Number(l.benchmark) }; };
   W.route('/w/:id/patrimonio', async (ctx) => {
-    const id = ctx.w.id; const months = Number(ctx.q.get('m')) || 12;
-    const [nw, eq, pos] = await Promise.all([W.rpc('w_networth', { p_wallet: id }), W.rpc('w_equity', { p_wallet: id, p_months: months }), W.rpc('w_positions', { p_wallet: id })]);
+    const id = ctx.w.id; const months = Number(ctx.q.get('m')) || 12; const mode = W.viewMode(ctx);
+    const [nw, eq, pos] = await Promise.all([W.rpc('w_networth', { p_wallet: id, p_mode: mode }), W.rpc('w_equity', { p_wallet: id, p_months: months, p_mode: mode }), W.rpc('w_positions', { p_wallet: id, p_mode: mode })]);
+    const bm = BM[nw.benchmark] || ''; const bk = benchKpi(eq, bm);
     const kpi = (l, v, sub, c = '') => `<div class="kpi"><div class="kpi-label">${l}</div><div class="big ${c}">${v}</div>${sub ? `<div class="muted small">${sub}</div>` : ''}</div>`;
     ctx.after = () => {
-      const rows = eq.map((p) => ({ label: W.monthLabel(p.date), long: W.dt(p.date), a: p.total, b: p.aportes, inv: p.investimentos }));
-      const draw = (mode) => W.lineChart(document.getElementById('ch-eq'), mode === 'rent' ? rows.map((r) => ({ ...r, a: r.inv, b: r.b })) : rows.map((r) => ({ label: r.label, long: r.long, a: r.a })), { names: mode === 'rent' ? ['Investimentos', 'Aportes líquidos'] : ['Patrimônio líquido'], name: 'Evolução' });
+      const rows = eq.map((p) => ({ label: W.monthLabel(p.date), long: W.dt(p.date), a: p.total, b: p.aportes, inv: p.investimentos, c: p.benchmark }));
+      const draw = (m) => W.lineChart(document.getElementById('ch-eq'), m === 'rent' ? rows.map((r) => ({ label: r.label, long: r.long, a: r.inv, b: r.b, ...(bm ? { c: r.c } : {}) })) : rows.map((r) => ({ label: r.label, long: r.long, a: r.a })), { names: m === 'rent' ? ['Investimentos', 'Aportes líquidos', `Aportes rendendo ${bm}`] : ['Patrimônio líquido'], name: 'Evolução' });
       draw('pl');
-      document.querySelectorAll('[data-chart]').forEach((b) => b.addEventListener('click', () => { document.querySelectorAll('[data-chart]').forEach((x) => x.classList.toggle('active', x === b)); draw(b.dataset.chart); }));
+      document.querySelectorAll('[data-chart]').forEach((b) => b.addEventListener('click', () => { document.querySelectorAll('[data-chart]').forEach((x) => x.classList.toggle('active', x === b)); document.getElementById('lg-rent').hidden = b.dataset.chart !== 'rent'; draw(b.dataset.chart); }));
       const kinds = {}; pos.forEach((p) => { kinds[KIND[p.kind] || 'Outro'] = (kinds[KIND[p.kind] || 'Outro'] || 0) + Number(p.value); });
       W.donut(document.getElementById('ch-alloc'), Object.entries(kinds).map(([name, value]) => ({ name, value })), { name: 'Alocação por tipo de ativo' });
-      W.donut(document.getElementById('ch-comp'), [{ name: 'Investimentos', value: nw.investimentos }, { name: 'Contas (Gastos)', value: Math.max(nw.contas, 0) }, { name: 'Bens', value: nw.bens }], { name: 'Composição do patrimônio' });
+      W.donut(document.getElementById('ch-comp'), [{ name: 'Investimentos', value: nw.investimentos }, { name: 'Contas (Gastos)', value: Math.max(nw.contas, 0) }], { name: 'Composição do patrimônio' });
     };
-    return `${W.pageHead('Patrimônio', 'Investimentos + saldos das contas + bens − dívidas.', ctx.canWrite ? `<a class="btn secondary" href="#/w/${id}/bens">Bens e dívidas</a><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : '')}
-      <div class="kpis">${kpi('Patrimônio líquido', W.brl(nw.total), '')}${kpi('Investimentos', W.brl(nw.investimentos), `Resultado ${W.sign(nw.resultado, W.brl)}${nw.rentabilidade === null ? '' : ` (${W.sign(nw.rentabilidade, (v) => W.pct(v))})`}`)}${kpi('Contas (saldo em Gastos)', W.brl(nw.contas), '')}${kpi('Bens e dívidas', W.brl(Number(nw.bens) - Number(nw.dividas)), `Bens ${W.brl(nw.bens)} · Dívidas ${W.brl(nw.dividas)}`)}</div>
+    return `${W.pageHead('Patrimônio', 'Investimentos + saldos das contas. Imóveis, veículos e outros bens entram como ativos personalizados.', `${W.modeBar(mode)}<a class="btn secondary" href="#/w/${id}/relatorios">${ico('file')} Relatórios</a><a class="btn secondary" href="#/w/${id}/acessos">${ico('users')} Acessos</a>${ctx.canWrite ? `<a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
+      ${W.modeHint(mode, nw.tem_mercado)}
+      <div class="kpis">${kpi('Patrimônio líquido', W.brl(nw.total), mode === 'mercado' ? 'A mercado' : 'Na curva')}${kpi('Investimentos', W.brl(nw.investimentos), `Resultado ${W.sign(nw.resultado, W.brl)}${nw.rentabilidade === null ? '' : ` (${W.sign(nw.rentabilidade, (v) => W.pct(v))})`}`)}${kpi('Contas (saldo em Gastos)', W.brl(nw.contas), '')}${bk ? kpi(`Comparado ao ${bm}`, W.sign(bk.diff, W.brl), `Os mesmos aportes rendendo ${bm} valeriam ${W.brl(bk.val)} (${months < 24 ? '12 meses' : months / 12 + ' anos'})`, W.cls(bk.diff)) : kpi('Benchmark', bm || 'Nenhum', bm ? 'Sem aportes no período' : (ctx.w.role === 'gestor' ? `<a href="#/w/${id}/config">Escolher em Configurações</a>` : 'Definido pelo gestor'))}</div>
       <div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Evolução</h2><div class="row"><div class="tabs"><button class="active" data-chart="pl">Patrimônio</button><button data-chart="rent">Investimentos × aportes</button></div>
-        <div class="tabs">${[12, 24, 36, 60].map((m) => `<a class="chip${m === months ? ' active' : ''}" href="#/w/${id}/patrimonio?m=${m}">${m < 24 ? '12 meses' : m / 12 + ' anos'}</a>`).join('')}</div></div></div><div id="ch-eq"></div>
-        <p class="muted small">Rentabilidade simples: resultado ÷ aportes líquidos (não desconta o tempo em que cada aporte ficou investido).</p></div>
+        ${periodChips(ctx, `/w/${id}/patrimonio`, months)}</div></div><div class="legend-bench" id="lg-rent" hidden><span><i></i>Investimentos</span><span><i class="alt"></i>Aportes líquidos</span>${bm ? `<span><i class="bench"></i>Aportes rendendo ${bm}</span>` : ''}</div><div id="ch-eq"></div>
+        <p class="muted small">Rentabilidade simples: resultado ÷ aportes líquidos (não desconta o tempo em que cada aporte ficou investido).${bm ? ` A linha do ${bm} aplica o índice a cada aporte desde a data dele.` : ''}</p></div>
       <div class="grid-2"><div class="card"><div class="card-head"><h2>Composição</h2></div><div id="ch-comp"></div></div><div class="card"><div class="card-head"><h2>Investimentos por tipo</h2></div><div id="ch-alloc"></div></div></div>`;
   });
-
-  /* ================= Bens e dívidas ================= */
-  W.route('/w/:id/bens', async (ctx) => {
-    const rows = await W.rpc('w_other_list', { p_wallet: ctx.w.id });
-    ctx.after = () => { ctx.items = rows; W.cur = ctx; };
-    const tbl = (kind) => { const l = rows.filter((r) => r.kind === kind); return l.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Nome</th><th>Data de referência</th><th class="num">Valor</th><th></th></tr></thead><tbody>${l.map((r) => `<tr><td>${esc(r.name)}${r.notes ? `<div class="muted small">${esc(r.notes)}</div>` : ''}</td><td>${W.dt(r.ref_date)}</td><td class="num">${W.brl(r.value)}</td><td class="actions">${ctx.canWrite ? `<button class="btn ghost sm" data-act="other-edit" data-id="${esc(r.id)}" aria-label="Editar">${ico('pencil')}</button><button class="btn ghost sm" data-act="other-del" data-id="${esc(r.id)}" aria-label="Excluir">${ico('trash')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : empty(kind === 'bem' ? 'Nenhum bem cadastrado.' : 'Nenhuma dívida cadastrada.'); };
-    W.other = rows;
-    return `${W.pageHead('Bens e dívidas', 'Imóveis, veículos, financiamentos… Informados por você; entram no patrimônio, mas não na base de cobrança.', ctx.canWrite ? `<button class="btn secondary" data-act="other-new" data-kind="divida">${ico('plus')} Dívida</button><button class="btn" data-act="other-new" data-kind="bem">${ico('plus')} Bem</button>` : '')}
-      <div class="stack"><div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Bens</h2><b>${W.brl(rows.filter((r) => r.kind === 'bem').reduce((s, r) => s + Number(r.value), 0))}</b></div>${tbl('bem')}</div>
-      <div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Dívidas</h2><b>${W.brl(rows.filter((r) => r.kind === 'divida').reduce((s, r) => s + Number(r.value), 0))}</b></div>${tbl('divida')}</div></div>`;
-  });
-  const otherModal = (kind, it) => W.modal({ title: kind === 'bem' ? `${it ? 'Editar' : 'Novo'} bem` : `${it ? 'Editar' : 'Nova'} dívida`, body: `<form class="stack" data-form="other-save"><input type="hidden" name="id" value="${esc(it ? it.id : '')}"><input type="hidden" name="kind" value="${kind}">
-    <div class="field"><label>Nome</label><input class="input" name="name" required minlength="2" value="${esc(it ? it.name : '')}" placeholder="${kind === 'bem' ? 'Apartamento, carro…' : 'Financiamento, cartão…'}"></div>
-    <div class="form-grid"><div class="field"><label>Valor (R$)</label><input class="input" name="value" inputmode="decimal" required value="${it ? esc(W.num(it.value)) : ''}"></div><div class="field"><label>Data de referência</label><input class="input" name="ref_date" data-mask="date" required value="${esc(it ? it.ref_date : W.ymd())}"></div></div>
-    <div class="field"><label>Observação (opcional)</label><input class="input" name="notes" value="${esc(it ? it.notes || '' : '')}"></div><div class="modal-foot"><button type="button" class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn" type="submit">Salvar</button></div></form>` });
-  Object.assign(W.acts, {
-    'other-new': (el) => otherModal(el.dataset.kind, null),
-    'other-edit': (el) => { const it = W.other.find((r) => r.id === el.dataset.id); otherModal(it.kind, it); },
-    'other-del': async (el) => { if (!(await W.confirm('Excluir item?', 'Ele deixa de entrar no patrimônio.', 'Excluir', true))) return; await W.rpc('w_other_delete', { p_wallet: curId(), p_id: el.dataset.id }); W.toast('Item excluído'); W.refresh(); },
-  });
+  // Bens e dívidas saiu na v2: o endereço antigo leva ao Patrimônio
+  W.route('/w/:id/bens', async (ctx) => { W.go(`/w/${ctx.w.id}/patrimonio`); return ''; }, { wallet: true });
   const curId = () => (location.hash.match(/#\/w\/([^/?]+)/) || [])[1];
   W.curId = curId;
-  W.forms['other-save'] = async (f) => { const v = W.form(f); const val = W.parseNum(v.value); if (val === null || val < 0) throw new Error('Valor inválido.'); await W.rpc('w_other_save', { p_wallet: curId(), p: { id: v.id, kind: v.kind, name: v.name, value: val, ref_date: v.ref_date, notes: v.notes } }); W.closeModal(); W.toast('Salvo'); W.refresh(); };
 
   /* ================= Visão geral de investimentos ================= */
   W.route('/w/:id/investimentos', async (ctx) => {
-    const id = ctx.w.id; const months = Number(ctx.q.get('m')) || 12;
-    const [nw, eq, pos] = await Promise.all([W.rpc('w_networth', { p_wallet: id }), W.rpc('w_equity', { p_wallet: id, p_months: months }), W.rpc('w_positions', { p_wallet: id })]);
+    const id = ctx.w.id; const months = Number(ctx.q.get('m')) || 12; const mode = W.viewMode(ctx);
+    const [nw, eq, pos] = await Promise.all([W.rpc('w_networth', { p_wallet: id, p_mode: mode }), W.rpc('w_equity', { p_wallet: id, p_months: months, p_mode: mode }), W.rpc('w_positions', { p_wallet: id, p_mode: mode })]);
+    const bm = BM[nw.benchmark] || ''; const bk = benchKpi(eq, bm);
     const kpi = (l, v, sub, c = '') => `<div class="kpi"><div class="kpi-label">${l}</div><div class="big ${c}">${v}</div>${sub ? `<div class="muted small">${sub}</div>` : ''}</div>`;
     const top = [...pos].sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 6); const tot = pos.reduce((x, p) => x + Number(p.value), 0);
     ctx.after = () => {
-      W.lineChart(document.getElementById('ch-inv'), eq.map((p) => ({ label: W.monthLabel(p.date), long: W.dt(p.date), a: p.investimentos, b: p.aportes })), { names: ['Investimentos', 'Aportes líquidos'], name: 'Evolução dos investimentos' });
+      W.lineChart(document.getElementById('ch-inv'), eq.map((p) => ({ label: W.monthLabel(p.date), long: W.dt(p.date), a: p.investimentos, b: p.aportes, ...(bm ? { c: p.benchmark } : {}) })), { names: ['Investimentos', 'Aportes líquidos', `Aportes rendendo ${bm}`], name: 'Evolução dos investimentos' });
       const kinds = {}; pos.forEach((p) => { kinds[KIND[p.kind] || 'Outro'] = (kinds[KIND[p.kind] || 'Outro'] || 0) + Number(p.value); });
       W.donut(document.getElementById('ch-alloc'), Object.entries(kinds).map(([name, value]) => ({ name, value })), { name: 'Alocação por tipo de ativo' });
     };
-    return `${W.pageHead('Visão geral', 'Quanto você tem investido e como está distribuído.', ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : '')}
-      <div class="kpis">${kpi('Valor atual', W.brl(nw.investimentos), `${pos.length} ${pos.length === 1 ? 'ativo' : 'ativos'}`)}${kpi('Aportes líquidos', W.brl(nw.aportes), 'Compras menos vendas')}${kpi('Resultado', W.sign(nw.resultado, W.brl), nw.rentabilidade === null ? 'Sem aportes registrados' : `${W.sign(nw.rentabilidade, (v) => W.pct(v))} sobre os aportes`, W.cls(nw.resultado))}${kpi('Maior posição', top.length && tot > 0 ? W.pct(Number(top[0].value) / tot, 1) : '—', top.length ? esc(top[0].ticker || top[0].name) : 'Sem posições')}</div>
-      <div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Evolução</h2><div class="tabs">${[12, 24, 36, 60].map((m) => `<a class="chip${m === months ? ' active' : ''}" href="#/w/${id}/investimentos?m=${m}">${m < 24 ? '12 meses' : m / 12 + ' anos'}</a>`).join('')}</div></div><div id="ch-inv"></div></div>
+    return `${W.pageHead('Visão geral', 'Quanto você tem investido e como está distribuído.', `${W.modeBar(mode)}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
+      ${W.modeHint(mode, nw.tem_mercado)}
+      <div class="kpis">${kpi('Valor atual', W.brl(nw.investimentos), `${pos.length} ${pos.length === 1 ? 'ativo' : 'ativos'}`)}${kpi('Aportes líquidos', W.brl(nw.aportes), 'Compras menos vendas')}${kpi('Resultado', W.sign(nw.resultado, W.brl), nw.rentabilidade === null ? 'Sem aportes registrados' : `${W.sign(nw.rentabilidade, (v) => W.pct(v))} sobre os aportes`, W.cls(nw.resultado))}${bk ? kpi(`Comparado ao ${bm}`, W.sign(bk.diff, W.brl), `Aportes rendendo ${bm}: ${W.brl(bk.val)}`, W.cls(bk.diff)) : kpi('Maior posição', top.length && tot > 0 ? W.pct(Number(top[0].value) / tot, 1) : '—', top.length ? esc(top[0].ticker || top[0].name) : 'Sem posições')}</div>
+      <div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Evolução</h2>${periodChips(ctx, `/w/${id}/investimentos`, months)}</div><div class="legend-bench"><span><i></i>Investimentos</span><span><i class="alt"></i>Aportes líquidos</span>${bm ? `<span><i class="bench"></i>Aportes rendendo ${bm}</span>` : ''}</div><div id="ch-inv"></div></div>
       <div class="grid-2"><div class="card"><div class="card-head"><h2>Alocação por tipo</h2></div><div id="ch-alloc"></div></div>
         <div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Maiores posições</h2><a href="#/w/${id}/posicao" class="muted small">Ver todas</a></div>${top.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Ativo</th><th class="num">Valor</th><th class="num">Peso</th></tr></thead><tbody>${top.map((p) => `<tr class="link" data-href="#/w/${id}/ativo/${esc(p.asset_id)}"><td><b>${esc(p.ticker || p.name)}</b></td><td class="num">${W.brl(p.value)}</td><td class="num">${tot > 0 ? W.pct(Number(p.value) / tot, 1) : '—'}</td></tr>`).join('')}</tbody></table></div>` : empty('Nenhum investimento registrado.')}</div></div>`;
   });
 
   /* ================= Posição ================= */
   W.route('/w/:id/posicao', async (ctx) => {
-    const id = ctx.w.id; const pos = await W.rpc('w_positions', { p_wallet: id });
-    const hasMkt = pos.some((p) => p.pu_mercado !== null);
-    const draw = (merc) => {
+    const id = ctx.w.id; const mode = W.viewMode(ctx); const pos = await W.rpc('w_positions', { p_wallet: id, p_mode: mode });
+    const hasMkt = pos.some((p) => p.pu_mercado !== null); const merc = mode === 'mercado';
+    const draw = () => {
       const tot = pos.reduce((s, p) => s + Number(merc && p.value_mercado !== null ? p.value_mercado : p.value), 0), cost = pos.reduce((s, p) => s + Number(p.cost), 0);
       document.getElementById('pos-body').innerHTML = pos.length ? pos.map((p) => { const v = merc && p.value_mercado !== null ? p.value_mercado : p.value; const r = Number(v) - Number(p.cost); return `<tr class="link" data-href="#/w/${id}/ativo/${esc(p.asset_id)}"><td><b>${esc(p.ticker || p.name)}</b>${p.ticker ? `<div class="muted small">${esc(p.name)}</div>` : ''}</td><td>${esc(KIND[p.kind] || '')}${p.maturity ? `<div class="muted small">vence ${W.dt(p.maturity)}</div>` : ''}</td><td class="num">${W.qty(p.qty)}</td><td class="num">${W.num(p.avg_pu, 4)}</td><td class="num">${W.num(merc && p.pu_mercado !== null ? p.pu_mercado : p.pu, 4)}<div class="muted small">${W.dt(p.pu_date)}</div></td><td class="num"><b>${W.brl(v)}</b></td><td class="num">${clsDelta(r)}<div class="small ${W.cls(r)}">${p.cost > 0 ? W.sign(r / p.cost, (x) => W.pct(x)) : ''}</div></td><td class="num">${tot > 0 ? W.pct(Number(v) / tot, 1) : '—'}</td></tr>`; }).join('') : `<tr><td colspan="8">${empty('Nenhum investimento registrado.')}</td></tr>`;
       document.getElementById('pos-foot').innerHTML = pos.length ? `<tr><td colspan="5"><b>Total</b></td><td class="num"><b>${W.brl(tot)}</b></td><td class="num">${clsDelta(tot - cost)}</td><td class="num">100%</td></tr>` : '';
     };
-    ctx.after = () => { draw(false); const cb = document.getElementById('merc'); if (cb) cb.addEventListener('change', () => draw(cb.checked)); document.getElementById('pos-body').addEventListener('click', (e) => { const r = e.target.closest('tr[data-href]'); if (r) location.hash = r.dataset.href.slice(1); }); };
-    return `${W.pageHead('Posição', 'Quanto você tem em cada ativo hoje.', `${hasMkt ? '<label class="check"><input type="checkbox" id="merc"> Mostrar pré-fixados a mercado</label>' : ''}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
+    ctx.after = () => { draw(); document.getElementById('pos-body').addEventListener('click', (e) => { const r = e.target.closest('tr[data-href]'); if (r) location.hash = r.dataset.href.slice(1); }); };
+    return `${W.pageHead('Posição', 'Quanto você tem em cada ativo hoje.', `${W.modeBar(mode)}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
+      ${W.modeHint(mode, hasMkt)}
       <div class="card flush"><div class="table-wrap"><table><thead><tr><th>Ativo</th><th>Tipo</th><th class="num">Quantidade</th><th class="num">P.U. médio</th><th class="num">P.U. atual</th><th class="num">Valor</th><th class="num">Resultado</th><th class="num">Peso</th></tr></thead><tbody id="pos-body"></tbody><tfoot id="pos-foot"></tfoot></table></div></div>`;
   });
   document.addEventListener('click', (e) => { const r = e.target.closest('tr.link[data-href]'); if (r && !e.target.closest('a,button')) location.hash = r.dataset.href.slice(1); });
@@ -148,7 +138,7 @@
   W.route('/w/:id/ativos', async (ctx) => {
     const list = await W.rpc('w_assets_custom', { p_wallet: ctx.w.id }); W.assets = list; ctx.after = () => { W.cur = ctx; };
     return `${W.pageHead('Ativos personalizados', 'Cadastre o que não está na bolsa: CDB, crédito privado, debêntures, participações, imóveis em fundo… e acompanhe a valorização.', ctx.canWrite ? `<button class="btn" data-act="asset-new">${ico('plus')} Novo ativo</button>` : '')}
-      <div class="banner info">${ico('tags')}<div class="grow">Renda fixa com taxa (pré, % do CDI ou IPCA+) é valorizada <b>todo dia útil</b> pela curva. Para os demais, marque “valorização manual” e informe o P.U. quando quiser.</div></div>
+      <div class="banner info">${ico('tags')}<div class="grow">Renda fixa com taxa (pré, % do CDI ou IPCA+) é valorizada <b>todo dia útil</b> pela curva. Para os demais, marque “valorização manual” e informe o P.U. quando quiser. <b>Imóveis, veículos e outros bens</b> também entram aqui, como tipo “Outro” com valorização manual.</div></div>
       <div class="card flush">${list.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Ativo</th><th>Tipo</th><th>Remuneração</th><th>Vencimento</th><th class="num">Último P.U.</th><th></th></tr></thead><tbody>${list.map((a) => `<tr><td><a href="#/w/${ctx.w.id}/ativo/${esc(a.id)}">${esc(a.name)}</a>${a.ticker ? `<div class="muted small">${esc(a.ticker)}</div>` : ''}</td><td>${esc(KIND[a.kind] || '')}</td><td>${a.indexer ? remun(a) : tag(a.custom ? 'Valorização manual' : '—')}</td><td>${W.dt(a.maturity)}</td><td class="num">${a.last_pu === null ? '—' : W.num(a.last_pu, 4)}<div class="muted small">${a.last_date ? W.dt(a.last_date) : ''}</div></td><td class="actions">${ctx.canWrite ? `${a.custom || !a.indexer ? `<button class="btn secondary sm" data-act="price-new" data-id="${esc(a.id)}">Atualizar valor</button>` : ''}<button class="btn ghost sm" data-act="asset-edit" data-id="${esc(a.id)}" aria-label="Editar">${ico('pencil')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : empty('Nenhum ativo personalizado ainda.')}</div>`;
   });
   const remun = (a) => (a.indexer === 'PRE' ? `${W.num(a.rate * 100)}% a.a.` : a.indexer === 'CDI' ? `${W.num(a.rate * 100)}% do CDI` : `IPCA + ${W.num(a.rate * 100)}% a.a.`);
@@ -183,7 +173,7 @@
     return `${W.pageHead(a.ticker || a.name, `${KIND[a.kind] || ''}${a.ticker ? ' · ' + a.name : ''}${a.maturity ? ' · vence ' + W.dt(a.maturity) : ''}`, ctx.canWrite && own ? `<button class="btn secondary" data-act="price-new" data-id="${esc(a.id)}">Atualizar valor</button><button class="btn secondary" data-act="asset-edit" data-id="${esc(a.id)}">Editar ativo</button>` : '', [`/w/${id}/posicao`, 'Posição'])}
       <div class="kpis"><div class="kpi"><div class="kpi-label">Quantidade</div><div class="big">${p ? W.qty(p.qty) : '0'}</div></div><div class="kpi"><div class="kpi-label">P.U. médio</div><div class="big">${p ? W.num(p.avg_pu, 4) : '—'}</div></div><div class="kpi"><div class="kpi-label">P.U. atual</div><div class="big">${p ? W.num(p.pu, 4) : '—'}</div><div class="muted small">${p && p.pu_date ? W.dt(p.pu_date) : ''}</div></div><div class="kpi"><div class="kpi-label">Valor</div><div class="big">${p ? W.brl(p.qty * p.pu) : '—'}</div></div>
       <div class="kpi"><div class="kpi-label">Resultado</div><div class="big ${p ? W.cls(p.qty * (p.pu - p.avg_pu)) : ''}">${p ? W.sign(p.qty * (p.pu - p.avg_pu), W.brl) : '—'}</div></div></div>
-      ${a.indexer ? `<div class="banner info">${ico('trend')}<div class="grow">Remuneração: <b>${remun(a)}</b>, valorizada pela curva todo dia útil${a.indexer === 'PRE' ? '. O P.U. “a mercado” é uma estimativa por taxa de referência.' : '.'}</div></div>` : ''}
+      ${a.indexer ? `<div class="banner info">${ico('trend')}<div class="grow">Remuneração: <b>${remun(a)}</b>, valorizada pela curva todo dia útil${a.indexer === 'PRE' || a.indexer === 'IPCA' ? '. O P.U. “a mercado” é uma estimativa: taxa do Tesouro de prazo parecido hoje + o spread que o título tinha na emissão.' : a.indexer === 'CDI' ? '. Em % do CDI, o valor a mercado é igual ao da curva.' : '.'}</div></div>` : ''}
       <div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Histórico do P.U.</h2></div><div id="ch-px"></div></div>
       <div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Transações</h2></div>${d.tx.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Data</th><th>Tipo</th><th class="num">Quantidade</th><th class="num">P.U.</th><th>Custodiante</th></tr></thead><tbody>${d.tx.map((t) => `<tr><td>${W.dt(t.date)}</td><td>${tag(TX[t.kind])}</td><td class="num">${W.qty(t.qty)}</td><td class="num">${W.num(t.unit_price, 4)}</td><td>${esc(t.custodian || '—')}</td></tr>`).join('')}</tbody></table></div>` : empty('Sem transações.')}</div>`;
   });

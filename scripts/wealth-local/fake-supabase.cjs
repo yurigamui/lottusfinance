@@ -9,7 +9,7 @@ const PORT = +process.env.PORT || 54399;
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 const jwt = (claims) => `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64(claims)}.local`;
 const parse = (t) => { try { return JSON.parse(Buffer.from(String(t).split('.')[1], 'base64url').toString()); } catch { return null; } };
-const factors = new Map(); // userId -> [{id, status, factor_type}]
+const factors = new Map(); const pendingEmail = new Map(); // userId -> [{id, status, factor_type}]
 const log = [];
 
 function session(user, aal = 'aal1') {
@@ -105,10 +105,13 @@ http.createServer(async (req, res) => {
       if (req.method === 'PUT') {
         if (body.password) await q(`update auth.users set encrypted_password = crypt($2, gen_salt('bf')) where id = $1`, [c.sub, body.password]);
         if (body.data) await q(`update auth.users set raw_user_meta_data = raw_user_meta_data || $2 where id = $1`, [c.sub, body.data]);
+        if (body.email) { pendingEmail.set(c.sub, String(body.email).toLowerCase()); console.log('troca de e-mail pedida', c.sub, body.email); }
       }
       const r = await q('select * from auth.users where id = $1', [c.sub]);
       return r.rows[0] ? send(res, 200, userObj(r.rows[0])) : authErr(res, 'User not found', 404, 'user_not_found');
     }
+    // função de borda de cobrança: sem provedor ligado no ambiente local (como em produção com BILLING_PROVIDER=manual)
+    if (p === '/functions/v1/wealth-billing') return send(res, 200, { ok: true, provider: 'manual', url: null });
     if (p === '/auth/v1/logout') return send(res, 204);
     if (p === '/auth/v1/recover') return send(res, 200, {});
     if (p.startsWith('/auth/v1/factors')) {

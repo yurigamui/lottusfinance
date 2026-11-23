@@ -1,7 +1,7 @@
 // Driver do Wealth: serve apps/wealth com os cabeçalhos do _headers e desvia o Supabase de produção para o falso local.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
-const APP = require('path').resolve(__dirname, '../../apps/wealth');
+const APP = process.env.WEALTH_APP || require('path').resolve(__dirname, '../../apps/wealth');
 const PROD = 'https://rowhslnnlzfbhmzbylbz.supabase.co';
 const FAKE = 'http://127.0.0.1:54399';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };

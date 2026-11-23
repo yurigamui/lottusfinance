@@ -12,13 +12,16 @@ window.BO = window.BO || {};
   /* ---------- erros ---------- */
   const MSG = {
     forbidden: 'Você não tem permissão para isso.', read_only: 'Esta carteira está somente para visualização (pagamento pendente ou arquivada).',
-    payment_required: 'Para criar ou assumir mais de uma carteira é preciso cadastrar uma forma de pagamento (plano Pro).',
+    payment_required: 'Para criar ou assumir mais de uma carteira é preciso assinar o plano Pro.',
+    plan_required: 'Disponível nos planos pagos. Assine em Conta > Plano.', billing_required: 'Informe os dados de cobrança para assinar o plano.',
+    too_many_wallets: 'Para voltar ao Grátis, fique com uma carteira só (exclua ou arquive as outras).', confirm_mismatch: 'O nome digitado não confere com o da carteira.',
+    unauthorized: 'Chave de API inválida, expirada ou revogada.',
     profile_required: 'Termine o seu cadastro primeiro.', email_not_confirmed: 'Confirme o e-mail da sua conta primeiro.',
     cpf_invalid: 'CPF inválido.', cpf_in_use: 'Este CPF já está cadastrado em outra conta.', name_required: 'Preencha o nome.', email_invalid: 'E-mail inválido.',
     invalid_role: 'Alçada inválida.', already_member: 'Esta pessoa já tem acesso à carteira.', last_manager: 'A carteira precisa ter ao menos um gestor.',
     owner_must_manage: 'O titular da cobrança precisa continuar como gestor.', owner_cannot_leave: 'O titular da cobrança não pode sair; peça a outro gestor para removê-lo ou arquive a carteira.',
     owner_only: 'Só o titular da cobrança pode fazer isso.', not_found: 'Não encontrado.', invalid_value: 'Valor inválido.', invalid_file: 'Arquivo inválido ou grande demais.',
-    in_use: 'Existem lançamentos nesta conta; exclua-os antes.', plan_required: 'Disponível no plano Fund.',
+    in_use: 'Existem lançamentos nesta conta; exclua-os antes.',
     doc_invalid: 'CPF ou CNPJ inválido.', zip_invalid: 'CEP inválido.', invalid_name: 'Dê um nome com 2 a 80 caracteres.', user_not_found: 'Não há conta no Wealth com este CPF. Peça para a pessoa criar a conta primeiro.',
     invalid_reference: 'Esse cadastro não pertence a esta carteira. Atualize a página e escolha de novo.',
     position_negative: 'A venda é maior que a quantidade em carteira nessa data. Confira as compras lançadas antes dela.',

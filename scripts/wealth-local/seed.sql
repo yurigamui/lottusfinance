@@ -14,6 +14,12 @@ insert into public.w_assets (id, wallet_id, kind, name, indexer, rate, issue_dat
 insert into public.w_asset_prices (asset_id, date, pu, source) select '11111111-0000-4000-8000-000000000001', d::date, 30 + (extract(doy from d) % 10), 'exemplo' from generate_series(current_date - 400, current_date, interval '1 day') d;
 insert into public.w_asset_prices (asset_id, date, pu, source) select '11111111-0000-4000-8000-000000000002', d::date, 95 + (extract(doy from d) % 7), 'exemplo' from generate_series(current_date - 400, current_date, interval '1 day') d;
 insert into public.w_asset_prices (asset_id, date, pu, source) select '11111111-0000-4000-8000-000000000003', d::date, 13000 + (d::date - (current_date - 400)) * 4.5, 'exemplo' from generate_series(current_date - 400, current_date, interval '1 day') d;
+insert into public.w_assets (id, wallet_id, kind, name, issuer, indexer, rate, issue_date, maturity, pu_inicial) values
+ ('11111111-0000-4000-8000-000000000004', null, 'rf_pre', 'CDB Pré Banco Exemplo 2028', 'Banco Exemplo', 'PRE', 0.12, current_date - 90, '2028-12-01', 1000);
+insert into public.w_asset_prices (asset_id, date, pu, pu_mercado, source) values ('11111111-0000-4000-8000-000000000004', current_date, 1028.5, 1011.2, 'curva');
+-- índices fictícios: CDI diário e IPCA mensal
+insert into public.w_indices (name, date, value) select 'CDI', d::date, 0.045 from generate_series(current_date - 800, current_date, interval '1 day') d where extract(isodow from d) < 6;
+insert into public.w_indices (name, date, value) select 'IPCA', d::date, 0.4 from generate_series(date_trunc('month', current_date - 800), current_date, interval '1 month') d;
 insert into public.w_banks (code, ispb, name) values ('001', '00000000', 'Banco do Brasil'), ('341', '60701190', 'Itaú Unibanco'), ('260', '18236120', 'Nu Pagamentos') on conflict do nothing;
 
 create or replace function pg_temp.as_user(u uuid) returns void language sql as $$ select set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, false) $$;
@@ -42,8 +48,11 @@ begin
   perform public.w_tx_save(wid, jsonb_build_object('asset_id', '11111111-0000-4000-8000-000000000001', 'kind', 'compra', 'date', (current_date - 300)::text, 'qty', 100, 'unit_price', 28.5, 'custodian', 'Corretora Exemplo'));
   perform public.w_tx_save(wid, jsonb_build_object('asset_id', '11111111-0000-4000-8000-000000000002', 'kind', 'compra', 'date', (current_date - 200)::text, 'qty', 50, 'unit_price', 96, 'custodian', 'Corretora Exemplo'));
   perform public.w_tx_save(wid, jsonb_build_object('asset_id', '11111111-0000-4000-8000-000000000003', 'kind', 'compra', 'date', (current_date - 150)::text, 'qty', 2, 'unit_price', 13500));
-  perform public.w_other_save(wid, jsonb_build_object('kind', 'bem', 'name', 'Apartamento exemplo', 'value', 850000));
-  perform public.w_other_save(wid, jsonb_build_object('kind', 'divida', 'name', 'Financiamento exemplo', 'value', 320000));
+  -- bem informado como ativo personalizado (Bens e dívidas saíram na v2) e um CDB pré com P.U. a mercado
+  insert into public.w_assets (id, wallet_id, kind, name, custom, pu_inicial) values ('22222222-0000-4000-8000-000000000001', wid, 'outro', 'Apartamento exemplo', true, 800000);
+  perform public.w_tx_save(wid, jsonb_build_object('asset_id', '22222222-0000-4000-8000-000000000001', 'kind', 'compra', 'date', (current_date - 100)::text, 'qty', 1, 'unit_price', 800000));
+  perform public.w_asset_price_set(wid, '22222222-0000-4000-8000-000000000001', current_date - 30, 850000);
+  perform public.w_tx_save(wid, jsonb_build_object('asset_id', '11111111-0000-4000-8000-000000000004', 'kind', 'compra', 'date', (current_date - 90)::text, 'qty', 10, 'unit_price', 1000));
   -- carteira só da Ana, para testar isolamento
   perform pg_temp.as_user('d0000000-0000-4000-8000-000000000004'); perform public.w_wallet_create('Davi Exemplo', 'pessoal');
 end $$;

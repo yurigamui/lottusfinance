@@ -29,7 +29,7 @@
     const { wrap, tip } = shell(host); const fmt = o.format || W.brl; const H = o.height || 260; const names = o.names || ['Valor', 'Aportes'];
     function draw() {
       const Wd = Math.max(280, wrap.clientWidth), m = { t: 16, r: 8, b: 26, l: 56 }, pw = Wd - m.l - m.r, ph = H - m.t - m.b;
-      const vals = rows.flatMap((r) => [r.a, r.b]).filter((v) => v !== undefined && v !== null).map(Number);
+      const vals = rows.flatMap((r) => [r.a, r.b, r.c]).filter((v) => v !== undefined && v !== null).map(Number);
       const [lo, hi] = niceRange(Math.min(0, ...vals), Math.max(0, ...vals));
       const y = (v) => m.t + ph - ((v - lo) / (hi - lo || 1)) * ph; const x = (i) => m.l + (rows.length === 1 ? pw / 2 : (pw * i) / (rows.length - 1));
       const svg = el('svg', { width: Wd, height: H, viewBox: `0 0 ${Wd} ${H}`, role: 'img', 'aria-label': o.name || 'Gráfico' });
@@ -43,12 +43,13 @@
       const path = (k) => rows.map((r, i) => (r[k] === undefined || r[k] === null ? null : `${x(i)},${y(Number(r[k]))}`)).filter(Boolean).map((p, i) => `${i ? 'L' : 'M'}${p}`).join('');
       if (rows.length > 1) svg.appendChild(el('path', { d: `${path('a')}L${x(rows.length - 1)},${y(Math.max(lo, 0))}L${x(0)},${y(Math.max(lo, 0))}Z`, class: 'line-area' }));
       if (rows.some((r) => r.b !== undefined)) svg.appendChild(el('path', { d: path('b'), class: 'line-path alt' }));
+      if (rows.some((r) => r.c !== undefined && r.c !== null)) svg.appendChild(el('path', { d: path('c'), class: 'line-path bench' }));
       svg.appendChild(el('path', { d: path('a'), class: 'line-path' }));
       const dot = el('circle', { r: 5, class: 'line-dot', visibility: 'hidden' }); svg.appendChild(dot);
       const band = pw / Math.max(rows.length - 1, 1);
       rows.forEach((r, i) => {
         const hit = el('rect', { x: x(i) - band / 2, y: m.t, width: band, height: ph, class: 'chart-hit', tabindex: '0', 'aria-label': `${r.long || r.label}: ${fmt(r.a)}` });
-        const show = () => { dot.setAttribute('cx', x(i)); dot.setAttribute('cy', y(Number(r.a))); dot.setAttribute('visibility', 'visible'); setTip(tip, [fmt(r.a), r.long || r.label, ...(r.b !== undefined ? [`${names[1]}: ${fmt(r.b)}`] : [])], x(i), y(Number(r.a)), Wd); };
+        const show = () => { dot.setAttribute('cx', x(i)); dot.setAttribute('cy', y(Number(r.a))); dot.setAttribute('visibility', 'visible'); setTip(tip, [fmt(r.a), r.long || r.label, ...(r.b !== undefined ? [`${names[1]}: ${fmt(r.b)}`] : []), ...(r.c !== undefined && r.c !== null ? [`${names[2]}: ${fmt(r.c)}`] : [])], x(i), y(Number(r.a)), Wd); };
         const hide = () => { tip.hidden = true; dot.setAttribute('visibility', 'hidden'); };
         hit.addEventListener('pointerenter', show); hit.addEventListener('pointermove', show); hit.addEventListener('pointerleave', hide); hit.addEventListener('focus', show); hit.addEventListener('blur', hide);
         svg.appendChild(hit);
@@ -56,7 +57,8 @@
       const old = wrap.querySelector('svg'); if (old) old.replaceWith(svg); else wrap.insertBefore(svg, tip);
     }
     draw();
-    table(host, ['Mês', names[0], ...(rows.some((r) => r.b !== undefined) ? [names[1]] : [])], rows.map((r) => [r.long || r.label, fmt(r.a), ...(r.b !== undefined ? [fmt(r.b)] : [])]));
+    const hasC = rows.some((r) => r.c !== undefined && r.c !== null);
+    table(host, ['Mês', names[0], ...(rows.some((r) => r.b !== undefined) ? [names[1]] : []), ...(hasC ? [names[2]] : [])], rows.map((r) => [r.long || r.label, fmt(r.a), ...(r.b !== undefined ? [fmt(r.b)] : []), ...(hasC ? [r.c === null || r.c === undefined ? '—' : fmt(r.c)] : [])]));
     if (window.ResizeObserver) { let last = wrap.clientWidth; new ResizeObserver(() => { if (Math.abs(wrap.clientWidth - last) > 4) { last = wrap.clientWidth; draw(); } }).observe(wrap); }
   };
 
