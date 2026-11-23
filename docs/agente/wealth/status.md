@@ -49,4 +49,4 @@ Todas as 21 páginas têm idealização no doc "Lottus Wealth — idealização 
 
 ## Últimas decisões
 
-Ver `DECISOES.md` (documento `claude/wealth-decisoes.md`).
+Ver `decisoes.md` (documento `claude/wealth-decisoes.md`).

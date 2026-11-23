@@ -1,54 +1,3 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pagamento · Lottus</title>
-<meta name="robots" content="noindex, nofollow">
-<meta name="color-scheme" content="light">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="icon" type="image/png" href="img/mark-rosa.png">
-<script src="vendor/qrcode.js"></script>
-<style>
-  :root { --tinta: #231c1a; --tinta-2: #4a403b; --muted: #8a7d74; --papel: #f5f2eb; --card: #fffdf9; --linha: #e6dccf; --rosa: #c73053; --rosa-tint: #fdf0f3; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--papel); color: var(--tinta); font-family: Inter, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-  .wrap { max-width: 560px; margin: 0 auto; padding: 28px 16px 48px; }
-  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-  .top img { height: 30px; }
-  .card { background: var(--card); border: 1px solid var(--linha); border-radius: 20px; padding: 26px 24px; }
-  .eyebrow { font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-  h1 { font-size: 30px; line-height: 1.15; letter-spacing: -0.03em; margin: 8px 0 6px; font-variant-numeric: tabular-nums; }
-  .sub { font-size: 15px; color: var(--tinta-2); margin: 0 0 18px; line-height: 1.5; }
-  .qr { display: grid; place-items: center; background: #fff; border: 1px solid var(--linha); border-radius: 16px; padding: 14px; margin: 6px 0 14px; }
-  .qr svg { width: 220px; height: 220px; display: block; }
-  .code { font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; background: #f7f3ec; border-radius: 12px; padding: 12px; color: var(--tinta-2); }
-  button, .btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; border: 0; border-radius: 999px; background: var(--tinta); color: #fff; font: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer; text-decoration: none; margin-top: 12px; }
-  .btn.ghost { background: transparent; color: var(--tinta); border: 1px solid var(--linha); }
-  dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 18px 0 0; font-size: 14px; }
-  dt { color: var(--muted); } dd { margin: 0; text-align: right; font-weight: 600; }
-  dd .muted { white-space: nowrap; }
-  .note { margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: var(--rosa-tint); border: 1px solid #f3cbd5; font-size: 14px; line-height: 1.55; color: var(--tinta-2); }
-  .done { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 14px; background: #e3f1ea; color: #2f6b4f; font-size: 15px; line-height: 1.5; }
-  .done b { color: #1f5139; }
-  .warn { color: #9b2c22; font-weight: 700; }
-  .err { padding: 14px 16px; border-radius: 14px; background: #f7e1df; color: #9b2c22; font-size: 14.5px; }
-  .muted { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
-  .split { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 14px; margin: 12px 0 4px; }
-  .split span:nth-child(even) { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--linha); border-top-color: var(--rosa); animation: s 0.8s linear infinite; margin: 24px auto; }
-  @keyframes s { to { transform: rotate(360deg); } }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="top"><a href="index.html"><img src="img/logo-rosa.png" alt="Lottus"></a><span class="muted" id="kind">Pagamento</span></div>
-  <div class="card" id="box"><div class="spinner" aria-label="Carregando"></div></div>
-  <p class="muted" style="text-align:center;margin-top:16px">Dúvidas? contato@lottusfinance.com.br</p>
-</div>
-<script>
 (function () {
   // Função pública da Lottus (não precisa de login; o link é a credencial)
   var FN = 'https://rowhslnnlzfbhmzbylbz.supabase.co/functions/v1/pix-charge';
@@ -148,6 +97,3 @@
     })
     .catch(function (e) { fail(e.message === 'not_found' ? 'Não encontramos esta cobrança. Use o link ou o QR Code mais recente.' : 'Não conseguimos abrir a cobrança agora. Tente de novo em instantes.'); });
 })();
-</script>
-</body>
-</html>

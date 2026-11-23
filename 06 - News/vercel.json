@@ -1,1 +1,0 @@
-{ "rewrites": [ { "source": "/materia/:slug", "destination": "/index.html" }, { "source": "/previsoes/:key", "destination": "/index.html" }, { "source": "/noticias", "destination": "/index.html" } ] }

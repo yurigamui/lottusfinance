@@ -30,7 +30,16 @@ Se a plataforma já existe, use o **Modo Beta** (manual, seção 10): audite tud
 - Chame os subagentes pelo nome: `idealizador`, `arquiteto`, `designer`, `desenvolvedor`, `verificador`, `auditor-dados`.
 - Ao chamar o `verificador`, passe **somente** a micro-especificação da seção, o caminho do que foi construído e o checklist da Fase 4 (manual, seção 8). Nunca passe a nota de construção nem o raciocínio do desenvolvedor.
 - Aplique os gates (G0 a G7). Não pule nenhum. Três reprovações seguidas da mesma seção: pare e leve ao Yuri.
-- Estado de cada plataforma em `docs/agente/<plataforma>/`: `STATUS.md`, `DECISOES.md`, `PENDENCIAS.md`, `MAPA-DE-VINCULOS.md`. Comece cada sessão lendo o `STATUS.md` e termine atualizando-o com o próximo passo exato.
+- Estado de cada plataforma em `docs/agente/<plataforma>/`: `status.md`, `decisoes.md`, `pendencias.md`, `mapa-de-vinculos.md`. Comece cada sessão lendo `docs/agente/progresso.md` e o `status.md` da plataforma e termine atualizando-o com o próximo passo exato.
 - Decida sozinho o que é técnico e reversível. Pare e pergunte ao Yuri sobre preço, plano, regra de crédito, jurídico (LGPD, CVM, B3, termos), produção, serviço pago, apagar dados e mudança de escopo. Uma pergunta por vez, com a recomendação primeiro.
 - Reporte no fim de cada seção em cinco linhas: seção, veredito, o que mudou, pendências, próximo passo.
 - Prefixos de RPC: `bo_` Admin, `w_` Wealth, `invest_` Invest, `sign_` Sign, `_` interna. Migrações: `AAAAMMDDHHMMSS_assunto.sql`.
+
+## Onde fica cada coisa neste repositório
+
+- `apps/<plataforma>/`: front estático de cada plataforma (`admin`, `site`, `partners`, `sign`, `news`), cada uma com `README.md` de publicação e `_headers` (CSP).
+- `supabase/migrations/`: migrações novas, prontas e **não aplicadas** (ver o `README.md` da pasta).
+- `docs/manual-agente-desenvolvedor.md`: o manual. `docs/agente/`: progresso, controle de cada plataforma, relatórios e `depende-de-mim.md`.
+- `scripts/check.mjs`: verificação sem dependências (sintaxe JS, links locais, CSP, segredos). Rode `node scripts/check.mjs` antes de cada commit.
+- `_revisar/`: arquivos que parecem sem uso, aguardando decisão do Yuri. Não apagar.
+- Mensagens de commit: `plataforma: o que mudou` (ex.: `partners/login: corrige foco do campo de código`).
