@@ -133,7 +133,9 @@ const forMethod = (m: string): Provider => (!live() ? manual : m === 'pix' ? tri
 
 async function applyEvent(prov: Provider, ev: Event) {
   if (ev.type === 'authorized' || (ev.type === 'paid' && ev.customer_id && ev.card_last4)) {
-    await sb.rpc('w_billing_authorized', { p_provider: prov.name, p_customer_id: ev.customer_id, p_card_brand: ev.card_brand ?? null, p_card_last4: ev.card_last4 ?? null });
+    const { data: auth, error: ae } = await sb.rpc('w_billing_authorized', { p_provider: prov.name, p_customer_id: ev.customer_id, p_card_brand: ev.card_brand ?? null, p_card_last4: ev.card_last4 ?? null });
+    if (ae) throw new Error(ae.message);
+    if (auth !== 'ok') console.warn('autorização sem cliente conhecido', prov.name);
     if (ev.type === 'authorized') return 'ok';
   }
   const { data, error } = await sb.rpc('w_payment_event_apply', { p_provider: prov.name, p_event_id: ev.event_id, p_type: ev.type, p_charge_id: ev.charge_id, p_payload: ev.payload });
@@ -148,7 +150,7 @@ Deno.serve(async (req) => {
   if (action === 'checkout') {
     const tok = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
     const { data: u } = await sb.auth.getUser(tok);
-    if (!u?.user) return json({ ok: false, error: 'unauthorized' }, 401);
+    if (!u?.user) return withCors(req, json({ ok: false, error: 'unauthorized' }, 401));
     const { data: info, error } = await sb.rpc('w_billing_checkout_info', { p_user: u.user.id });
     if (error || !info?.profile || !['pro', 'fund'].includes(info.plan)) return withCors(req, json({ ok: false, error: 'billing_required' }, 400));
     const prov = forMethod(info.profile.method);
@@ -159,7 +161,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'webhook') {
-    const prov = PROVIDERS[url.searchParams.get('provider') ?? 'manual'];
+    const pname = url.searchParams.get('provider') ?? 'manual'; const prov = Object.hasOwn(PROVIDERS, pname) ? PROVIDERS[pname] : null;
     if (!prov) return new Response('not found', { status: 404 });
     const ev = prov.parseWebhook(await req.json().catch(() => null), req.headers);
     if (!ev) return new Response('forbidden', { status: 403 });

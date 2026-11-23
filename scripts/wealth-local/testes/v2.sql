@@ -5,6 +5,11 @@ begin;
 create or replace function pg_temp.as_user(u uuid) returns void language sql as $$ select set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true) $$;
 create or replace function pg_temp.err(q text) returns text language plpgsql as $$ begin execute q; return 'ok'; exception when others then return sqlerrm; end $$;
 create or replace function pg_temp.ok(c boolean, n text) returns void language plpgsql as $$ begin if not coalesce(c, false) then raise exception 'FALHOU: %', n; end if; raise notice 'ok  %', n; end $$;
+-- independente do estado: começa com a Ana no Grátis, sem cobrança nem grupos (B-1 da verificação)
+update public.w_profiles set plan = 'gratis', payment_ok = false where user_id = 'a0000000-0000-4000-8000-000000000001';
+delete from public.w_billing_profiles where user_id = 'a0000000-0000-4000-8000-000000000001';
+delete from public.w_groups where owner_id = 'a0000000-0000-4000-8000-000000000001';
+delete from public.w_wallets where owner_id = 'a0000000-0000-4000-8000-000000000001' and name <> 'Família Exemplo';
 select set_config('t.wid', (select id::text from public.w_wallets where name = 'Família Exemplo'), true);
 set local role authenticated;
 do $$
@@ -123,5 +128,43 @@ begin
   perform pg_temp.ok(public.w_billing_authorized('asaas', 'cus_exemplo', 'VISA', '4242') = 'ok', 'V14 autorização aceita');
   perform pg_temp.ok((select payment_ok from public.w_profiles where user_id = ana), 'V14 pagamento autorizado');
   perform pg_temp.ok((select card_last4 from public.w_billing_profiles where user_id = ana) = '4242', 'V14 só os 4 últimos dígitos');
+end $$;
+-- ciclo 2: regressões dos achados da verificação
+do $$
+declare ana uuid := 'a0000000-0000-4000-8000-000000000001'; wid uuid := current_setting('t.wid')::uuid; k text; t0 timestamptz; ms numeric; eq jsonb; old numeric;
+begin
+  -- B1: funções internas novas não são chamáveis por usuário logado
+  perform pg_temp.ok(not has_function_privilege('authenticated', 'public._w_invest_value_m(uuid,date,text)', 'execute') and not has_function_privilege('authenticated', 'public._w_wallet_brand(uuid)', 'execute')
+    and not has_function_privilege('authenticated', 'public._w_mode(uuid,text)', 'execute') and not has_function_privilege('authenticated', 'public._w_bench_factor(text,date,date)', 'execute'), 'C2-B1 internas sem grant para authenticated');
+  -- A1: autorização sem cartão não apaga o final; número inteiro guarda os 4 últimos
+  update public.w_billing_profiles set card_brand = 'VISA', card_last4 = '4242' where user_id = ana;
+  perform public.w_billing_authorized('asaas', 'cus_exemplo', null, null);
+  perform pg_temp.ok((select card_last4 from public.w_billing_profiles where user_id = ana) = '4242', 'C2-A1 autorização sem cartão mantém o final');
+  perform public.w_billing_authorized('asaas', 'cus_exemplo', 'MASTER', '5555 4444 3333 1111');
+  perform pg_temp.ok((select card_last4 from public.w_billing_profiles where user_id = ana) = '1111', 'C2-A1 guarda os 4 últimos dígitos');
+  -- M6: data impossível na API vira invalid_value
+  perform set_config('request.jwt.claims', json_build_object('sub', ana, 'role', 'authenticated')::text, true);
+  k := public.w_apikey_create('Datas')->>'key'; perform set_config('request.jwt.claims', '', true);
+  perform pg_temp.ok(pg_temp.err(format('select public.w_api_call(%L, %L, %L, %L)', k, 'transacoes', wid, '{"de":"2026-02-30"}')) = 'invalid_value', 'C2-M6 data impossível = invalid_value');
+  -- A3: benchmark em uma passada confere com a fórmula direta (fator por aporte) e fica dentro da meta com 1.000 lançamentos
+  perform set_config('request.jwt.claims', json_build_object('sub', ana, 'role', 'authenticated')::text, true);
+  eq := public.w_equity(wid, 12, 'curva');
+  select round(sum(case t.kind when 'compra' then t.qty * t.unit_price else -t.qty * t.unit_price end * public._w_bench_factor('CDI', t.date, (eq->-1->>'date')::date)), 2) into old
+    from public.w_invest_tx t where t.wallet_id = wid and t.kind in ('compra', 'venda') and t.date <= (eq->-1->>'date')::date;
+  perform pg_temp.ok(abs((eq->-1->>'benchmark')::numeric - old) < 0.05, format('C2-A3 benchmark igual à fórmula direta (%s × %s)', eq->-1->>'benchmark', old));
+  insert into public.w_invest_tx (wallet_id, asset_id, kind, date, qty, unit_price, source)
+  select wid, '11111111-0000-4000-8000-000000000001', 'compra', current_date - (g % 700), 1, 30, 'manual' from generate_series(1, 1000) g;
+  t0 := clock_timestamp(); perform public.w_equity(wid, 60, 'curva'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
+  perform pg_temp.ok(ms < 300, format('C2-A3 w_equity 60 meses com 1.000 lançamentos em %s ms (meta 300)', round(ms)));
+  t0 := clock_timestamp(); perform public.w_equity(wid, 12, 'curva'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
+  perform pg_temp.ok(ms < 300, format('C2-A3 w_equity 12 meses em %s ms', round(ms)));
+end $$;
+-- M1: CPF/CNPJ de cobrança com dígito verificador
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', 'a0000000-0000-4000-8000-000000000001', 'role', 'authenticated')::text, true);
+do $$ begin
+  perform pg_temp.ok(pg_temp.err($q$select public.w_billing_profile_save('{"holder_name":"Ana Exemplo","doc":"11111111111","email":"a@exemplo.com.br","zip":"01001000","street":"R","number":"1","district":"C","city":"S","state":"SP","method":"pix"}')$q$) = 'doc_invalid', 'C2-M1 CPF com dígitos repetidos recusado');
+  perform pg_temp.ok(pg_temp.err($q$select public.w_billing_profile_save('{"holder_name":"Empresa Exemplo","doc":"11.222.333/0001-81","email":"a@exemplo.com.br","zip":"01001000","street":"R","number":"1","district":"C","city":"S","state":"SP","method":"boleto"}')$q$) = 'ok', 'C2-M1 CNPJ válido aceito');
+  perform pg_temp.ok(pg_temp.err($q$select public.w_billing_profile_save('{"holder_name":"Empresa Exemplo","doc":"11.222.333/0001-82","email":"a@exemplo.com.br","zip":"01001000","street":"R","number":"1","district":"C","city":"S","state":"SP","method":"boleto"}')$q$) = 'doc_invalid', 'C2-M1 CNPJ com dígito errado recusado');
 end $$;
 rollback;

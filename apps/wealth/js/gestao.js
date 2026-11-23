@@ -82,7 +82,8 @@
     const pr = W.state.me.profile; const fund = pr.plan === 'fund'; const groupsOk = pr.plan !== 'gratis';
     const mine = (w.groups || []).filter((g) => g.mine); const others = (w.groups || []).filter((g) => !g.mine);
     let brand;
-    if (!fund) brand = `<div class="card stack"><div class="row between"><div><h2>Marca</h2><div class="muted small">Logo, cores e estilo no lugar das iniciais, para todas as pessoas com acesso.</div></div>${tag('Plano Fund', 'brand')}</div><div><a class="btn secondary" href="#/conta?aba=plano">Conhecer o plano Fund</a></div></div>`;
+    if (!mine.length && others.length) brand = `<div class="card stack"><h2>Marca</h2><p class="muted small">Esta carteira está no grupo <b>${esc(others[0].name)}</b>, de outra pessoa; a marca é definida por quem criou o grupo.</p></div>`;
+    else if (!fund) brand = `<div class="card stack"><div class="row between"><div><h2>Marca</h2><div class="muted small">Logo, cores e estilo no lugar das iniciais, para todas as pessoas com acesso.</div></div>${tag('Plano Fund', 'brand')}</div><div><a class="btn secondary" href="#/conta?aba=plano">Conhecer o plano Fund</a></div></div>`;
     else if (mine.length) {
       const g = await W.rpc('w_group_get', { p_id: mine[0].id });
       brand = `<div class="note-box" style="margin-top:16px">A marca pertence ao grupo <b>${esc(g.name)}</b> (${g.wallets.length} ${g.wallets.length === 1 ? 'carteira' : 'carteiras'}) e vale para todas as carteiras dele. <a href="#/grupos/${esc(g.id)}">Abrir o grupo</a></div>${W.brandHtml(g)}`;
@@ -107,7 +108,7 @@
         <div class="row between"><div><b>Arquivar</b><div class="muted small">A carteira some da lista de todos e deixa de ser cobrada. Os dados ficam guardados; a equipe Lottus pode reativar.</div></div><button class="btn secondary" data-act="wallet-archive"${w.read_only ? ' disabled' : ''}>Arquivar</button></div>
         <div class="row between"><div><b>Excluir de vez</b><div class="muted small">Apaga a carteira, os lançamentos, as contas, os ativos personalizados e os acessos. Não dá para desfazer. Faturas já emitidas continuam na sua conta.</div></div><button class="btn danger" data-act="wallet-delete">Excluir carteira</button></div></div>` : '<p class="muted small" style="margin-top:16px">Só o titular da cobrança pode arquivar ou excluir esta carteira.</p>'}`;
   });
-  W.forms['wallet-settings'] = async (f) => { const v = W.form(f); await W.rpc('w_wallet_settings_save', { p_wallet: curId(), p: { name: v.name, benchmark: v.benchmark, view_mode: v.view_mode } }); W.state.wallets = []; W.toast('Configurações salvas'); W.refresh(); };
+  W.forms['wallet-settings'] = async (f) => { const v = W.form(f); const nm = f.querySelector('[name=name]'); W.fieldError(nm, ''); const n = String(v.name || '').trim(); if (n.length < 2 || n.length > 80) W.fieldFail(nm, 'O nome precisa ter de 2 a 80 caracteres.'); await W.rpc('w_wallet_settings_save', { p_wallet: curId(), p: { name: v.name, benchmark: v.benchmark, view_mode: v.view_mode } }); W.state.wallets = []; W.toast('Configurações salvas'); W.refresh(); };
   document.addEventListener('change', (e) => { if (e.target.id === 'bg-sel') { const n = document.getElementById('bg-new'); if (n) n.hidden = !!e.target.value; } });
   W.forms['brand-group'] = async (f) => {
     const v = W.form(f); const id = curId();

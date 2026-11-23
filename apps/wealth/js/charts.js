@@ -28,7 +28,7 @@
   W.lineChart = (host, rows, o = {}) => {
     const { wrap, tip } = shell(host); const fmt = o.format || W.brl; const H = o.height || 260; const names = o.names || ['Valor', 'Aportes'];
     function draw() {
-      const Wd = Math.max(280, wrap.clientWidth), m = { t: 16, r: 8, b: 26, l: 56 }, pw = Wd - m.l - m.r, ph = H - m.t - m.b;
+      const Wd = Math.max(200, wrap.clientWidth), m = { t: 16, r: 8, b: 26, l: 56 }, pw = Wd - m.l - m.r, ph = H - m.t - m.b;
       const vals = rows.flatMap((r) => [r.a, r.b, r.c]).filter((v) => v !== undefined && v !== null).map(Number);
       const [lo, hi] = niceRange(Math.min(0, ...vals), Math.max(0, ...vals));
       const y = (v) => m.t + ph - ((v - lo) / (hi - lo || 1)) * ph; const x = (i) => m.l + (rows.length === 1 ? pw / 2 : (pw * i) / (rows.length - 1));
@@ -66,7 +66,7 @@
   W.flowChart = (host, rows, o = {}) => {
     const { wrap, tip } = shell(host); const H = o.height || 240;
     function draw() {
-      const Wd = Math.max(280, wrap.clientWidth), m = { t: 16, r: 4, b: 26, l: 56 }, pw = Wd - m.l - m.r, ph = H - m.t - m.b;
+      const Wd = Math.max(200, wrap.clientWidth), m = { t: 16, r: 4, b: 26, l: 56 }, pw = Wd - m.l - m.r, ph = H - m.t - m.b;
       const max = niceMax(Math.max(0, ...rows.flatMap((r) => [Number(r.in) || 0, Number(r.out) || 0]))); const y = (v) => m.t + ph - (v / max) * ph;
       const svg = el('svg', { width: Wd, height: H, viewBox: `0 0 ${Wd} ${H}`, role: 'img', 'aria-label': 'Receitas e despesas por mês' });
       for (let i = 0; i <= 4; i++) { const v = (max / 4) * i, yy = Math.round(y(v)) + 0.5; svg.appendChild(el('line', { x1: m.l, x2: Wd - m.r, y1: yy, y2: yy, class: i === 0 ? 'chart-base' : 'chart-grid' })); const t = el('text', { x: m.l - 8, y: yy + 4, 'text-anchor': 'end', class: 'chart-axis' }); t.textContent = i === 0 ? '0' : W.brlC(v).replace('R$ ', ''); svg.appendChild(t); }
@@ -100,7 +100,7 @@
       const path = el('path', { d: top.length === 1 ? `M${C - R},${C}a${R},${R} 0 1,0 ${2 * R},0a${R},${R} 0 1,0 ${-2 * R},0M${C - r},${C}a${r},${r} 0 1,1 ${2 * r},0a${r},${r} 0 1,1 ${-2 * r},0Z` : `M${p(R, a0)}A${R},${R} 0 ${big} 1 ${p(R, a1)}L${p(r, a1)}A${r},${r} 0 ${big} 0 ${p(r, a0)}Z`, class: `c${i}`, 'fill-rule': 'evenodd' });
       const t = el('title'); t.textContent = `${s.name}: ${fmt(s.value)} (${W.pct(s.value / total, 1)})`; path.appendChild(t); svg.appendChild(path); a0 += (Number(s.value) / total) * Math.PI * 2;
     });
-    const box = document.createElement('div'); box.className = 'row'; box.style.flexWrap = 'nowrap';
+    const box = document.createElement('div'); box.className = 'row donut-box'; box.style.flexWrap = 'nowrap';
     const leg = document.createElement('div'); leg.className = 'legend grow';
     leg.innerHTML = top.map((s, i) => `<div class="legend-row"><span class="dot c${i}"></span><span class="grow">${W.esc(s.name)}</span><b>${W.pct(s.value / total, 1)}</b></div>`).join('');
     box.append(svg, leg); host.appendChild(box);

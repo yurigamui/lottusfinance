@@ -164,7 +164,7 @@ declare v_user uuid;
 begin
   select user_id into v_user from public.w_billing_profiles where provider = p_provider and provider_customer_id = p_customer_id;
   if v_user is null then return 'not_found'; end if;
-  update public.w_billing_profiles set card_brand = coalesce(p_card_brand, card_brand), card_last4 = coalesce(left(regexp_replace(coalesce(p_card_last4, ''), '\D', '', 'g'), 4), card_last4) where user_id = v_user;
+  update public.w_billing_profiles set card_brand = coalesce(p_card_brand, card_brand), card_last4 = coalesce(nullif(right(regexp_replace(coalesce(p_card_last4, ''), '\D', '', 'g'), 4), ''), card_last4) where user_id = v_user;
   update public.w_profiles set payment_ok = true where user_id = v_user;
   perform public._w_audit(null, 'payment_authorized', jsonb_build_object('user', v_user, 'provider', p_provider));
   return 'ok';
@@ -209,7 +209,9 @@ returns numeric language sql stable security definer set search_path = '' as $$
 $$;
 
 revoke all on function public._w_mode(uuid, text), public._w_invest_value_m(uuid, date, text), public._w_bench_factor(text, date, date) from public, anon;
-grant execute on function public._w_mode(uuid, text), public._w_invest_value_m(uuid, date, text), public._w_bench_factor(text, date, date) to authenticated, service_role;
+-- internas: sem grant para authenticated (as RPCs públicas as chamam como dono, depois de conferir o acesso)
+revoke execute on function public._w_mode(uuid, text), public._w_invest_value_m(uuid, date, text), public._w_bench_factor(text, date, date) from authenticated;
+grant execute on function public._w_mode(uuid, text), public._w_invest_value_m(uuid, date, text), public._w_bench_factor(text, date, date) to service_role;
 
 drop function if exists public.w_networth(uuid);
 create or replace function public.w_networth(p_wallet uuid, p_mode text default null)
@@ -249,7 +251,9 @@ end $$;
 revoke all on function public.w_positions(uuid, text) from public, anon;
 grant execute on function public.w_positions(uuid, text) to authenticated;
 
--- evolução mensal com o benchmark: "aportes corrigidos" = quanto os aportes valeriam se rendessem o benchmark
+-- evolução mensal com o benchmark: "aportes corrigidos" = quanto os aportes valeriam se rendessem o benchmark.
+-- Conta em uma passada: com L(d) = soma de ln(1 + índice) até d, cada aporte vale fluxo × e^(L(d) − L(data do aporte)),
+-- então benchmark(d) = e^L(d) × Σ fluxo × e^(−L(data)). Evita uma subconsulta por lançamento e por mês.
 drop function if exists public.w_equity(uuid, integer);
 create or replace function public.w_equity(p_wallet uuid, p_months integer default 12, p_mode text default null)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
@@ -260,12 +264,20 @@ begin
   select benchmark into bm from public.w_wallets where id = p_wallet;
   v_first := (date_trunc('month', current_date) - make_interval(months => greatest(least(coalesce(p_months, 12), 120), 1) - 1))::date;
   return coalesce((
-    select jsonb_agg(jsonb_build_object('date', d, 'investimentos', i, 'contas', c, 'total', i + c, 'aportes', k, 'benchmark', bv) order by d)
+    with ev as (
+      select i.date, ln(1 + i.value / 100) l, 0::numeric f, 0 o from public.w_indices i where bm <> 'nenhum' and i.name = bm
+      union all
+      select t.date, 0, case t.kind when 'compra' then t.qty * t.unit_price else -t.qty * t.unit_price end, 1
+        from public.w_invest_tx t where t.wallet_id = p_wallet and t.kind in ('compra', 'venda')),
+    acc as (select e.date, e.f, e.o, sum(e.l) over (order by e.date, e.o rows unbounded preceding) cum from ev e),
+    tw as (select a.date, a.f * exp(-a.cum) w from acc a where a.o = 1),
+    months as (select least((g + interval '1 month - 1 day')::date, current_date) d from generate_series(v_first, date_trunc('month', current_date)::date, interval '1 month') g)
+    select jsonb_agg(jsonb_build_object('date', s.d, 'investimentos', s.i, 'contas', s.c, 'total', s.i + s.c, 'aportes', s.k, 'benchmark', s.bv) order by s.d)
       from (select x.d, public._w_invest_value_m(p_wallet, x.d, m) i, public._w_cash(p_wallet, x.d) c, public._w_contrib(p_wallet, x.d) k,
-                   case when bm = 'nenhum' then null else
-                     (select coalesce(sum(case t.kind when 'compra' then t.qty * t.unit_price when 'venda' then -t.qty * t.unit_price else 0 end * public._w_bench_factor(bm, t.date, x.d)), 0)
-                        from public.w_invest_tx t where t.wallet_id = p_wallet and t.date <= x.d) end bv
-              from (select least((g + interval '1 month - 1 day')::date, current_date) d from generate_series(v_first, date_trunc('month', current_date)::date, interval '1 month') g) x) s), '[]'::jsonb);
+                   case when bm = 'nenhum' then null else round(
+                     exp(coalesce((select sum(ln(1 + i.value / 100)) from public.w_indices i where i.name = bm and i.date <= x.d), 0))
+                     * coalesce((select sum(tw.w) from tw where tw.date <= x.d), 0), 2) end bv
+              from months x) s), '[]'::jsonb);
 end $$;
 revoke all on function public.w_equity(uuid, integer, text) from public, anon;
 grant execute on function public.w_equity(uuid, integer, text) to authenticated;
@@ -278,7 +290,8 @@ returns jsonb language sql stable security definer set search_path = '' as $$
    where gw.wallet_id = p_wallet and b.enabled order by g.created_at limit 1;
 $$;
 revoke all on function public._w_wallet_brand(uuid) from public, anon;
-grant execute on function public._w_wallet_brand(uuid) to authenticated, service_role;
+revoke execute on function public._w_wallet_brand(uuid) from authenticated;
+grant execute on function public._w_wallet_brand(uuid) to service_role;
 
 create or replace function public.w_wallets_list()
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
@@ -428,6 +441,8 @@ begin
     else raise exception 'not_found';
   end case;
   return jsonb_build_object('carteira', p_wallet, 'dados', v_res);
+exception when invalid_datetime_format or datetime_field_overflow or invalid_text_representation or numeric_value_out_of_range then
+  raise exception 'invalid_value';
 end $$;
 revoke all on function public.w_api_call(text, text, uuid, jsonb) from public, anon, authenticated;
 grant execute on function public.w_api_call(text, text, uuid, jsonb) to service_role;
@@ -441,3 +456,32 @@ begin
 end $$;
 revoke all on function public.w_api_wallet(text, uuid) from public, anon, authenticated;
 grant execute on function public.w_api_wallet(text, uuid) to service_role;
+
+-- ============ ciclo 2 da verificação ============
+-- CPF ou CNPJ de cobrança conferido pelos dígitos verificadores (antes só pelo tamanho)
+create or replace function public._w_cnpj_ok(p text) returns boolean language plpgsql immutable set search_path = '' as $$
+declare d int[]; s int; r int; w1 int[] := array[5,4,3,2,9,8,7,6,5,4,3,2]; w2 int[] := array[6,5,4,3,2,9,8,7,6,5,4,3,2];
+begin
+  if p !~ '^\d{14}$' or p ~ '^(\d)\1{13}$' then return false; end if;
+  select array_agg(substr(p, g, 1)::int order by g) into d from generate_series(1, 14) g;
+  s := 0; for i in 1..12 loop s := s + d[i] * w1[i]; end loop; r := s % 11; if (case when r < 2 then 0 else 11 - r end) <> d[13] then return false; end if;
+  s := 0; for i in 1..13 loop s := s + d[i] * w2[i]; end loop; r := s % 11; return (case when r < 2 then 0 else 11 - r end) = d[14];
+end $$;
+revoke all on function public._w_cnpj_ok(text) from public, anon, authenticated;
+
+create or replace function public.w_billing_profile_save(p jsonb)
+returns void language plpgsql security definer set search_path = '' as $$
+declare v_doc text := regexp_replace(coalesce(p->>'doc', ''), '\D', '', 'g'); v_zip text := regexp_replace(coalesce(p->>'zip', ''), '\D', '', 'g');
+begin
+  if auth.uid() is null then raise exception 'forbidden'; end if;
+  if length(trim(coalesce(p->>'holder_name', ''))) < 3 then raise exception 'name_required'; end if;
+  if not ((length(v_doc) = 11 and public._w_cpf_ok(v_doc)) or (length(v_doc) = 14 and public._w_cnpj_ok(v_doc))) then raise exception 'doc_invalid'; end if;
+  if v_zip !~ '^\d{8}$' then raise exception 'zip_invalid'; end if;
+  if coalesce(trim(p->>'email'), '') !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'email_invalid'; end if;
+  insert into public.w_billing_profiles (user_id, holder_name, doc, email, zip, street, number, complement, district, city, state, method, updated_at)
+  values (auth.uid(), trim(p->>'holder_name'), v_doc, lower(trim(p->>'email')), v_zip, trim(p->>'street'), trim(p->>'number'), nullif(trim(coalesce(p->>'complement', '')), ''),
+          trim(p->>'district'), trim(p->>'city'), upper(trim(p->>'state')), p->>'method', now())
+  on conflict (user_id) do update set holder_name = excluded.holder_name, doc = excluded.doc, email = excluded.email, zip = excluded.zip, street = excluded.street, number = excluded.number,
+    complement = excluded.complement, district = excluded.district, city = excluded.city, state = excluded.state, method = excluded.method, updated_at = now();
+  perform public._w_audit(null, 'billing_profile_saved', jsonb_build_object('method', p->>'method'));
+end $$;

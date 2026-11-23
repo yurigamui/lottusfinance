@@ -301,6 +301,7 @@ async function anbima(assets: Asset[], todayIso: string) {
 Deno.serve(async (req) => {
   const got = req.headers.get('x-cron-secret') ?? '';
   const envSecret = Deno.env.get('WEALTH_CRON_SECRET');
+  log.length = 0; // o módulo pode ser reaproveitado entre execuções
   const ok = (!!envSecret && got === envSecret) || (!!got && (await sb.rpc('w_cron_ok', { p: got })).data === true);
   if (!ok) return new Response('forbidden', { status: 403 });
   try {

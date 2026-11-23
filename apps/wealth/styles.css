@@ -1717,3 +1717,24 @@ nav.tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width
 .legend-bench i.alt { border-top: 2px dashed var(--ink); }
 .legend-bench i.bench { border-top: 2px dotted var(--muted); }
 .danger-zone { border-color: var(--danger, #c0392b); }
+
+/* ---------- v2 ciclo 2: menu com 6 seções cabe em 320 px; cabeçalho de gráfico e legendas no celular; alvos de 44 px ---------- */
+@media (max-width: 420px) {
+  .sidenav-mark { display: none; }
+  .sidenav { padding: 8px; gap: 0; justify-content: center; overflow-x: visible; }
+  .sidenav-items { gap: 2px; justify-content: center; width: 100%; }
+  .nav-btn { width: 44px; height: 44px; border-radius: 14px; }
+}
+.card-head { flex-wrap: wrap; }
+.card-head > .row { flex-wrap: wrap; gap: 8px; }
+.period { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.period a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--muted); text-decoration: none; font-family: inherit; }
+.period a.active { background: var(--field); color: var(--ink); }
+.tabs button, .tabs .tab-link { min-height: 44px; display: inline-flex; align-items: center; }
+.legend-row { min-width: 0; }
+.legend-row .grow { min-width: 0; overflow-wrap: anywhere; }
+.legend-row b { flex-shrink: 0; margin-left: 6px; }
+@media (max-width: 420px) {
+  .donut-box { flex-direction: column; align-items: stretch; }
+  .donut-box svg { align-self: center; }
+}

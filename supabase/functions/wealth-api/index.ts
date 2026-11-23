@@ -40,7 +40,8 @@ Deno.serve(async (req) => {
   const q = url.searchParams; const params: Record<string, string> = {};
   for (const k of ['visao', 'meses', 'de', 'ate', 'pagina']) { const v = q.get(k); if (v !== null && v !== '') params[k] = v; }
   if (params.visao && !['curva', 'mercado'].includes(params.visao)) return fail('invalid_value');
-  if ((params.de && !DATE.test(params.de)) || (params.ate && !DATE.test(params.ate))) return fail('invalid_value');
+  const realDate = (s: string) => DATE.test(s) && !Number.isNaN(Date.parse(s + 'T00:00:00Z')) && new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;
+  if ((params.de && !realDate(params.de)) || (params.ate && !realDate(params.ate))) return fail('invalid_value');
   if (params.meses && !(/^\d{1,3}$/.test(params.meses) && +params.meses >= 1 && +params.meses <= 120)) return fail('invalid_value');
   if (params.pagina && !(/^\d{1,5}$/.test(params.pagina) && +params.pagina >= 1)) return fail('invalid_value');
   const { data, error } = await sb.rpc('w_api_call', { p_key: key, p_resource: resource, p_wallet: wallet, p_params: params });

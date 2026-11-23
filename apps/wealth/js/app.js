@@ -24,6 +24,7 @@
   W.modeBar = (mode) => `<div class="tabs" role="group" aria-label="Visão dos preços">${[['curva', 'Na curva'], ['mercado', 'A mercado']].map(([k, l]) => `<button type="button" data-act="view-mode" data-mode="${k}" class="${mode === k ? 'active' : ''}" aria-pressed="${mode === k}">${l}</button>`).join('')}</div>`;
   W.modeHint = (mode, has) => `<p class="muted small">${mode === 'mercado' ? (has ? 'A mercado: renda fixa pelo preço estimado de venda hoje (taxa de mercado + spread de emissão); demais ativos pela última cotação.' : 'A mercado: nenhum ativo da carteira tem preço a mercado diferente da curva hoje.') : 'Na curva: renda fixa pela taxa contratada até hoje; demais ativos pela última cotação.'}</p>`;
   W.qs = (ctx, k, v) => { const q = new URLSearchParams(ctx.q); q.set(k, v); return q.toString(); };
+  document.addEventListener('error', (e) => { const im = e.target; if (!(im instanceof HTMLImageElement)) return; const box = im.closest('.org-mark.has-logo'); if (!box) return; box.classList.remove('has-logo'); box.textContent = W.initials(im.alt || 'W'); }, true);
   W.pageHead = (title, sub, actions, back) => `<div class="page-head"><div>${back ? `<a class="back" href="#${back[0]}">← ${esc(back[1])}</a><br>` : ''}<h1>${esc(title)}</h1>${sub ? `<div class="page-sub">${esc(sub)}</div>` : ''}</div>${actions ? `<div class="row">${actions}</div>` : ''}</div>`;
   const tag = (t, c = '') => `<span class="tag ${c}">${esc(t)}</span>`;
   W.tag = tag;
@@ -44,7 +45,7 @@
     const m = path.match(r.re); const params = {}; r.keys.forEach((k, i) => { params[k] = decodeURIComponent(m[i + 1]); });
     W.closeModal();
     if (!r.public) {
-      if (!W.state.me) { try { sessionStorage.setItem('w_next', path); } catch { /* navegação privada */ } return W.go('/entrar'); }
+      if (!W.state.me) { try { sessionStorage.setItem('w_next', location.hash.replace(/^#/, '') || path); } catch { /* navegação privada */ } return W.go('/entrar'); }
       if (!W.state.me.profile || !W.state.me.profile.completed) { if (path !== '/finalizar') return W.go('/finalizar'); }
     }
     const ctx = { path, params, q, after: null, can: () => false, w: null, canWrite: false };
@@ -228,7 +229,7 @@
     boxes[0].focus();
   }
   // Depois de entrar, volta para a tela que a pessoa tentou abrir sem sessão (link de e-mail, favorito), se houver.
-  function nextPath() { let n = null; try { n = sessionStorage.getItem('w_next'); sessionStorage.removeItem('w_next'); } catch { /* navegação privada */ } return n && /^\/[a-z0-9/_-]*$/i.test(n) && n !== '/entrar' ? n : null; }
+  function nextPath() { let n = null; try { n = sessionStorage.getItem('w_next'); sessionStorage.removeItem('w_next'); } catch { /* navegação privada */ } return n && /^\/[a-z0-9/_-]*(\?[a-z0-9=&_.%-]*)?$/i.test(n) && !/^\/entrar\b/.test(n) ? n : null; }
   async function afterLogin() { await loadMe(); W.state.wallets = []; const done = W.state.me && W.state.me.profile && W.state.me.profile.completed; W.go(done ? (nextPath() || '/carteiras') : '/finalizar'); }
 
   W.route('/criar-conta', async (ctx) => {
@@ -330,7 +331,7 @@
   const RADIUS = { classico: '10px', moderno: '20px', minimalista: '2px' };
   const brandPrev = (b) => { const c = b.color || '#c73053', c2 = b.color2 || '#1a1a1a'; return `<div id="gb-prev" style="border:1px solid var(--line,#e5e5e5);border-radius:${RADIUS[b.style] || '10px'};padding:20px;font-family:${FONT_CSS[b.font] || FONT_CSS.inter};background:#fff"><div class="row" style="gap:10px;align-items:center">${b.logo_url && /^https:\/\//i.test(b.logo_url) ? `<img alt="" src="${esc(b.logo_url)}" style="height:32px;max-width:120px;object-fit:contain">` : `<span style="display:inline-grid;place-items:center;width:32px;height:32px;border-radius:${RADIUS[b.style] || '10px'};background:${esc(c)};color:#fff;font-weight:600">${esc(W.initials(b.brand_name || 'W'))}</span>`}<b style="color:${esc(c2)}">${esc(b.brand_name || 'Sua marca')}</b></div><p style="color:${esc(c2)};opacity:.7;margin:14px 0">Patrimônio líquido</p><div style="font-size:26px;font-weight:600;color:${esc(c2)}">R$ 1.250.000,00</div><button type="button" style="margin-top:16px;border:0;color:#fff;background:${esc(c)};padding:10px 18px;border-radius:${RADIUS[b.style] || '10px'};font-family:inherit">Ver carteira</button></div>`; };
   const brandHtml = (g) => {
-    if (!g.fund) return `<div class="card stack" style="margin-top:16px"><div class="row between"><div><h2>Marca do grupo</h2><div class="muted small">Estilo, logo e cores para gerar a plataforma white-label deste grupo.</div></div>${tag('Plano Fund', 'brand')}</div><div><a class="btn secondary" href="#/conta">Conhecer o plano Fund</a></div></div>`;
+    if (!g.fund) return `<div class="card stack" style="margin-top:16px"><div class="row between"><div><h2>Marca do grupo</h2><div class="muted small">Estilo, logo e cores para gerar a plataforma white-label deste grupo.</div></div>${tag('Plano Fund', 'brand')}</div><div><a class="btn secondary" href="#/conta?aba=plano">Conhecer o plano Fund</a></div></div>`;
     const b = g.brand || {};
     return `<div class="split" style="margin-top:16px"><form class="card stack" data-form="brand-save"><input type="hidden" name="group" value="${esc(g.id)}"><div class="card-head"><div><h2>Marca do grupo</h2><div class="muted small">Define como a plataforma white-label deste grupo aparece para as pessoas dele.</div></div></div>
       <label class="check"><input type="checkbox" name="enabled"${b.enabled ? ' checked' : ''}> <span>Ativar plataforma com a marca deste grupo</span></label>
@@ -450,10 +451,15 @@
         <div class="field"><label for="pf-cpf">CPF</label><input class="input" id="pf-cpf" value="${esc(W.cpfMasked(me.profile.cpf))}" disabled><div class="help">O CPF identifica a sua conta e não pode ser alterado.</div></div>
         <div><button class="btn" type="submit">Salvar dados</button></div></form>
       <div class="card stack"><div class="card-head"><h2>Segurança</h2></div><div class="row between"><div><b>Autenticação em duas etapas</b><div class="muted small">Opcional. Usa um aplicativo autenticador no celular.</div></div>${fac ? `<div class="row">${tag('Ativada', 'success')}<button class="btn danger sm" data-act="mfa-off" data-id="${esc(fac.id)}">Desativar</button></div>` : '<button class="btn secondary sm" data-act="mfa-on">Ativar</button>'}</div>
-        <form class="stack-sm" data-form="newpass-in"><h3 style="margin:8px 0 0">Trocar senha</h3><div class="field"><label for="op">Senha atual</label><input class="input" id="op" name="current" type="password" required autocomplete="current-password"></div><div class="field"><label for="np">Nova senha</label><input class="input" id="np" name="password" type="password" required minlength="8" autocomplete="new-password"><div class="help">Mínimo de 8 caracteres.</div></div><div><button class="btn secondary sm" type="submit">Salvar senha</button></div></form></div></div>`;
+        <form class="stack-sm" data-form="newpass-in"${fac ? ` data-factor="${esc(fac.id)}"` : ''}><h3 style="margin:8px 0 0">Trocar senha</h3><div class="field"><label for="op">Senha atual</label><input class="input" id="op" name="current" type="password" required autocomplete="current-password"></div><div class="field"><label for="np">Nova senha</label><input class="input" id="np" name="password" type="password" required minlength="8" autocomplete="new-password"><div class="help">Mínimo de 8 caracteres.</div></div>${fac ? '<div class="field"><label for="pw-otp">Código de duas etapas</label><input class="input" id="pw-otp" name="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required><div class="help">O código de 6 dígitos do aplicativo autenticador.</div></div>' : ''}<div><button class="btn secondary sm" type="submit">Salvar senha</button></div></form></div></div>`;
   }
+  // erro ao lado do campo (bloco 6): valida antes de enviar; o banco confere de novo
+  W.fieldFail = (el, msg) => { W.fieldError(el, msg); el.focus(); const er = new Error(msg); er.shownInField = true; throw er; };
   W.forms['profile-save'] = async (f) => {
     const v = W.form(f); const me = W.state.me;
+    const nm = f.querySelector('[name=name]'), ph = f.querySelector('[name=phone]'); W.fieldError(nm, ''); W.fieldError(ph, '');
+    if (String(v.name || '').trim().length < 3) W.fieldFail(nm, 'Digite o nome completo (ao menos 3 letras).');
+    const dg = String(v.phone || '').replace(/\D/g, ''); if (dg && (dg.length < 10 || dg.length > 13)) W.fieldFail(ph, 'Celular com DDD: 10 ou 11 dígitos (ex.: (11) 90000-0000).');
     W.state.me = await W.rpc('w_profile_update', { p_name: v.name, p_phone: v.phone || null });
     let sub = '';
     if (v.email && v.email.trim().toLowerCase() !== String(me.email).toLowerCase()) {
@@ -467,6 +473,8 @@
     const v = W.form(f); const cur = f.querySelector('[name=current]'); W.fieldError(cur, '');
     const chk = await W.sb.auth.signInWithPassword({ email: W.state.me.email, password: v.current });
     if (chk.error) { W.fieldError(cur, 'Senha atual incorreta.'); const er = new Error('Senha atual incorreta.'); er.shownInField = true; throw er; }
+    // conferir a senha abre uma sessão nova só com a senha: com duas etapas ativas, o código devolve a sessão ao nível 2 antes da troca
+    if (f.dataset.factor) { const otp = f.querySelector('[name=otp]'); W.fieldError(otp, ''); const { error: e2 } = await W.sb.auth.mfa.challengeAndVerify({ factorId: f.dataset.factor, code: String(v.otp || '').replace(/\D/g, '') }); if (e2) W.fieldFail(otp, 'Código incorreto. Digite o código atual do aplicativo.'); }
     const { error } = await W.sb.auth.updateUser({ password: v.password }); if (error) throw new Error(W.msgOf(error.message)); f.reset(); W.toast('Senha alterada');
   };
 
@@ -515,7 +523,7 @@
       <div class="card stack" style="margin-top:16px"><h2>O que a API entrega</h2>${apiDoc()}</div>`;
     const owned = (W.state.wallets || []).filter((w) => w.is_owner);
     return `<div class="card"><div class="card-head"><div><h2>Chaves de API</h2><div class="muted small">Só leitura. Cada chave enxerga as carteiras em que você é o titular da cobrança (todas ou só as escolhidas).</div></div><button class="btn sm" data-act="key-new"${owned.length ? '' : ' disabled'}>${ico('plus')} Nova chave</button></div>
-        ${d.keys.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Nome</th><th>Chave</th><th>Carteiras</th><th>Criada</th><th>Último uso</th><th>Situação</th><th></th></tr></thead><tbody>${d.keys.map((k) => `<tr><td>${esc(k.label)}</td><td class="mono">${esc(k.prefix)}…</td><td>${k.wallets ? esc(k.wallets.join(', ')) : 'Todas'}</td><td>${W.dt(k.created_at)}</td><td>${k.last_used_at ? W.dtm(k.last_used_at) : '—'}</td><td>${k.revoked_at ? tag('Revogada') : k.expired ? tag('Expirada', 'warning') : tag(k.expires_at ? `Vale até ${W.dt(k.expires_at)}` : 'Ativa', 'success')}</td><td class="actions">${k.revoked_at ? '' : `<button class="btn danger sm" data-act="key-revoke" data-id="${esc(k.id)}">Revogar</button>`}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhuma chave criada.</div>'}</div>
+        ${d.keys.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Nome</th><th>Chave</th><th>Carteiras</th><th>Criada</th><th>Último uso</th><th>Situação</th><th></th></tr></thead><tbody>${d.keys.map((k) => `<tr><td>${esc(k.label)}</td><td class="mono">${esc(k.prefix)}…</td><td>${k.wallets ? (k.wallets.length ? esc(k.wallets.join(', ')) : 'Nenhuma (excluídas)') : 'Todas'}</td><td>${W.dt(k.created_at)}</td><td>${k.last_used_at ? W.dtm(k.last_used_at) : '—'}</td><td>${k.revoked_at ? tag('Revogada') : k.expired ? tag('Expirada', 'warning') : k.wallets && !k.wallets.length ? tag('Sem carteiras', 'warning') : tag(k.expires_at ? `Vale até ${W.dt(k.expires_at)}` : 'Ativa', 'success')}</td><td class="actions">${k.revoked_at ? '' : `<button class="btn danger sm" data-act="key-revoke" data-id="${esc(k.id)}">Revogar</button>`}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhuma chave criada.</div>'}</div>
       <div class="card stack" style="margin-top:16px"><h2>Como usar</h2><p class="muted small">Envie a chave no cabeçalho <code>Authorization: Bearer wk_…</code> a partir do seu servidor (nunca no navegador do cliente). Respostas em JSON; datas em AAAA-MM-DD; valores em reais. Acrescente <code>?visao=mercado</code> ou <code>?visao=curva</code> para escolher a visão dos preços (padrão: a da carteira).</p>
         <pre class="mono code-box">curl -H "Authorization: Bearer wk_…" ${esc(W.cfg.apiUrl)}/v1/carteiras</pre>${apiDoc()}
         <p class="muted small">Erros: 401 chave inválida, expirada ou revogada · 404 carteira ou recurso fora da chave.</p></div>
