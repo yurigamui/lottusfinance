@@ -37,6 +37,8 @@ Lista consolidada do que o time de agentes não pode ou não deve fazer sozinho.
 1. `20261123120000_wealth_integridade_e_indices.sql` — cadastros da mesma carteira, 16 índices, `_guard_delete` em `w_invoices` e `w_payment_events`. Diagnóstico antes: a consulta do cabeçalho deve dar 0.
 2. `20261123121000_seguranca_rls_e_helpers_internos.sql` — RLS em `legacy_gl_lines`, 34 helpers `_` sem `anon`, `search_path` em `news.log_forecast`.
 3. `20261123122000_admin_conferencia_manual_nfe.sql` — cria `bo_nfe_manual_check` (o botão da conferência manual da NF-e no Admin hoje sempre falha).
+4. `20261123123000_wealth_posicao_nao_negativa.sql` e `20261123124000_wealth_ativos_da_carteira.sql` — venda maior que a posição e filtro de ativos.
+5. `20261123125000_wealth_v2_configuracoes_plano_mercado_api.sql` — **Wealth v2** (configurações, excluir carteira, plano sem 2ª carteira, A mercado/Na curva, benchmark, dados pessoais, API, cobrança). Testes: `scripts/wealth-local/testes/v2.sql` (45 verificações).
 - **Passo a passo:** no branch, `supabase db push` (ou colar cada arquivo no SQL Editor do branch, nesta ordem) e rodar `supabase/tests/*.sql` contra o branch. Depois, backup e o mesmo em produção, com o seu OK.
 
 ## 2d. Dados que só você tem (o time não inventa)
@@ -93,3 +95,19 @@ O repositório é **público**. Em *Settings*:
 - **O que:** o `git push` da branch `agentes-autonomo` voltou **403** ("Claude doesn't have GitHub access to yurigamui/lottusfinance").
 - **Por quê:** os commits ficam só no contêiner desta sessão, que é apagado por inatividade. Sem o push, o trabalho se perde.
 - **Passo a passo:** reconecte o GitHub em https://claude.ai/connect-github e instale o Claude GitHub App no repositório (https://github.com/apps/claude/installations/select_target). Depois diga "retome" nesta mesma sessão: o primeiro passo é `git push -u origin agentes-autonomo`.
+
+## 5. Wealth v2: pagamentos, preços e publicação (23/11/2026)
+
+### W-v2-01 · Credenciais de sandbox dos provedores de pagamento
+- **O que é:** chaves do Asaas (sandbox) e da Trio, e a documentação da API de Pix Automático da Trio.
+- **Por que:** o time não cria contas nem usa credenciais; os adaptadores em `supabase/functions/wealth-billing` estão escritos, mas **não foram testados contra os provedores**, e os endereços da Trio precisam vir da documentação dela.
+- **Passo a passo:** 1) Criar a conta sandbox no Asaas e gerar a chave; no Supabase, em Edge Functions > Secrets, gravar `ASAAS_API_KEY`, `ASAAS_BASE_URL` (sandbox) e `ASAAS_WEBHOOK_TOKEN`. 2) Pedir à Trio a documentação e as credenciais de sandbox do Pix Automático; gravar `TRIO_API_KEY`, `TRIO_BASE_URL`, `TRIO_PATH_AUTHORIZATION`, `TRIO_PATH_CHARGE`, `TRIO_WEBHOOK_TOKEN`. 3) Configurar os webhooks: `…/functions/v1/wealth-billing?action=webhook&provider=asaas` e `…&provider=trio`. 4) Me avisar: eu ajusto os campos da Trio e testo no sandbox com `BILLING_LIVE=1` **só no branch**.
+
+### W-v2-02 · Licença da ANBIMA
+- **O que é:** confirmar se a Lottus pode usar os preços indicativos de debêntures, CRI e CRA (ANBIMA Data) e obter `ANBIMA_CLIENT_ID`/`ANBIMA_CLIENT_SECRET`.
+- **Por que:** dado licenciado; enquanto isso a renda fixa a mercado usa só o cálculo (Tesouro + spread).
+- **Passo a passo:** consultar a ANBIMA/jurídico; com OK, gravar as credenciais nos Secrets e `ANBIMA_ENABLED=1`.
+
+### W-v2-03 · Publicar a v2
+- **Ordem:** 1) branch do Supabase (D-01) com as migrações até `20261123125000`; 2) testes `supabase/tests` e `scripts/wealth-local/testes`; 3) publicar as funções `wealth-pu`, `wealth-billing`, `wealth-api` (verify_jwt desligado; ver `supabase/functions/README.md`); 4) publicar `apps/wealth`; 5) produção só com o seu OK.
+
