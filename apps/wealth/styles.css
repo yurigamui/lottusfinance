@@ -1738,3 +1738,43 @@ nav.tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width
   .donut-box { flex-direction: column; align-items: stretch; }
   .donut-box svg { align-self: center; }
 }
+
+/* ---------- v3: P.U. do dia, edição em lote, avisos de ativos ---------- */
+.pu-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 12px; background: var(--soft); }
+.bulk-bar { position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; margin-bottom: 12px; border-radius: 14px; background: var(--ink); color: var(--bg); }
+.bulk-bar .btn { background: var(--bg); color: var(--ink); }
+.warn-text { color: var(--warning); }
+.range-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.range-bar .field { min-width: 0; }
+.timeline { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.timeline li { display: flex; justify-content: space-between; gap: 10px; padding-left: 18px; position: relative; color: var(--muted); }
+.timeline li::before { content: ''; position: absolute; left: 0; top: 6px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--line); }
+.timeline li.done { color: var(--ink); }
+.timeline li.done::before { background: var(--rosa); border-color: var(--rosa); }
+/* ---------- v3 ciclo 2: tabelas de fatura no celular; alvo das caixas de seleção ---------- */
+.table-wrap > table.fit { min-width: 0 !important; }
+.show-sm { display: none; }
+@media (max-width: 640px) { .hide-sm { display: none; } .show-sm { display: block; } table.fit td, table.fit th { white-space: normal; } }
+td.pick, th.pick { width: 44px; padding: 0 !important; }
+td.pick label, th.pick label { display: grid; place-items: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+td.pick input, th.pick input { width: 20px; height: 20px; }
+@media (max-width: 640px) { .inv-list td.actions { white-space: normal; } .inv-list td.actions .btn { display: flex; justify-content: center; margin: 2px 0; } }
+/* ---------- v3 ciclo 3: faturas e ativos sem ações escondidas em nenhuma largura ---------- */
+.inv-list td, .inv-list th { white-space: normal; }
+.inv-list td.actions { white-space: nowrap; }
+.show-md { display: none; }
+@media (max-width: 1100px) { .hide-md { display: none; } .show-md { display: block; } .show-md.row { display: flex; } }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 640px) { .inv-list td.actions { white-space: normal; width: 1%; } .inv-list td.actions .btn { display: flex; justify-content: center; margin: 2px 0; } }
+@media (max-width: 400px) { table.fit td, table.fit th { padding-left: 8px !important; padding-right: 8px !important; } table.fit td.actions .btn { padding-left: 10px; padding-right: 10px; } }
+.show-xs { display: none; }
+@media (max-width: 400px) { .hide-xs { display: none; } .show-xs { display: block; } }
+/* ---------- v3 ciclo 4: ativos sem corte até 1300 px e no celular; ações das faturas empilhadas em qualquer largura ---------- */
+.show-lg { display: none; }
+@media (max-width: 1300px) { .hide-lg { display: none; } .show-lg { display: block; } .show-lg.row { display: flex; } }
+.inv-list td.actions { white-space: normal; width: 1%; }
+.inv-list td.actions .btn { display: flex; justify-content: center; margin: 2px 0; }
+/* ---------- v3 ciclo 4: a coluna de valor vai para a 1ª célula quando o CARTÃO é estreito (não a tela) ---------- */
+.card:has(> .table-wrap > table.fit), .card:has(.inv-list) { container-type: inline-size; }
+.show-cq { display: none; }
+@container (max-width: 420px) { .hide-cq { display: none; } .show-cq { display: block; } }
