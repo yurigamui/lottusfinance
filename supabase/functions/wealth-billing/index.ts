@@ -127,8 +127,9 @@ const trioProv: Provider = {
   async checkout(user, p, monthly, firstDue, unitPrice) {
     if (!trioReady()) return { provider: 'trio', url: null };
     // já autorizado: nada a fazer; pendente ou recusado: nova recorrência (o QR anterior expira sozinho)
-    // uma recorrência por titular: autorizada → nada a fazer; pendente com QR ainda válido → devolve o MESMO código
-    // (assim, autorizar qualquer código gerado vale); pendente vencida → cancela antes de criar outra
+    // uma recorrência por titular: autorizada → nada a fazer; pendente com QR ainda válido e devolvido pelo GET → o mesmo código;
+    // senão (vencida, ou o GET não traz o QR — campo não documentado no GET) → cancela a pendente e cria outra. Autorizar um código
+    // antigo continua valendo: a aprovação é aceita pelo external_id (titular).
     if (p.provider === 'trio' && p.provider_customer_id) {
       const cur = await trio('GET', `/v2/in/pix/recurrences/${encodeURIComponent(p.provider_customer_id)}`).catch(() => null);
       if (cur?.status === 'approved' || cur?.authorized_at) return { provider: 'trio', url: null, authorized: true, customer_id: cur.id };

@@ -428,7 +428,8 @@
       : `<div class="note-box">A cobrança chega no e-mail <b>${esc(v.email)}</b>${v.method === 'cartao' ? ' com o link para cadastrar o cartão' : ''}. A primeira fatura fecha no fim do mês.</div>`}`, foot: '<button class="btn" data-act="modal-close">Entendi</button>' });
   };
   W.acts['pix-auth'] = async (el) => {
-    if (el.disabled) return; el.disabled = true; let c; try { c = await checkout(); } finally { el.disabled = false; } // um clique, uma chamada const pix = c && typeof c.pix_payload === 'string' && /^000201[\x20-\x7e]{20,800}$/.test(c.pix_payload) ? c.pix_payload : '';
+    if (el.disabled) return; el.disabled = true; let c; try { c = await checkout(); } finally { el.disabled = false; } // um clique, uma chamada
+    const pix = c && typeof c.pix_payload === 'string' && /^000201[\x20-\x7e]{20,800}$/.test(c.pix_payload) ? c.pix_payload : '';
     if (c && c.authorized) { W.toast('Pix Automático já autorizado'); return route(); }
     W.modal({ title: 'Autorizar o Pix Automático', body: pix ? `<p>Abra o app do seu banco, escolha <b>Pix copia e cola</b>, cole o código e confirme a autorização.</p><div class="field"><label for="pix-code">Código Pix (copia e cola)</label><textarea class="input" id="pix-code" rows="3" readonly>${esc(pix)}</textarea></div><div><button class="btn secondary sm" data-act="copy-pix">Copiar código</button></div><p class="muted small">Vale por 2 dias.</p>` : '<div class="note-box">Não foi possível gerar o código agora. Tente de novo em alguns minutos; se continuar, fale com o suporte.</div>', foot: '<button class="btn" data-act="modal-close">Fechar</button>' });
   };

@@ -389,7 +389,8 @@ async function anbima(assets: Asset[], todayIso: string) {
       const r = await fetch(`${base}${path}`, { headers: { client_id: id, access_token: tok, accept: 'application/json' } });
       if (!r.ok) { log.push(`ANBIMA ${path}: ${r.status}${r.status === 403 ? ' (recurso fora do plano contratado?)' : ''}`); continue; }
       for (const x of (await r.json()) as any[]) {
-        const code = String(x.codigo_ativo ?? '').toUpperCase(); const pu = Number(x.pu_retificado) > 0 ? Number(x.pu_retificado) : Number(x.pu); // retificado, quando houver const dt = String(x.data_referencia ?? todayIso).slice(0, 10);
+        const code = String(x.codigo_ativo ?? '').toUpperCase(); const pu = Number(x.pu_retificado) > 0 ? Number(x.pu_retificado) : Number(x.pu); // retificado, quando houver
+        const dt = String(x.data_referencia ?? todayIso).slice(0, 10);
         if (!(pu > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(dt)) continue;
         for (const a of byCode.get(code) ?? []) rows.push({ asset_id: a.id, date: dt, pu });
       }
