@@ -6,6 +6,7 @@
   const empty = (t) => `<div class="empty">${esc(t)}</div>`;
   const KIND = { acao: 'Ação', fii: 'FII', etf: 'ETF', bdr: 'BDR', fundo: 'Fundo', tesouro: 'Tesouro Direto', rf_pre: 'Renda fixa pré', rf_pos: 'Renda fixa pós', rf_ipca: 'Renda fixa IPCA+', cripto: 'Cripto', imovel: 'Imóvel', veiculo: 'Veículo', outro: 'Outro' };
   const MES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const AX = (v) => W.pct(v, Math.abs(v) < 0.02 ? 2 : 1);
   const p2 = (v, d = 2) => (v === null || v === undefined || !isFinite(v) ? '—' : W.pct(v, d));
   const sg = (v) => (v === null || v === undefined || !isFinite(v) ? '—' : W.sign(v, W.brl));
   const cl = (v) => (v === null || v === undefined || !isFinite(v) ? '' : W.cls(v));
@@ -29,7 +30,7 @@
       const ret = idx[i1] / idx[i0] - 1, cdi = k[i1] / k[i0] - 1; let money = inv[i1] - inv[i0]; for (let i = i0 + 1; i <= i1; i++) money += -fl[i] + inc[i];
       const days365 = (new Date(d[i1]) - new Date(d[i0])) / 864e5, v = vol(i0, i1);
       const ann = (x) => (days365 >= 30 ? Math.pow(1 + x, 365 / days365) - 1 : x);
-      return { ret, money, cdi, vol: v, sharpe: v && v > 0 && days365 >= 30 ? (ann(ret) - ann(cdi)) / v : null };
+      return { ret, money, cdi, vol: v, sharpe: v && v > 0 && days365 >= 90 ? (ann(ret) - ann(cdi)) / v : null };
     };
     return { n, d, inv, fl, inc, k, r, idx, cumFl, wk, at, base, vol, win };
   };
@@ -83,11 +84,11 @@
     ctx.after = () => {
       W.cur = ctx;
       const hit = (r, a, b) => ({ money: null, pct: (1 + r[b].a) / (1 + r[a].a) - 1, from: r[a].long, to: r[b].long });
-      if (rebased.length > 1) W.lineChart(document.getElementById('d-rent'), rebased, { names: ['Portfólio', 'CDI'], name: 'Rentabilidade acumulada', format: (v) => W.pct(v, 2), onRange: (a, b) => { const r = hit(rebased, a, b); return { ...r, money: r.pct }; } }); else document.getElementById('d-rent').innerHTML = empty('Período curto demais para o gráfico.');
+      if (rebased.length > 1) W.lineChart(document.getElementById('d-rent'), rebased, { names: ['Portfólio', 'CDI'], name: 'Rentabilidade acumulada', format: (v) => W.pct(v, 2), axisFormat: AX, onRange: (a, b) => { const r = hit(rebased, a, b); return { ...r, money: r.pct }; } }); else document.getElementById('d-rent').innerHTML = empty('Período curto demais para o gráfico.');
       const evo = rows.map((i) => ({ label: W.dt(c.d[i]).slice(0, 5), long: W.dt(c.d[i]), a: c.inv[i], b: c.cumFl[i] }));
       if (evo.length > 1) W.lineChart(document.getElementById('d-evo'), evo, { names: ['Portfólio', 'Valor investido'], name: 'Evolução patrimonial' });
-      if (dd.length > 1) W.lineChart(document.getElementById('d-dd'), dd, { names: ['Drawdown'], name: 'Drawdown', format: (v) => W.pct(v, 2), axisFormat: (v) => W.pct(v, 1) });
-      const drawVol = (w) => { const vv = rollVol(c, w, i0 + 1, i1); const vr = rows.map((i, j) => ({ label: W.dt(c.d[i]).slice(0, 5), long: W.dt(c.d[i]), a: vv[j] === null ? 0 : vv[j] })); if (vr.length > 1) W.lineChart(document.getElementById('d-vol'), vr, { names: ['Volatilidade anualizada'], name: 'Volatilidade', format: (v) => W.pct(v, 2), axisFormat: (v) => W.pct(v, 1) }); };
+      if (dd.length > 1) W.lineChart(document.getElementById('d-dd'), dd, { names: ['Drawdown'], name: 'Drawdown', format: (v) => W.pct(v, 2), axisFormat: AX });
+      const drawVol = (w) => { const vv = rollVol(c, w, i0 + 1, i1); const vr = rows.map((i, j) => ({ label: W.dt(c.d[i]).slice(0, 5), long: W.dt(c.d[i]), a: vv[j] === null ? 0 : vv[j] })); if (vr.length > 1) W.lineChart(document.getElementById('d-vol'), vr, { names: ['Volatilidade anualizada'], name: 'Volatilidade', format: (v) => W.pct(v, 2), axisFormat: AX }); };
       drawVol(252);
       document.querySelectorAll('[data-vol]').forEach((b) => b.addEventListener('click', () => { document.querySelectorAll('[data-vol]').forEach((x) => x.classList.toggle('active', x === b)); drawVol(Number(b.dataset.vol)); }));
       document.querySelectorAll('[data-mt]').forEach((b) => b.addEventListener('click', () => { document.querySelectorAll('[data-mt]').forEach((x) => x.classList.toggle('active', x === b)); document.getElementById('m-ret').hidden = b.dataset.mt !== 'ret'; document.getElementById('m-money').hidden = b.dataset.mt !== 'money'; }));
@@ -99,7 +100,7 @@
       <div class="dash-kpi"><span class="muted small">Patrimônio em ${W.dt(per.to)}</span><b>${W.brl(nw.total)}</b></div>
       <div class="dash-kpi"><span class="muted small">Resultado (${per.all ? 'desde o início' : `${Math.round((new Date(per.to) - new Date(per.from)) / 864e5) + 1} dias`})</span><b class="${cl(cur.money)}">${sg(cur.money)} <span class="pill ${cl(cur.ret)}">${p2(cur.ret)} ${cur.ret >= 0 ? '↑' : '↓'}</span></b></div></div>`;
     const evoPer = `<div data-evo-range class="dash-range"><div class="field"><label>Período</label>${W.rangeHtml(per.all ? '' : from, per.all ? '' : per.to, [3, 6, 12, 24])}</div></div>`;
-    return `${W.pageHead('Dashboard', '', actions)}${evoPer}${head}
+    return `${W.pageHead('Patrimônio', '', actions)}${evoPer}${head}
       <div class="dash-grid">
         ${card('Rentabilidade', '<div id="d-rent"></div>', 'span-7')}
         ${card('Alocação patrimonial', `<div class="dash-alloc"><div id="d-alloc"></div>${tbl('<th>Classe de ativo</th><th class="num">Valor atualizado</th><th class="num">Rentabilidade</th>', allocRows.map((g) => `<tr><td>${esc(g.name)}</td><td class="num">${W.brl(g.value)}</td><td class="num ${cl(g.twr)}">${p2(g.twr)}</td></tr>`).join(''))}</div>`, 'span-5')}

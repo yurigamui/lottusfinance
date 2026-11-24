@@ -6,7 +6,7 @@
   function niceMax(v) { if (!(v > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (v <= m * p) return m * p; return 10 * p; }
   function niceRange(min, max) {
     if (min >= 0) return [0, niceMax(max)];
-    const top = niceMax(Math.max(max, 0)), bot = -niceMax(-min); return [bot, top];
+    const top = max > 0 ? niceMax(max) : 0, bot = -niceMax(-min); return [bot, top];
   }
   function shell(host, label) {
     host.classList.add('chart-host'); host.innerHTML = '';
