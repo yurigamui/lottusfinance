@@ -23,7 +23,7 @@ Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (enviada ao GitHub; có
 - **Partners:** injeção de HTML corrigida (**aprovada com ressalvas**, 2 ciclos); 192 RPCs conferidas. `partners/relatorio.md`.
 
 ## Em andamento
-- Nada. Todo o restante está bloqueado por itens de `depende-de-mim.md` (ver `resumo-final.md`).
+- Nada. **Wealth v2 e v3 concluídas no ambiente local (24/11)**: ver `wealth/status.md`. Todo o restante está bloqueado por itens de `depende-de-mim.md` (ver `resumo-final.md`).
 
 ## Próximo passo exato (para "retome")
 1. Se o branch do Supabase existir (D-01): aplicar `supabase/migrations/*.sql` no branch, nesta ordem, rodar `supabase/tests/*.sql` e os testes de `scripts/wealth-local/testes/` contra ele; ler os advisors.

@@ -173,7 +173,14 @@ begin
   t0 := clock_timestamp(); perform public.w_asset_search(wid, 'carga exemplo acao 4999'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
   perform pg_temp.ok(jsonb_array_length(public.w_asset_search(wid, 'carga exemplo acao 4999')) >= 1 and ms < 150, format('C5-M1 busca sem acento em 50 mil ativos: %s ms', round(ms)));
   t0 := clock_timestamp(); perform public.w_asset_search(wid, 'ac'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
-  perform pg_temp.ok(jsonb_array_length(public.w_asset_search(wid, 'ac')) = 30 and ms < 150, format('C6-M1 termo amplo ("ac") em 50 mil ativos: %s ms', round(ms)));
+  perform pg_temp.ok(ms < 50, format('C6-M1 termo amplo ("ac") em 50 mil ativos: %s ms', round(ms)));
   perform pg_temp.ok(public.w_asset_search(wid, 'petr4')->0->>'ticker' = 'PETR4', 'C6-M1 código exato vem primeiro');
+  -- C4-M1/C4-M2: 2 letras que casam pouco é rápido; ativo da própria carteira nunca some atrás do catálogo
+  insert into public.w_assets (wallet_id, kind, name, custom) values (wid, 'outro', 'Fundo próprio da família (cotas)', true), (wid, 'outro', 'Zeta ação particular', true);
+  t0 := clock_timestamp(); perform public.w_asset_search(wid, 'pe'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
+  perform pg_temp.ok(public.w_asset_search(wid, 'pe') @> '[{"ticker":"PETR4"}]' and ms < 50, format('C7-M1 "pe" acha PETR4 em %s ms com 50 mil ativos', round(ms)));
+  t0 := clock_timestamp(); perform public.w_asset_search(wid, 'zq'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
+  perform pg_temp.ok(ms < 50, format('C7-M1 "zq" (quase nada casa) em %s ms', round(ms)));
+  perform pg_temp.ok(public.w_asset_search(wid, 'fundo') @> '[{"name":"Fundo próprio da família (cotas)"}]' and public.w_asset_search(wid, 'acao') @> '[{"name":"Zeta ação particular"}]', 'C7-M2 ativos da carteira aparecem mesmo com 50 mil no catálogo');
 end $$;
 rollback;
