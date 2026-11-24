@@ -46,8 +46,8 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-040 | Modal de dados de cobrança: erros de CPF/CEP aparecem só no aviso flutuante, não ao lado do campo | Baixa | Agente | próxima rodada | verificação 23/11 (B1) |
 | W-041 | **Resolvida na v2 (pede a senha atual).** Troca de senha em Conta e plano não pede a senha atual nem a confirmação da nova: uma sessão aberta basta. Opções: pedir a senha atual e reautenticar antes de `updateUser`, ou ligar "Secure password change" no Supabase Auth | Média | Agente (front) e Yuri (configuração do Auth) | antes do lançamento | verificação 23/11 (X3) |
 | W-042 | CSV: o "Peso" sai com muitas casas decimais e o "Tipo" das transações sai como código (compra/venda) | Baixa | Agente | próxima rodada | verificação 23/11 (X2) |
-| W-043 | v2: adaptadores de pagamento (Trio Pix Automático, Asaas cartão/boleto) **não testados contra os provedores**; endereços e campos da Trio a preencher (documentação não pública) | Alta | Yuri (credenciais de sandbox e documentação da Trio) | antes de cobrar | v2 23/11 |
-| W-044 | v2: ANBIMA desligada até confirmar a licença de uso dos dados de debêntures/CRI/CRA; endpoints a conferir com a documentação da ANBIMA Data | Média | Yuri (jurídico/contrato) | a definir | v2 23/11 |
+| W-043 | v2: adaptadores de pagamento **não testados contra os provedores**. Trio reescrita conforme a documentação V2 em 24/11 (falta credencial de sandbox); Asaas escrita sem a documentação | Alta | Yuri (credenciais de sandbox e documentação da Trio) | antes de cobrar | v2 23/11 |
+| W-044 | **Licença confirmada (24/11); endpoints conferidos e corrigidos.** Falta só a credencial da ANBIMA | Baixa | Yuri (credencial) | a definir | v2 23/11 |
 | W-045 | v2: mês da assinatura é cobrado inteiro (sem proporcional) | Baixa | Yuri (regra de preço) | a definir | v2 23/11 |
 | W-046 | v2: API sem limite de chamadas por minuto e sem escrita | Média | Agente | próxima rodada | v2 23/11 |
 | W-047 | v2: `w_equity` com benchmark faz uma soma por transação por mês; medir com volume real no branch (1.000+ transações, 60 meses) | Média | Agente | no branch (D-01) | v2 23/11 |

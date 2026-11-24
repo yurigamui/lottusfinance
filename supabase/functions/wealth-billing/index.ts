@@ -20,14 +20,14 @@ const live = () => env('BILLING_LIVE') === '1';
 type Profile = { holder_name: string; doc: string; email: string; zip: string; street: string; number: string; complement?: string; district: string; city: string; state: string; method: 'pix' | 'cartao' | 'boleto'; provider?: string; provider_customer_id?: string };
 type Pending = { invoice: string; user: string; amount: number; due_date: string; ref_month: string; profile: Profile };
 type Charge = { provider: string; charge_id: string; method: string; pix_payload?: string; boleto_url?: string; boleto_line?: string };
-type Event = { event_id: string; type: 'paid' | 'failed' | 'canceled' | 'refunded' | 'authorized'; charge_id?: string; customer_id?: string; card_brand?: string; card_last4?: string; payload: unknown };
-type Checkout = { provider: string; url: string | null; customer_id?: string };
+type Event = { event_id: string; type: 'paid' | 'failed' | 'canceled' | 'refunded' | 'authorized' | 'ignore'; charge_id?: string; customer_id?: string; card_brand?: string; card_last4?: string; payload: unknown };
+type Checkout = { provider: string; url: string | null; customer_id?: string; pix_payload?: string | null; authorized?: boolean };
 
 interface Provider {
   name: string;
-  checkout(user: string, p: Profile, monthly: number, firstDue: string): Promise<Checkout>;
+  checkout(user: string, p: Profile, monthly: number, firstDue: string, unitPrice: number): Promise<Checkout>;
   createCharge(p: Pending): Promise<Charge | null>;
-  parseWebhook(body: any, headers: Headers): Event | null;
+  parseWebhook(body: any, headers: Headers, raw: string): Event | null | Promise<Event | null>;
 }
 
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json' } });
@@ -98,33 +98,83 @@ const asaasProv: Provider = {
   },
 };
 
-/* ---------- Trio: Pix Automático (endereços e campos a confirmar com a documentação da Trio) ---------- */
-const trioReady = () => !!(env('TRIO_API_KEY') && env('TRIO_BASE_URL') && env('TRIO_PATH_AUTHORIZATION') && env('TRIO_PATH_CHARGE'));
-async function trio(path: string, body: unknown) {
-  const r = await fetch(`${env('TRIO_BASE_URL')}${path}`, { method: 'POST', headers: { authorization: `Bearer ${env('TRIO_API_KEY')}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+/* ---------- Trio: Pix Automático (API V2, https://docs.trio.com.br/v2/guides/receivables/using-pix-automatic) ----------
+   Recorrência mensal de valor variável (o valor depende de quantas carteiras o titular tem): o pagador autoriza uma vez pelo
+   QR code (Pix copia e cola) no app do banco; a cada fatura criamos a cobrança do ciclo e a agendamos 2 a 10 dias antes do vencimento.
+   Autenticação: HTTP Basic (client_id:client_secret) + cabeçalho Trio-Version. Webhook: cabeçalho x-webhook-secret e assinatura
+   HMAC-SHA-256 (hexadecimal maiúsculo) do corpo cru em x-webhook-signature, com a notification_key do webhook. */
+const TRIO_VERSION_DEFAULT = '2026-10-19.v2'; // versão vigente na documentação em 24/11/2026 (enum do cabeçalho Trio-Version)
+const trioReady = () => !!(env('TRIO_CLIENT_ID') && env('TRIO_CLIENT_SECRET') && env('TRIO_BANK_ACCOUNT_ID'));
+async function trio(method: string, path: string, body?: unknown) {
+  const base = env('TRIO_BASE_URL') || 'https://api.sandbox.trio.com.br';
+  const r = await fetch(`${base}${path}`, { method, headers: { authorization: `Basic ${btoa(`${env('TRIO_CLIENT_ID')}:${env('TRIO_CLIENT_SECRET')}`)}`, 'trio-version': env('TRIO_VERSION') || TRIO_VERSION_DEFAULT, 'content-type': 'application/json', accept: 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (r.status === 204) return null;
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`trio ${r.status}: ${JSON.stringify(j).slice(0, 200)}`);
-  return j;
+  if (!r.ok) throw new Error(`trio ${r.status}: ${JSON.stringify(j?.errors ?? j?.error ?? j).slice(0, 200)}`);
+  return j?.data ?? j;
 }
+const cents = (v: number) => Math.round(Number(v) * 100);
+const daysUntil = (d: string) => Math.round((D(d).getTime() - D(new Date().toISOString().slice(0, 10)).getTime()) / 864e5);
+const D = (s: string) => new Date(s + 'T00:00:00Z');
+async function hmacHexUpper(key: string, raw: string) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const s = new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(raw)));
+  return [...s].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+const sameText = (a: string, b: string) => { if (a.length !== b.length) return false; let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0; };
 const trioProv: Provider = {
   name: 'trio',
-  async checkout(user, p, monthly, firstDue) {
+  async checkout(user, p, monthly, firstDue, unitPrice) {
     if (!trioReady()) return { provider: 'trio', url: null };
-    // Pix Automático: pedido de autorização recorrente (jornada do BCB); o pagador aceita no app do banco
-    const a = await trio(env('TRIO_PATH_AUTHORIZATION'), { external_id: user, payer: { name: p.holder_name, document: p.doc, email: p.email }, amount_max: monthly * 3, frequency: 'MONTHLY', first_due_date: firstDue, description: 'Lottus Wealth' });
-    if (a?.customer_id || a?.id) await sb.rpc('w_billing_set_customer', { p_user: user, p_provider: 'trio', p_customer_id: String(a.customer_id ?? a.id) });
-    return { provider: 'trio', url: httpsOnly(a?.authorization_url ?? a?.url), customer_id: a?.customer_id ?? a?.id };
+    // já autorizado: nada a fazer; pendente ou recusado: nova recorrência (o QR anterior expira sozinho)
+    if (p.provider === 'trio' && p.provider_customer_id) {
+      const cur = await trio('GET', `/v2/in/pix/recurrences/${encodeURIComponent(p.provider_customer_id)}`).catch(() => null);
+      if (cur?.status === 'approved' || cur?.authorized_at) return { provider: 'trio', url: null, authorized: true, customer_id: cur.id };
+    }
+    const start = daysUntil(firstDue) >= 3 ? firstDue : new Date(Date.now() + 4 * 864e5).toISOString().slice(0, 10); // start_date: no mínimo 3 dias à frente
+    const rec = await trio('POST', '/v2/in/pix/recurrences', {
+      bank_account_id: env('TRIO_BANK_ACCOUNT_ID'),
+      counterparty: { tax_number: p.doc, name: p.holder_name.slice(0, 140) },
+      description: 'Lottus Wealth', // até 35 caracteres; aparece para o pagador na autorização
+      contract_number: `LW${user.replace(/-/g, '')}`.slice(0, 35),
+      periodicity: 'mnth', start_date: start, external_id: user,
+      amounts: { minimum: cents(unitPrice) }, // valor variável (muda com o nº de carteiras), com mínimo = preço de 1 carteira
+      options: { authorization_type: 'qrcode', automatic_schedule: false, automated_attempt_retry: true, retry_policy: '3r_7d', next_working_day: true, qrcode_expiration_seconds: 172800 },
+    });
+    await sb.rpc('w_billing_set_customer', { p_user: user, p_provider: 'trio', p_customer_id: String(rec.id) });
+    return { provider: 'trio', url: null, customer_id: rec.id, pix_payload: typeof rec?.qrcode?.hash === 'string' ? rec.qrcode.hash : null };
   },
   async createCharge(p) {
-    if (!trioReady()) return null;
-    const c = await trio(env('TRIO_PATH_CHARGE'), { external_id: p.invoice, authorization: p.profile.provider_customer_id, amount: p.amount, due_date: p.due_date, description: `Lottus Wealth ${p.ref_month.slice(0, 7)}` });
-    return { provider: 'trio', charge_id: String(c.id), method: 'pix', pix_payload: typeof c.pix_copy_paste === 'string' ? c.pix_copy_paste : undefined };
+    if (!trioReady() || p.profile.provider !== 'trio' || !p.profile.provider_customer_id) return null;
+    // a Trio só aceita agendar 2 a 10 dias antes do vencimento: antes disso esperamos a próxima rodada; depois, registramos o erro
+    const d = daysUntil(p.due_date);
+    if (d > 10) return null;
+    if (d < 2) throw new Error('trio: fora da janela de agendamento (2 a 10 dias antes do vencimento)');
+    const col = await trio('POST', '/v2/in/pix/recurrences/collections/next', { recurrence_id: p.profile.provider_customer_id });
+    try {
+      await trio('POST', `/v2/in/pix/recurrences/collections/${encodeURIComponent(col.id)}/schedule`, { amount: cents(p.amount), due_date: p.due_date, external_id: p.invoice });
+    } catch (e) {
+      // não deixa cobrança criada e não agendada: cancela e devolve o erro para nova tentativa
+      await trio('POST', `/v2/in/pix/recurrences/collections/${encodeURIComponent(col.id)}/cancel`, { requester_tax_number: env('TRIO_REQUESTER_TAX_NUMBER') || p.profile.doc }).catch(() => null);
+      throw e;
+    }
+    return { provider: 'trio', charge_id: String(col.id), method: 'pix' };
   },
-  parseWebhook(b, h) {
-    const tok = env('TRIO_WEBHOOK_TOKEN'); if (!tok || h.get('x-webhook-token') !== tok) return null;
-    const map: Record<string, Event['type']> = { 'authorization.accepted': 'authorized', 'charge.paid': 'paid', 'charge.failed': 'failed', 'charge.canceled': 'canceled', 'charge.refunded': 'refunded' };
-    const type = map[b?.type]; if (!type || !b?.id) return null;
-    return { event_id: String(b.id), type, charge_id: b?.data?.charge_id ? String(b.data.charge_id) : undefined, customer_id: b?.data?.customer_id, payload: b };
+  async parseWebhook(b, h, raw) {
+    const secret = env('TRIO_WEBHOOK_SECRET'), key = env('TRIO_NOTIFICATION_KEY');
+    if (!secret || !key || !sameText(h.get('x-webhook-secret') ?? '', secret)) return null;
+    if (!sameText(h.get('x-webhook-signature') ?? '', await hmacHexUpper(key, raw))) return null;
+    const e = b?.event ?? b; // os exemplos da documentação trazem o envelope dentro de "event"
+    const cat = e?.category, type = e?.type, data = e?.data ?? {}; const ref = String(e?.ref_id ?? e?.reference_id ?? data.id ?? '');
+    if (!cat || !type || !ref) return null;
+    const event_id = `${ref}:${cat}:${type}`; // a Trio reenvia notificações: ref_id + categoria + tipo identificam a notificação
+    const payload = { category: cat, type, ref_id: ref, status: data.status ?? null };
+    if (cat === 'recurrence' && type === 'approved') return { event_id, type: 'authorized', customer_id: String(data.id ?? ref), payload };
+    if (cat === 'recurrence_collection') {
+      const map: Record<string, Event['type']> = { settled: 'paid', expired: 'failed', rejected: 'failed', cancelled: 'canceled' };
+      if (map[type]) return { event_id, type: map[type], charge_id: String(data.id ?? ref), payload };
+    }
+    return { event_id, type: 'ignore', payload }; // demais eventos (criação, tentativas, recorrência recusada/expirada) só confirmam o recebimento
   },
 };
 
@@ -155,16 +205,18 @@ Deno.serve(async (req) => {
     if (error || !info?.profile || !['pro', 'fund'].includes(info.plan)) return withCors(req, json({ ok: false, error: 'billing_required' }, 400));
     const prov = forMethod(info.profile.method);
     try {
-      const c = await prov.checkout(u.user.id, info.profile, Number(info.price) * Math.max(Number(info.wallets), 1), nextDue());
-      return withCors(req, json({ ok: true, provider: c.provider, url: c.url }));
+      const c = await prov.checkout(u.user.id, info.profile, Number(info.price) * Math.max(Number(info.wallets), 1), nextDue(), Number(info.price));
+      return withCors(req, json({ ok: true, provider: c.provider, url: c.url, pix_payload: c.pix_payload ?? null, authorized: !!c.authorized }));
     } catch (e) { console.error('checkout', (e as Error).message); return withCors(req, json({ ok: true, provider: prov.name, url: null, pending: true })); }
   }
 
   if (action === 'webhook') {
     const pname = url.searchParams.get('provider') ?? 'manual'; const prov = Object.hasOwn(PROVIDERS, pname) ? PROVIDERS[pname] : null;
     if (!prov) return new Response('not found', { status: 404 });
-    const ev = prov.parseWebhook(await req.json().catch(() => null), req.headers);
+    const raw = await req.text(); let body: any = null; try { body = JSON.parse(raw); } catch { /* corpo inválido */ }
+    const ev = await prov.parseWebhook(body, req.headers, raw);
     if (!ev) return new Response('forbidden', { status: 403 });
+    if (ev.type === 'ignore') return json({ ok: true, ignored: true });
     try { return json({ ok: true, result: await applyEvent(prov, ev) }); } catch (e) { return json({ ok: false, error: (e as Error).message }, 500); }
   }
 
