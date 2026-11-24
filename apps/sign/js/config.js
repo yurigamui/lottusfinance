@@ -4,4 +4,9 @@ window.LOTTUS_CONFIG = {
   supabaseUrl: 'https://rowhslnnlzfbhmzbylbz.supabase.co',
   supabaseKey: 'sb_publishable_G_2ClQ5DpzaAn_02yahsfQ_FwSFR5eQ',
   signUrl: 'https://sign.lottusfinance.com.br/',
+  /* Termos e Política (seção 1.1): URL e versão dependem do jurídico (J-02/P1-10). Vazio = o texto aparece sem link. */
+  termsUrl: '',
+  privacyUrl: '',
+  termsVersion: '[preencher]',
+  privacyVersion: '[preencher]',
 };
