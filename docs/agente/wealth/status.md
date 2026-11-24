@@ -41,3 +41,7 @@ Ver `decisoes.md` (documento `claude/wealth-decisoes.md`).
 
 ## Wealth v2 (23/11/2026)
 Seções S1–S6 **aprovadas com ressalvas** em 2 ciclos do verificador (ciclo 1 reprovou: 1 bloqueante de segurança e 4 altos, todos corrigidos). S7 (preços) e S8 (cobrança) **não verificadas em execução** (sem Deno, rede e credenciais). Especificação: `v2-especificacao.md`. Migração `20261123125000` (não aplicada); testes `scripts/wealth-local/testes/v2.sql` (55 verificações). Próximo: v3 (`v3-plano.md`).
+
+## Wealth v3 (23–24/11/2026)
+T1–T7 **aprovadas** (T2, T3, T6/T7 com ressalvas) em 4 ciclos do verificador + 1 reverificação da busca (regra 14). Ciclos 1–3 reprovaram (7 altos no 1º, 2 no 2º, 1 no 3º), todos corrigidos. T2 (robô de preços) só revisado no código: não roda aqui (sem Deno e sem rede). Migração `20261123130000` (não aplicada); testes `scripts/wealth-local/testes/v3.sql` (65) e `v2.sql` (55). Plano e critérios: `v3-plano.md`. Pendências W-052 a W-061.
+**Próximo passo exato:** com o OK do Yuri e o branch (D-01): aplicar `20261123125000` e `20261123130000` no branch, rodar `testes/v2.sql` e `testes/v3.sql`, publicar `wealth-pu`, `wealth-billing` e `wealth-api` no branch e conferir os preços reais (Tesouro, CVM, B3, Mercado Bitcoin); depois produção e `apps/wealth`.
