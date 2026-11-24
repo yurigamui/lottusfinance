@@ -98,3 +98,4 @@
 .foot-social a, .foot-social a.has-img { min-width: 44px; min-height: 44px; }
 .foot-social a.has-img { width: 44px; height: 44px; }
 .foot-social a:not(.has-img) { display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 400px) { .foot-links span { flex-basis: 100%; margin-top: 8px; } }
