@@ -12,4 +12,4 @@
 | T-01 | Mover `pdf_b64` para Storage privado (escala) | Média | Arquiteto | Parte 2 | ficha |
 | T-02 | Duplicação nome/CPF em `sign_accounts` e `sign_env_signers` vs `profiles` | Média | Auditor | Parte 1 | ficha |
 | T-03 | Páginas públicas usam RPCs antigas; precisam usar `sign_env_public_*` e `verify_envelope*` | Alta | Desenvolvedor | Partes 3 e 4 | linha de base |
-| T-04 | Signatário não tem OTP: `sign_otps` é só de usuário logado e `sign_env_public_submit` confirma só CPF. "Avançada" exige código ao signatário (migração nova + canal de envio) | Alta | Arquiteto | Parte 3 | decisão G1 |
+| T-04 | Signatário não tem OTP: `sign_otps` é só de usuário logado e `sign_env_public_submit` confere só o CPF. Construir OTP do signatário por e-mail, canal WhatsApp pronto e desligado | Alta | Arquiteto | Parte 3 | decisão G1 |

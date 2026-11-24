@@ -21,9 +21,8 @@ Fase atual: **2 (Parte 1: Conta e identidade), G1 liberado em 24/11/2026** · Pa
 | (aguardando G1) | | | | | | |
 
 ## Próximo passo exato
-1. Fase 2 da Parte 1: Ficha da Parte com `idealizador`, `arquiteto`, `designer`. Antes, auditar no banco local se o OTP do signatário existe (hoje `sign_otps` só tem `user_id`; lacuna para "avançada", T-04).
-2. Montar o ambiente local de teste (Postgres local com as funções `sign_*`, modelo `scripts/wealth-local`); não aplicar nada em produção.
-3. Fase 2 da Parte 1 (Conta e identidade).
+1. Em andamento (24/11): `scripts/sign-local` (Postgres local com o esquema real, só leitura em produção) e a Ficha da Parte 1 (`parte-1-conta-e-identidade.md`).
+2. Quando ambos chegarem: `arquiteto` revisa dados (OTP por e-mail, canal WhatsApp desligado, T-02/T-04), `designer` revisa fluxos, Maestro confere G2 e começa a seção 1.1.
 
 ## Bloqueios que dependem do Yuri
 Ver `pendencias.md` (J-01 a J-04, jurídico) e `docs/agente/depende-de-mim.md` (D-01 branch Supabase).
