@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /pagar.html
+Disallow: /ciencia.html
+Disallow: /descadastrar.html
+Disallow: /conectar/
+
+Sitemap: https://lottusfinance.com.br/sitemap.xml

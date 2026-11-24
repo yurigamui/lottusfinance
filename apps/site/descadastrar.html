@@ -7,7 +7,7 @@
 <title>Deixar de receber e-mails · Lottus</title>
 <style>
   body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f0e9; font-family: Inter, system-ui, Arial, sans-serif; color: #2b2321; }
-  main { background: #fff; border-radius: 24px; padding: 36px 32px; max-width: 440px; width: calc(100% - 32px); box-shadow: 0 10px 40px rgba(43,35,33,.08); text-align: center; }
+  main { box-sizing: border-box; background: #fff; border-radius: 24px; padding: 36px 32px; max-width: 440px; width: calc(100% - 32px); box-shadow: 0 10px 40px rgba(43,35,33,.08); text-align: center; }
   h1 { font-size: 22px; margin: 0 0 10px; } p { color: #6b5f5a; line-height: 1.5; margin: 0 0 20px; }
   button { background: #2b2321; color: #fff; border: 0; border-radius: 999px; padding: 12px 24px; font-weight: 700; font-size: 15px; cursor: pointer; }
   button:disabled { opacity: .6; }
@@ -19,23 +19,6 @@
   <p id="p">Confirme para parar de receber e-mails de campanha da Lottus. Avisos sobre faturas e contas ativas continuam chegando.</p>
   <button id="b" type="button">Confirmar</button>
 </main>
-<script>
-(function () {
-  var token = new URLSearchParams(location.search).get('t');
-  var t = document.getElementById('t'), p = document.getElementById('p'), b = document.getElementById('b');
-  if (!/^[0-9a-f-]{36}$/i.test(token || '')) { t.textContent = 'Link inválido'; p.textContent = 'Use o link que veio no final do e-mail.'; b.hidden = true; return; }
-  b.onclick = function () {
-    b.disabled = true;
-    fetch('https://rowhslnnlzfbhmzbylbz.supabase.co/rest/v1/rpc/mkt_unsubscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_G_2ClQ5DpzaAn_02yahsfQ_FwSFR5eQ' },
-      body: JSON.stringify({ p_token: token })
-    }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (ok) {
-      if (!ok) throw new Error();
-      t.textContent = 'Pronto, você saiu da lista'; p.textContent = 'Não enviaremos mais e-mails de campanha para este endereço.'; b.hidden = true;
-    }).catch(function () { t.textContent = 'Não deu certo'; p.textContent = 'Tente de novo em instantes ou responda o e-mail pedindo para sair.'; b.disabled = false; });
-  };
-})();
-</script>
+<script src="descadastrar.js"></script>
 </body>
 </html>

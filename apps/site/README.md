@@ -1,7 +1,9 @@
 # Site institucional Lottus
 
 Página única (index.html): topo, Sobre a Lottus, Como funciona, Simulador, Confiança e segurança, Dúvidas e rodapé (Contato).
-Tudo é gerado por build.py: edite e rode `python3 build.py`.
+**Atenção:** `build.py` e `legal.py` estão desatualizados (não geram o SEO, o bloco do Sign nem os scripts externos). **Não rode.** Edite `index.html` e as demais páginas direto (pendências S-003 e S-009).
+
+SEO: `robots.txt`, `sitemap.xml` (atualize ao criar ou remover página pública), JSON-LD no `<head>` do `index.html` (o FAQPage deve refletir exatamente as perguntas da seção Dúvidas) e `img/og.png` (1200×630). Domínio canônico: `https://lottusfinance.com.br`.
 
 No topo de build.py:
 - APP_STORE_URL / PLAY_STORE_URL: links do app nas lojas.

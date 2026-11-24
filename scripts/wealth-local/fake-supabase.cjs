@@ -111,7 +111,8 @@ http.createServer(async (req, res) => {
       return r.rows[0] ? send(res, 200, userObj(r.rows[0])) : authErr(res, 'User not found', 404, 'user_not_found');
     }
     // função de borda de cobrança: sem provedor ligado no ambiente local (como em produção com BILLING_PROVIDER=manual)
-    if (p === '/functions/v1/wealth-billing') return send(res, 200, { ok: true, provider: 'manual', url: null });
+    // FAKE_TRIO=1 simula a Trio devolvendo o Pix copia e cola da recorrência (código de exemplo, não pagável)
+    if (p === '/functions/v1/wealth-billing') return send(res, 200, process.env.FAKE_TRIO === '1' ? { ok: true, provider: 'trio', url: null, pix_payload: '00020101021226850014br.gov.bcb.pix2563exemplo.invalido/rec/0000000000000000000000000000052040000530398654040.005802BR5913LOTTUS EXEMPLO6009SAO PAULO62070503***6304ABCD', authorized: false } : { ok: true, provider: 'manual', url: null });
     if (p === '/auth/v1/logout') return send(res, 204);
     if (p === '/auth/v1/recover') return send(res, 200, {});
     if (p.startsWith('/auth/v1/factors')) {

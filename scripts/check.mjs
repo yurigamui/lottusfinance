@@ -28,6 +28,11 @@ function walk(dir, out = []) {
 }
 
 const files = walk(ROOT);
+// comentário de linha (não "://" de URL) que contém uma declaração: sinal de quebra de linha perdida numa edição
+function codeInComment(line) {
+  const m = line.match(/(^|[^:'"`\\])\/\/(.*)$/); if (!m) return false;
+  return /;\s*$|\b(const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*[^=]/.test(m[2]) && /\b(const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*[^=]/.test(m[2]);
+}
 const isVendor = (f) => /[\\/]vendor[\\/]|\.min\.js$/.test(f);
 
 // 1. Sintaxe JS
@@ -42,7 +47,14 @@ for (const f of files.filter((f) => extname(f) === '.js' || extname(f) === '.mjs
   src.split('\n').forEach((line, i) => {
     if (/\bconsole\.log\(/.test(line)) err(f, `linha ${i + 1}: console.log esquecido`);
     if (/\bdebugger\s*;/.test(line)) err(f, `linha ${i + 1}: debugger esquecido`);
+    if (codeInComment(line)) err(f, `linha ${i + 1}: declaração dentro de comentário (quebra de linha perdida?)`);
   });
+}
+// 1b. TypeScript das funções de borda: Node só confere a sintaxe com --experimental-strip-types; mesma checagem de código preso em comentário
+for (const f of files.filter((f) => extname(f) === '.ts')) {
+  try { execFileSync(process.execPath, ['--experimental-strip-types', '--no-warnings', '--check', f], { stdio: 'pipe' }); }
+  catch (e) { err(f, 'erro de sintaxe TS: ' + String(e.stderr || e.message).split('\n').slice(0, 4).join(' ')); }
+  readFileSync(f, 'utf8').split('\n').forEach((line, i) => { if (codeInComment(line)) err(f, `linha ${i + 1}: declaração dentro de comentário (quebra de linha perdida?)`); });
 }
 
 // 2. HTML: CSP e links locais

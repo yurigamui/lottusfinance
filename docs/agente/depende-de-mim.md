@@ -14,7 +14,7 @@ Lista consolidada do que o time de agentes não pode ou não deve fazer sozinho.
 - **Por quê:** o banco de produção já tem as migrações `wealth_1` a `wealth_12` aplicadas (19/11), mas o front do Wealth e o Invest não podem ser construídos, testados nem verificados sem o código.
 - **Passo a passo:** copie as pastas para `apps/wealth/`, `apps/invest/`, `apps/business/` e as funções para `supabase/functions/` (sem `.env` nem chaves). Para as migrações: `supabase link --project-ref <ref>` e `supabase db pull`, revisando antes se algum arquivo contém segredo (por exemplo, tokens em `cron.schedule` ou `vault.create_secret`). O repositório é público: só suba o que pode ficar público.
 
-### D-03 · Aplicar em produção as migrações prontas (quando houver OK)
+### D-03 · Aplicar em produção as migrações prontas — FEITO em 24/11/2026 (120000 a 130000), com OK do Yuri
 - Lista e ordem em `supabase/migrations/README.md`. Antes: backup, teste no branch (D-01) e plano de reversão escrito no topo de cada arquivo.
 
 ## 2. Segredos e chaves
@@ -98,16 +98,32 @@ O repositório é **público**. Em *Settings*:
 
 ## 5. Wealth v2: pagamentos, preços e publicação (23/11/2026)
 
-### W-v2-01 · Credenciais de sandbox dos provedores de pagamento
-- **O que é:** chaves do Asaas (sandbox) e da Trio, e a documentação da API de Pix Automático da Trio.
-- **Por que:** o time não cria contas nem usa credenciais; os adaptadores em `supabase/functions/wealth-billing` estão escritos, mas **não foram testados contra os provedores**, e os endereços da Trio precisam vir da documentação dela.
-- **Passo a passo:** 1) Criar a conta sandbox no Asaas e gerar a chave; no Supabase, em Edge Functions > Secrets, gravar `ASAAS_API_KEY`, `ASAAS_BASE_URL` (sandbox) e `ASAAS_WEBHOOK_TOKEN`. 2) Pedir à Trio a documentação e as credenciais de sandbox do Pix Automático; gravar `TRIO_API_KEY`, `TRIO_BASE_URL`, `TRIO_PATH_AUTHORIZATION`, `TRIO_PATH_CHARGE`, `TRIO_WEBHOOK_TOKEN`. 3) Configurar os webhooks: `…/functions/v1/wealth-billing?action=webhook&provider=asaas` e `…&provider=trio`. 4) Me avisar: eu ajusto os campos da Trio e testo no sandbox com `BILLING_LIVE=1` **só no branch**.
+### W-v2-01 · Trio (Pix Automático): o que fazer quando for aplicar
+- **Situação:** o adaptador está pronto conforme a documentação da Trio (API V2, lida em 24/11/2026); falta só credencial e cadastro.
+- **Passo a passo:**
+  1. No Trio App **sandbox** (app.sandbox.trio.com.br): criar a credencial de API (Client ID e Secret) e anotar o `bank_account_id` da conta que recebe.
+  2. No Supabase, em Edge Functions > Secrets: `TRIO_CLIENT_ID`, `TRIO_CLIENT_SECRET`, `TRIO_BANK_ACCOUNT_ID`, `TRIO_REQUESTER_TAX_NUMBER` (CNPJ da Lottus, para cancelamentos) e `BILLING_LIVE=1`. Em sandbox não precisa de `TRIO_BASE_URL`.
+  3. No Trio App, criar o webhook: URL `https://rowhslnnlzfbhmzbylbz.supabase.co/functions/v1/wealth-billing?action=webhook&provider=trio`, autenticação **segredo compartilhado** (`url_secret`), versão `v200`, categorias `recurrence`, `recurrence_collection` e `recurrence_collection_attempt`. Gravar o segredo em `TRIO_WEBHOOK_SECRET` e a chave de notificação (webhook key) em `TRIO_NOTIFICATION_KEY`.
+  4. Me avisar: eu testo no sandbox a assinatura (QR do Pix Automático), a autorização, uma cobrança e o pagamento simulado. Depois, para produção, as mesmas variáveis com as credenciais de produção e `TRIO_BASE_URL=https://api.trio.com.br`.
+- **Asaas (cartão e boleto):** credencial de sandbox (`ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`). O adaptador foi escrito sem acesso à documentação da Asaas e precisa ser conferido antes de ligar.
 
-### W-v2-02 · Licença da ANBIMA
-- **O que é:** confirmar se a Lottus pode usar os preços indicativos de debêntures, CRI e CRA (ANBIMA Data) e obter `ANBIMA_CLIENT_ID`/`ANBIMA_CLIENT_SECRET`.
-- **Por que:** dado licenciado; enquanto isso a renda fixa a mercado usa só o cálculo (Tesouro + spread).
-- **Passo a passo:** consultar a ANBIMA/jurídico; com OK, gravar as credenciais nos Secrets e `ANBIMA_ENABLED=1`.
+### W-v2-02 · ANBIMA (licença conferida em 24/11/2026)
+- **Situação:** ligada no código, conforme developers.anbima.com.br (OAuth em `/oauth/access-token`; preços em `/feed/precos-indices/v1/debentures/mercado-secundario` e `/feed/precos-indices/v1/cri-cra/mercado-secundario`). Liga sozinha quando houver credenciais.
+- **Passo a passo:** gerar `client_id` e `client_secret` na área logada do portal de desenvolvedores da ANBIMA e gravar em `ANBIMA_CLIENT_ID` e `ANBIMA_CLIENT_SECRET` (Secrets da função). Para testar primeiro no sandbox: `ANBIMA_BASE_URL=https://api.sandbox.anbima.com.br`. Se a ANBIMA responder 403, o recurso não está no plano contratado.
+- **Uso:** o ativo (debênture, CRI ou CRA) precisa ter o **código** da ANBIMA no campo Ticker/código. Com taxa e emissão cadastradas, o PU da ANBIMA vira o preço "a mercado"; sem curva, vira o preço do ativo.
+
+### D-01b · Branch do Supabase exige o plano Pro (24/11/2026)
+- **O que houve:** com a sua autorização, tentei criar o branch e o Supabase recusou: "Branching is supported only on the Pro plan or above".
+- **Opções:** (a) mudar o projeto para o plano Pro (serviço pago: decisão sua) e me avisar, que eu crio o branch; (b) seguir sem branch: as migrações continuam testadas no Postgres local com o esquema real, e a aplicação em produção fica para quando você der o OK, com backup antes.
 
 ### W-v2-03 · Publicar a v2
 - **Ordem:** 1) branch do Supabase (D-01) com as migrações até `20261123125000`; 2) testes `supabase/tests` e `scripts/wealth-local/testes`; 3) publicar as funções `wealth-pu`, `wealth-billing`, `wealth-api` (verify_jwt desligado; ver `supabase/functions/README.md`); 4) publicar `apps/wealth`; 5) produção só com o seu OK.
+
+### W-v3-PUB · Publicar as funções de borda novas (decisão sua)
+- **Situação:** o banco e o front estão na v3, mas as funções `wealth-pu`, `wealth-billing` e `wealth-api` em produção são as antigas. Efeitos hoje: o P.U. do Tesouro segue parado e os CDBs só ganham preço pela curva com a função nova; "Gerar código do Pix Automático" e o P.U. buscado na fonte respondem "não foi possível" (a tela segue normalmente).
+- **Passo a passo:** com o seu OK eu publico as três (verify_jwt desligado; ver `supabase/functions/README.md`). A `wealth-billing` nova fica em modo manual até você gravar as credenciais e `BILLING_LIVE=1`.
+
+### W-v3-CF · Script de estatísticas do Cloudflare bloqueado pela CSP
+- **O que é:** a hospedagem injeta `static.cloudflareinsights.com/beacon.min.js` (Web Analytics) e a CSP do Wealth bloqueia, como deve. Não quebra nada.
+- **Recomendação:** desligar o Web Analytics desse site no painel do Cloudflare (Analytics > Web Analytics). Liberar o script na CSP traria um rastreador de terceiro (avaliar LGPD antes).
 
