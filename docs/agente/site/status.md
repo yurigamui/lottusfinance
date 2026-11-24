@@ -9,12 +9,12 @@ Modo: Beta · Fase: 3/4 (construção e verificação por seção) · Branch: `c
 | Compartilhado | CSS de menu, rodapé e redes (44 px) | sim | sim (regressão em 7 páginas) | Aprovada com ressalvas | 1 |
 
 ## Próximo passo exato
-1. Yuri responde: páginas em `lottusfinance.com.br/partners/` e `/sign/` (recomendado) ou apresentação na raiz dos subdomínios.
+1. Decidido pelo Yuri (24/11): páginas em `lottusfinance.com.br/partners/` e `/sign/`; subdomínios seguem como app.
 2. Depois: decidir S-007 (Wealth e Invest no site), S-001 (CNPJ, endereço, encarregado nos Termos e Privacidade) e, no lançamento, S-008 (Search Console, sitemap, Teste de Resultados Ricos, medir LCP/INP/CLS).
 3. Não rodar `build.py` nem `legal.py` (S-009).
 
 ## Bloqueios que dependem do Yuri
-S-001, S-002 (links de lojas e redes), S-004 (destino do formulário), S-007, S-010 e a escolha do item 1.
+S-001, S-002 (links de lojas e redes), S-004 (destino do formulário), S-007, S-010.
 
 ## Últimas decisões
 Ver `decisoes.md` (24/11: molde do Partners, páginas por solução no domínio principal, CNPJ removido do rodapé, CSP restaurada).
