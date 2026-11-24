@@ -19,3 +19,5 @@
 | S-015 | Quando Wealth e Invest forem ao ar: trocar "em breve" e o CTA por link do app e atualizar a home, JSON-LD e FAQ. Wealth: incluir preços só depois de W-031 | Média | Agente | no lançamento | 24/11 |
 | S-016 | Confirmar na função `site_lead` (fora do repositório) que aceita `wealth` e `invest` em `product`; hoje há reenvio como "ambos" | Baixa | Agente / Yuri | antes de divulgar | 24/11 |
 | S-017 | O status do Invest no site ("em breve") assume que o app ainda não está no ar; Yuri confirmar a data e o endereço | Média | Yuri | no lançamento | 24/11 |
+| S-018 | "Debêntures privadas" como público do Invest vem do manual (seção 3) e do Projeto, não dos documentos de `docs/agente/invest`. Yuri confirmar o texto | Baixa | Yuri | antes de divulgar | verificação 24/11 |
+| S-019 | Checkbox de consentimento (4×13 px) e logo do cabeçalho (28 px) do formulário abaixo de 44 px; já existiam | Baixa | Agente | com S-012 | verificação 24/11 |

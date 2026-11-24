@@ -16,10 +16,10 @@
     var b = f.querySelector('button'); b.disabled = true; msg.textContent = 'Enviando…'; msg.className = 'lf-msg';
     var p = Object.assign({ name: d.name, company: d.company, email: d.email, phone: d.phone, product: d.product, message: d.message, consent: true }, utm);
     var url = 'https://rowhslnnlzfbhmzbylbz.supabase.co/rest/v1/rpc/site_lead', KEYP = 'sb_publishable_G_2ClQ5DpzaAn_02yahsfQ_FwSFR5eQ';
-    function send(pl) { return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: KEYP }, body: JSON.stringify({ p: pl }) }).then(function (r) { if (!r.ok) throw new Error(); }); }
+    function send(pl) { return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: KEYP }, body: JSON.stringify({ p: pl }) }).then(function (r) { if (!r.ok) { var er = new Error(); er.status = r.status; throw er; } }); }
     // Wealth e Invest: se a função do banco ainda não aceitar o valor, reenvia como "ambos" com o interesse na mensagem
     send(p).catch(function (err) {
-      if (p.product !== 'wealth' && p.product !== 'invest') throw err;
+      if ((p.product !== 'wealth' && p.product !== 'invest') || err.status !== 400) throw err;
       var q2 = Object.assign({}, p, { product: 'ambos', message: '[Interesse: Lottus ' + (p.product === 'wealth' ? 'Wealth' : 'Invest') + '] ' + (p.message || '') });
       return send(q2);
     }).then(function () { f.reset(); msg.textContent = 'Recebemos sua mensagem. Respondemos em até um dia útil.'; msg.className = 'lf-msg ok'; })
