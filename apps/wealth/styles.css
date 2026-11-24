@@ -1897,3 +1897,5 @@ table.pos td.c-cust { max-width: 160px; }
 .dash-card .table-wrap { overflow-x: auto; }
 .dash-card .table-wrap > table { min-width: 0 !important; }
 @media (max-width: 640px) { .dash-card .table-wrap > table.dash-t { min-width: 0 !important; font-size: 12.5px; } .dash-t th, .dash-t td { padding: 8px 6px !important; } }
+@media (max-width: 560px) { table.pos td.cell-name, table.pos td.cell-name .aname { white-space: normal; overflow: visible; text-overflow: clip; } table.pos .aname .muted { display: none; } }
+table.fit.dash-t td.num, table.fit.dash-t th.num, table.fit.dash-t th[scope=row] { white-space: nowrap; }

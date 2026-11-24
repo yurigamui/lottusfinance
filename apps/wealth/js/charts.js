@@ -45,7 +45,7 @@
       for (let i = 0; i <= 4; i++) {
         const v = lo + ((hi - lo) / 4) * i, yy = Math.round(y(v)) + 0.5;
         svg.appendChild(el('line', { x1: m.l, x2: Wd - m.r, y1: yy, y2: yy, class: Math.abs(v) < 1e-9 ? 'chart-base' : 'chart-grid' }));
-        const t = el('text', { x: m.l - 8, y: yy + 4, 'text-anchor': 'end', class: 'chart-axis' }); t.textContent = Math.abs(v) < 1e-9 ? '0' : W.brlC(v).replace('R$ ', ''); svg.appendChild(t);
+        const t = el('text', { x: m.l - 8, y: yy + 4, 'text-anchor': 'end', class: 'chart-axis' }); t.textContent = Math.abs(v) < 1e-9 ? '0' : o.axisFormat ? o.axisFormat(v) : W.brlC(v).replace('R$ ', ''); svg.appendChild(t);
       }
       const every = Math.ceil(rows.length / Math.max(2, Math.floor(pw / 56)));
       rows.forEach((r, i) => { if (i % every === 0 || i === rows.length - 1) { const t = el('text', { x: x(i), y: H - 8, 'text-anchor': 'middle', class: 'chart-axis' }); t.textContent = r.label; svg.appendChild(t); } });
