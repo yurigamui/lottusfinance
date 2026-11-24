@@ -341,8 +341,12 @@ begin
   return coalesce((select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'ticker', ticker, 'kind', kind, 'custom', custom,
       'last_pu', (select pu from public.w_asset_prices p where p.asset_id = s.id order by date desc limit 1),
       'last_date', (select date from public.w_asset_prices p where p.asset_id = s.id order by date desc limit 1)))
-    from (select * from public.w_assets where (wallet_id = p_wallet or wallet_id is null)
-            and (public._w_norm(name) like '%' || q || '%' or lower(ticker) like q || '%') order by (lower(ticker) = q) desc, ticker nulls last, name limit 30) s), '[]'::jsonb);
+    -- termos curtos casam milhares de ativos: limitamos antes de ordenar (código exato primeiro, pelo índice do ticker)
+    from (select * from (
+            (select * from public.w_assets where (wallet_id = p_wallet or wallet_id is null) and upper(ticker) = upper(q) limit 5)
+            union
+            (select * from public.w_assets where (wallet_id = p_wallet or wallet_id is null) and (public._w_norm(name) like '%' || q || '%' or lower(ticker) like q || '%') limit 300)) u
+          order by (lower(ticker) = q) desc, (wallet_id is not null) desc, ticker nulls last, name limit 30) s), '[]'::jsonb);
 end $$;
 
 create or replace function public.w_custodian_search(p_q text)

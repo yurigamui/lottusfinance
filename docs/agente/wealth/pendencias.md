@@ -64,3 +64,5 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-058 | v3 C2-B2: ao trocar um ativo de manual para "pela curva", o cálculo pode sobrescrever valores informados à mão nas mesmas datas (sem aviso) | Baixa | Agente | próxima rodada | verificação v3 ciclo 2 |
 | W-059 | v3 C2-B6: Gastos > Cadastros em 1280 px esconde botões de uma tabela de meia coluna atrás de rolagem lateral (fora do escopo da v3) | Baixa | Agente | próxima rodada | verificação v3 ciclo 2 |
 | W-038 | **Resolvida na v3:** índice de trigramas (pg_trgm) sobre o nome sem acento; busca em 50 mil ativos ~10 ms | — | — | — | v3 ciclo 3 |
+| W-060 | v3 C3-B2: "Desde o início" com 41 anos de histórico leva ~800 ms (passo mensal); a meta de 300 ms vale para 1 ano diário, que passou | Baixa | Agente | acompanhar no branch | verificação v3 ciclo 3 |
+| W-061 | v3: linha clicável das faturas sem `tabindex`/`role` (o "Ver" continua acessível por teclado) | Baixa | Agente | próxima rodada | verificação v3 ciclo 3 |

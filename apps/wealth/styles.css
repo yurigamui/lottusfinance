@@ -1769,3 +1769,12 @@ td.pick input, th.pick input { width: 20px; height: 20px; }
 @media (max-width: 400px) { table.fit td, table.fit th { padding-left: 8px !important; padding-right: 8px !important; } table.fit td.actions .btn { padding-left: 10px; padding-right: 10px; } }
 .show-xs { display: none; }
 @media (max-width: 400px) { .hide-xs { display: none; } .show-xs { display: block; } }
+/* ---------- v3 ciclo 4: ativos sem corte até 1300 px e no celular; ações das faturas empilhadas em qualquer largura ---------- */
+.show-lg { display: none; }
+@media (max-width: 1300px) { .hide-lg { display: none; } .show-lg { display: block; } .show-lg.row { display: flex; } }
+.inv-list td.actions { white-space: normal; width: 1%; }
+.inv-list td.actions .btn { display: flex; justify-content: center; margin: 2px 0; }
+/* ---------- v3 ciclo 4: a coluna de valor vai para a 1ª célula quando o CARTÃO é estreito (não a tela) ---------- */
+.card:has(> .table-wrap > table.fit), .card:has(.inv-list) { container-type: inline-size; }
+.show-cq { display: none; }
+@container (max-width: 420px) { .hide-cq { display: none; } .show-cq { display: block; } }

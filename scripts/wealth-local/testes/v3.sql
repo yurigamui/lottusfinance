@@ -172,5 +172,8 @@ begin
   perform public.w_asset_search(wid, 'carga exemplo acao 4999');
   t0 := clock_timestamp(); perform public.w_asset_search(wid, 'carga exemplo acao 4999'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
   perform pg_temp.ok(jsonb_array_length(public.w_asset_search(wid, 'carga exemplo acao 4999')) >= 1 and ms < 150, format('C5-M1 busca sem acento em 50 mil ativos: %s ms', round(ms)));
+  t0 := clock_timestamp(); perform public.w_asset_search(wid, 'ac'); ms := extract(epoch from clock_timestamp() - t0) * 1000;
+  perform pg_temp.ok(jsonb_array_length(public.w_asset_search(wid, 'ac')) = 30 and ms < 150, format('C6-M1 termo amplo ("ac") em 50 mil ativos: %s ms', round(ms)));
+  perform pg_temp.ok(public.w_asset_search(wid, 'petr4')->0->>'ticker' = 'PETR4', 'C6-M1 código exato vem primeiro');
 end $$;
 rollback;

@@ -231,14 +231,17 @@ function cvmParse(text: string, byCnpj: Map<string, Asset>, want: (a: Asset, dat
   }
   return [...best.values()].map((x) => x.row);
 }
+const histCache = new Map<string, Uint8Array | null>();
 async function cvmFile(ym: string): Promise<string | null> {
   const r = await fetch(`https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/inf_diario_fi_${ym}.zip`);
   if (r.ok) { const files = unzipSync(new Uint8Array(await r.arrayBuffer())); return new TextDecoder('latin1').decode(Object.values(files)[0]); }
   // anos antigos: a CVM guarda em HIST/ um arquivo por ano (vários CSV mensais dentro); usamos só o do mês pedido
-  const h = await fetch(`https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/HIST/inf_diario_fi_${ym.slice(0, 4)}.zip`);
-  if (!h.ok) return null;
-  const files = unzipSync(new Uint8Array(await h.arrayBuffer()));
-  const name = Object.keys(files).find((n) => n.includes(ym)); return name ? new TextDecoder('latin1').decode(files[name]) : null;
+  // o ZIP anual é baixado uma vez por execução e só o CSV do mês é descompactado (filtro do fflate), para não estourar memória
+  const y = ym.slice(0, 4);
+  if (!histCache.has(y)) { const h = await fetch(`https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/HIST/inf_diario_fi_${y}.zip`); histCache.set(y, h.ok ? new Uint8Array(await h.arrayBuffer()) : null); }
+  const zip = histCache.get(y); if (!zip) return null;
+  const files = unzipSync(zip, { filter: (f) => f.name.includes(ym) });
+  const name = Object.keys(files)[0]; return name ? new TextDecoder('latin1').decode(files[name]) : null;
 }
 // anota a tentativa de cada ativo naquele mês (achou ou não): mês sem dados não trava o preenchimento dos outros
 async function markTried(month: string, ids: Iterable<string>, found: Set<string>) {
@@ -447,7 +450,7 @@ Deno.serve(async (req) => {
   if (action === 'pu_at') return puAt(req);
   const got = req.headers.get('x-cron-secret') ?? '';
   const envSecret = Deno.env.get('WEALTH_CRON_SECRET');
-  log.length = 0; // o módulo pode ser reaproveitado entre execuções
+  log.length = 0; histCache.clear(); // o módulo pode ser reaproveitado entre execuções
   const ok = (!!envSecret && got === envSecret) || (!!got && (await sb.rpc('w_cron_ok', { p: got })).data === true);
   if (!ok) return new Response('forbidden', { status: 403 });
   try {
