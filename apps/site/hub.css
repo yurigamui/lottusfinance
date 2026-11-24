@@ -75,3 +75,13 @@
 .hub-art:has(.shot) { padding: clamp(18px, 2.5vw, 32px); }
 .hub-art .shot { margin-right: 0; }
 @media (max-width: 1040px) { .hub-grid:has(.shot) { grid-template-columns: minmax(0, 1fr); } }
+
+/* Solução espelhada (arte à esquerda, texto à direita); em tela estreita o texto vem primeiro, como no Partners */
+.intro-flip { padding-top: 0; }
+.hub-grid-flip { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr); }
+@media (max-width: 1040px) { .hub-grid-flip { grid-template-columns: minmax(0, 1fr); } .hub-grid-flip > .stack-lg { order: -1; } }
+
+/* Botões de chamada nunca passam da coluna em telas de 320 px */
+.row-cta { display: flex; flex-wrap: wrap; }
+.row-cta .btn { max-width: 100%; white-space: normal; text-align: center; justify-content: center; }
+@media (max-width: 380px) { .row-cta .btn { padding-inline: 18px; } }

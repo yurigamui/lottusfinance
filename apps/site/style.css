@@ -1010,4 +1010,6 @@ html { scroll-padding-top: 16px; }
 .lf-msg { margin: 0; font-size: 14px; min-height: 1em; }
 .lf-msg.ok { color: #2e7a57; } .lf-msg.err { color: #b3261e; }
 .lead-form .btn { align-self: flex-start; }
-@media (max-width: 820px) { .lead-grid, .lf-row { grid-template-columns: 1fr; } }
+@media (max-width: 820px) { .lead-grid, .lf-row { grid-template-columns: minmax(0, 1fr); } }
+.lead-form input, .lead-form select, .lead-form textarea { min-width: 0; max-width: 100%; }
+.lead-form label { min-width: 0; }

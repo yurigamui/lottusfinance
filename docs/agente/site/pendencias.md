@@ -7,3 +7,8 @@
 | S-003 | `build.py` e `legal.py` desatualizados em relação ao `index.html` e ao `termos.html` publicados (Termos 1.2 no ar × 1.0 no gerador). Aviso posto no README; sincronizar exige decidir qual versão é a certa | Média | Agente (com OK do Yuri sobre o texto jurídico) | a definir | auditoria 23/11 |
 | S-004 | Formulário de contato sem destino (`formEndpoint` vazio em `main.js`): mostra a mensagem pronta para copiar. Ligar a uma função própria exige decidir o serviço | Baixa | Yuri | a definir | auditoria 23/11 |
 | S-005 | `build.py` menciona `solucoes.html`, `sobre.html` e `contato.html`, que não existem no site publicado (página única). Comentário enganoso | Baixa | Agente | com S-003 | auditoria 23/11 |
+| S-006 | Home sem páginas próprias por solução (`/partners`, `/sign`): páginas dedicadas ranqueariam melhor por palavra-chave. Exige textos novos e decisão de escopo | Média | Yuri (aprovar escopo) | a definir | SEO 24/11 |
+| S-007 | Wealth e Invest não aparecem no site. Decidir se entram e com que texto (Invest: sem oferta em tela aberta) | Média | Yuri | a definir | pedido 24/11 |
+| S-008 | Após publicar: cadastrar o site no Google Search Console e no Bing Webmaster, enviar `sitemap.xml`, validar o JSON-LD no Teste de Resultados Ricos; medir LCP/INP/CLS em 4G real | Média | Yuri / agente | no lançamento | SEO 24/11 |
+| S-009 | `build.py`/`legal.py` seguem desatualizados e NÃO geram o novo SEO nem o bloco do Sign. Rodá-los apagaria as mudanças | Alta (risco) | Agente | com S-003 | 24/11 |
+| S-010 | Confirmar `lottusfinance.com.br` sem `www` como endereço canônico (redirecionar o outro na hospedagem) | Baixa | Yuri | no lançamento | SEO 24/11 |
