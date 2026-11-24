@@ -26,3 +26,11 @@
 | T-07 | Edge Functions `sign-messenger` (entrega do OTP) e a de validação da cadeia do certificado não estão no repositório; versionar antes da seção 1.5 | Média | Yuri (D-02) | Seção 1.5 | parte-1-arquitetura.md |
 | T-08 | Conferir em produção (SELECT): `sms_enabled`, `require_mfa`, `unique(cpf)` em `profiles` e a duplicidade de nome/CPF (T-02) | Média | Auditor | G2 | parte-1-arquitetura.md |
 | P1-12 / P1-13 | Conferir no painel do Auth (Confirm email, senha mínima, enumeração de e-mail, redirecionamentos); RPC `sign_terms_accept` (não aplicada) | Média | Yuri / Arquiteto | Seção 1.1 | micro-especificação 1.1 |
+| M1 | Auxiliares `_` executáveis por `anon` **em produção** (confirmado por SELECT em 24/11): `_sha256`, `_html_escape`, `_cnpj_ok`, `_email_html`, `_sign_mask_phone`, `_signature_statement`. A migração `20261123121000` já trata 4; falta incluir `_sign_mask_phone` e `_signature_statement` (migração nova, não aplicada). Risco baixo (não são security definer, não leem dados) | Média | Arquiteto | Release | auditor 1.1 |
+| M2 | `sign_me` devolve `cpf` e `phone` vindos de `raw_user_meta_data` (editável pelo usuário) como fallback; corrigir na migração da 1.3/1.4 e não tratar como verificado | Média | Arquiteto | Seções 1.3/1.4 | auditor 1.1 |
+| B1 | Link com `#access_token=lixo&type=signup` mostra "E-mail confirmado": trocar para texto neutro/"link venceu" quando o token for inválido | Baixa | Desenvolvedor | Ciclo 2 da 1.1 | auditor 1.1 |
+| B2 | Login CSRF por fragmento (fluxo implícito do Auth): avaliar PKCE | Baixa | Arquiteto | Release | auditor 1.1 |
+| B3 | Limite de reenvio (3/h) só no cliente (localStorage) e conta mesmo em falha de rede; defesa real é o limite do Auth (P1-11/P1-12) | Baixa | Desenvolvedor | Ciclo 2 da 1.1 | auditor 1.1 |
+| B4 | CSP com `style-src 'unsafe-inline'` e `connect-src` com `brasilapi.com.br` sem uso na 1.1: apertar depois | Baixa | Desenvolvedor | G6 | auditor 1.1 |
+| B5 | `terms_version`/`privacy_version` vão como "[preencher]" no signUp: não publicar assim (J-02/P1-10) | Média | Yuri/Jurídico | Release | auditor 1.1 |
+| S-02 | Proteção contra senha vazada do Auth desligada em produção (alerta do Supabase, confirmado em 24/11) | Média | Yuri | Release | advisors |
