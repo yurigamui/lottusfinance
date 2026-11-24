@@ -61,7 +61,10 @@ begin
   x := public.w_pu_at(wid, '11111111-0000-4000-8000-000000000001', current_date - 10);
   perform pg_temp.ok((x->>'found')::boolean and (x->>'exact')::boolean and (x->>'pu')::numeric = current_setting('t.pu10')::numeric, 'P1 P.U. exato do dia');
   x := public.w_pu_at(wid, '33333333-0000-4000-8000-000000000001', current_date - 10);
-  perform pg_temp.ok(not (x->>'found')::boolean and x->>'valuation' = 'curva', 'P1 sem preço no banco: devolve found=false (a função de borda busca)');
+  -- desde a v4 o banco calcula o P.U. diário da renda fixa com taxa: o dia já tem preço ("curva"); sem taxa (ativo manual) seguiria found=false
+  perform pg_temp.ok((x->>'found')::boolean and x->>'source' = 'curva' and x->>'valuation' = 'curva', 'P1 renda fixa com taxa já tem P.U. do dia calculado pelo banco');
+  x := public.w_pu_at(wid, '33333333-0000-4000-8000-000000000003', current_date - 3000);
+  perform pg_temp.ok(not (x->>'found')::boolean, 'P1 data anterior à 1ª compra: sem P.U. (found=false)');
   perform pg_temp.ok(pg_temp.err(format('select public.w_pu_at(%L, %L, %L)', wid, '11111111-0000-4000-8000-000000000001', current_date + 1)) = 'invalid_value', 'P1 data futura');
   perform pg_temp.as_user(davi);
   perform pg_temp.ok(pg_temp.err(format('select public.w_pu_at(%L, %L, %L)', wid, '11111111-0000-4000-8000-000000000001', current_date)) = 'forbidden', 'P1 quem não é membro não consulta');
