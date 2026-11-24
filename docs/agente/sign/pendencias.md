@@ -34,3 +34,8 @@
 | B4 | CSP com `style-src 'unsafe-inline'` e `connect-src` com `brasilapi.com.br` sem uso na 1.1: apertar depois | Baixa | Desenvolvedor | G6 | auditor 1.1 |
 | B5 | `terms_version`/`privacy_version` vão como "[preencher]" no signUp: não publicar assim (J-02/P1-10) | Média | Yuri/Jurídico | Release | auditor 1.1 |
 | S-02 | Proteção contra senha vazada do Auth desligada em produção (alerta do Supabase, confirmado em 24/11) | Média | Yuri | Release | advisors |
+| M-1 | Voltar do navegador após login cai sempre em `#/documentos` (empilha histórico): usar `replace` no redirecionamento | Média | Desenvolvedor | Antes do G5 da Parte 1 | verificação 1.1 |
+| M-2 | `[preencher]` visível e enviado em `terms_version`/`privacy_version`; Termos/Política sem link. Bloqueia release (G7) até J-02/P1-10 | Média | Yuri/Jurídico | G7 | verificação 1.1 |
+| M-3 | Estado "link vencido": após reenviar, botão e contagem somem | Média | Desenvolvedor | Antes do G5 da Parte 1 | verificação 1.1 |
+| B-1/B-3/B-4 | Hash do Auth só no carregamento; `aria-pressed` no "Mostrar"; tema escuro forçado a claro por `theme.js` (decidir) | Baixa | Desenvolvedor | Antes do G5 | verificação 1.1 |
+| T-09 | Desempenho em rede lenta: 7 módulos em cascata; meta de 1 s não atingida (1,7 s a 1,6 Mbps/150 ms). Pré-carregar (`modulepreload`) ou agrupar | Média | Desenvolvedor | Antes do G5 | nota de construção |
