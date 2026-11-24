@@ -49,27 +49,6 @@
     if (!rows.length) return '';
     return `<div class="card flush" style="margin-bottom:16px"><div class="card-head" style="padding:18px 24px 0"><h2>Vencimentos e liquidez</h2></div><div class="table-wrap"><table class="tight fit liq"><thead><tr><th>Prazo</th><th class="num">Valor</th><th class="num">% da carteira</th><th class="num hide-sm">Acumulado</th></tr></thead><tbody>${rows.map((b) => `<tr><td><b>${esc(b.label)}</b><div class="muted small one-line">${b.items.slice(0, LIQ_N).map((i) => esc(i.ticker || i.name)).join(' · ')}${b.count > LIQ_N ? ` · +${b.count - LIQ_N}` : ''}</div></td><td class="num">${W.brl(b.value)}</td><td class="num"><span class="bar" style="--w:${Math.round((b.share || 0) * 100)}%"></span>${W.pct(b.share || 0, 1)}</td><td class="num hide-sm">${W.pct(b.cumulative || 0, 1)}</td></tr>`).join('')}</tbody><tfoot><tr><td><b>Total</b></td><td class="num"><b>${W.brl(liq.total)}</b></td><td class="num">100%</td><td class="hide-sm"></td></tr></tfoot></table></div></div>`;
   };
-  W.route('/w/:id/patrimonio', async (ctx) => {
-    const id = ctx.w.id; const mode = W.viewMode(ctx); const per = periodOf(ctx);
-    const [nw, rg, pos, liq] = await Promise.all([W.rpc('w_networth', { p_wallet: id, p_mode: mode }), W.rpc('w_equity_range', { p_wallet: id, p_from: per.from, p_to: per.to, p_mode: mode }), W.rpc('w_positions', { p_wallet: id, p_mode: mode, p_perf: false }), W.rpc('w_liquidity', { p_wallet: id, p_mode: mode })]);
-    const eq = rg.points; const lab = rangeLabel(rg); const bm = BM[nw.benchmark] || ''; const bk = benchKpi(eq, bm);
-    ctx.after = () => {
-      W.cur = ctx;
-      const rows = eq.map((p) => ({ label: lab(p), long: W.dt(p.date), a: p.total, b: p.aportes, inv: p.investimentos, c: p.benchmark }));
-      const draw = (m) => W.lineChart(document.getElementById('ch-eq'), m === 'rent' ? rows.map((r) => ({ label: r.label, long: r.long, a: r.inv, b: r.b, ...(bm ? { c: r.c } : {}) })) : rows.map((r) => ({ label: r.label, long: r.long, a: r.a })), { names: m === 'rent' ? ['Investimentos', 'Aportes líquidos', `Aportes rendendo ${bm}`] : ['Patrimônio líquido'], name: 'Evolução', onRange: retInfo(rows, m) });
-      draw('pl');
-      document.querySelectorAll('[data-chart]').forEach((b) => b.addEventListener('click', () => { document.querySelectorAll('[data-chart]').forEach((x) => x.classList.toggle('active', x === b)); document.getElementById('lg-rent').hidden = b.dataset.chart !== 'rent'; draw(b.dataset.chart); }));
-      const kinds = {}; pos.forEach((p) => { kinds[KIND[p.kind] || 'Outro'] = (kinds[KIND[p.kind] || 'Outro'] || 0) + Number(p.value); });
-      W.donut(document.getElementById('ch-alloc'), Object.entries(kinds).map(([name, value]) => ({ name, value })), { name: 'Alocação por tipo de ativo' });
-      W.donut(document.getElementById('ch-comp'), [{ name: 'Investimentos', value: nw.investimentos }, { name: 'Contas', value: Math.max(nw.contas, 0) }], { name: 'Composição do patrimônio' });
-    };
-    return `${W.pageHead('Patrimônio', '', `${W.modeBar(mode)}<button class="btn secondary" data-act="reports-open">${ico('file')} Relatórios</button>${ctx.canWrite ? `<a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
-      <div class="kpis">${kpi('Patrimônio líquido', W.brl(nw.total))}${kpi('Investimentos', W.brl(nw.investimentos), resultSub(nw))}${Number(nw.contas) !== 0 ? kpi('Contas', W.brl(nw.contas)) : ''}${bk ? kpi(`Comparado ao ${bm}`, W.sign(bk.diff, W.brl), '', W.cls(bk.diff)) : ''}</div>
-      <div class="card" style="margin-bottom:16px" data-evo-range><div class="card-head"><h2>Evolução</h2><div class="row"><div class="tabs"><button class="active" data-chart="pl">Patrimônio</button><button data-chart="rent">Investimentos × aportes</button></div></div></div>
-        ${periodBar(ctx, per)}<div class="legend-bench" id="lg-rent" hidden><span><i></i>Investimentos</span><span><i class="alt"></i>Aportes líquidos</span>${bm ? `<span><i class="bench"></i>Aportes rendendo ${bm}</span>` : ''}</div><div id="ch-eq"></div></div>
-      ${liquidityCard(liq)}
-      <div class="grid-2"><div class="card"><div class="card-head"><h2>Composição</h2></div><div id="ch-comp"></div></div><div class="card"><div class="card-head"><h2>Investimentos por tipo</h2></div><div id="ch-alloc"></div></div></div>`;
-  });
   // Bens e dívidas saiu na v2: o endereço antigo leva ao Patrimônio
   W.route('/w/:id/bens', async (ctx) => { W.go(`/w/${ctx.w.id}/patrimonio`); return ''; }, { wallet: true });
   const curId = () => (location.hash.match(/#\/w\/([^/?]+)/) || [])[1];
