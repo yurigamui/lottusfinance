@@ -29,3 +29,15 @@
   Cache-Control: public, max-age=3600
 /robots.txt
   Cache-Control: public, max-age=3600
+
+# HTML sempre revalidado, para o navegador não ficar com a página antiga apontando para CSS antigo
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+/partners/
+  Cache-Control: public, max-age=0, must-revalidate
+/sign/
+  Cache-Control: public, max-age=0, must-revalidate
+/wealth/
+  Cache-Control: public, max-age=0, must-revalidate
