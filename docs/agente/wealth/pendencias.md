@@ -70,3 +70,4 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-063 | Trio TR-B1: a Trio recusa versões antigas do cabeçalho `Trio-Version` (hoje `2026-10-19.v2`); quando sair uma nova, as chamadas falham até atualizar `TRIO_VERSION` — criar alerta | Baixa | Agente/Yuri | antes de cobrar | verificação Trio 24/11 |
 | W-064 | O mesmo CPF/CNPJ é aceito nos dados de cobrança de usuários diferentes (ex.: uma empresa pagando por várias pessoas). Confirmar se é a regra desejada | Baixa | Yuri (regra) | a definir | verificação Trio 24/11 |
 | W-065 | `w_equity` (v2) com 60 meses × 1.000 lançamentos oscila entre 270 e 304 ms, no limite da meta de 300 ms (ver W-050) | Baixa | Agente | no branch | 24/11 |
+| W-066 | Acessibilidade: ao fechar um modal (Esc ou Fechar), o foco não volta ao botão que o abriu (provavelmente em todos os modais) | Baixa | Agente | próxima rodada | verificação Trio ciclo 3 |
