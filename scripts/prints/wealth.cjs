@@ -45,7 +45,6 @@ const user_ = { app: 'wealth', user, storage: 'session', rpc, ready: '#view', wa
   const which = process.argv[2] || 'all';
   const jobs = [];
   if (which === 'all' || which === 'patrimonio') jobs.push({ ...user_, hash: `#/w/${WID}/patrimonio`, ready: '#ch-eq svg', out: path.join(ROOT, 'apps/site/img/wealth-painel.webp') });
-  if (which === 'all' || which === 'gastos') jobs.push({ ...user_, hash: `#/w/${WID}/gastos`, ready: '#ch-flow svg', out: path.join(ROOT, 'apps/site/img/wealth-gastos.webp') });
   for (const j of jobs) {
     const png = await shoot(j);
     execFileSync('python3', [path.join(__dirname, 'toWebp.py'), png, j.out]); fs.unlinkSync(png);

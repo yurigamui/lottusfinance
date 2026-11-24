@@ -7,6 +7,7 @@ Modo: Beta · Fase: 3/4 (construção e verificação por seção) · Branch: `c
 | Home | Soluções (Sign no molde do Partners) + SEO técnico | sim | sim | Aprovada com ressalvas | 1 |
 | Páginas | `/partners/` e `/sign/` | sim | sim | Aprovada com ressalvas | 2 (contraste e alvos de 44 px corrigidos) |
 | Páginas | `/wealth/` e `/invest/` (em breve) + seções na home + formulário | sim | sim | Aprovada com ressalvas (ciclo 1 reprovada: meta keywords do Invest; ciclo 2 aprovada) | 2 |
+| Revisão de 11 pontos (menu Soluções, prints, planos, páginas ampliadas, Invest fora) | sim | sim | Aprovada com ressalvas (ciclo 1 reprovada; ciclo 2 aprovada) | 2 |
 | Compartilhado | CSS de menu, rodapé e redes (44 px) | sim | sim (regressão em 7 páginas) | Aprovada com ressalvas | 1 |
 
 ## Próximo passo exato
