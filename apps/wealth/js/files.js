@@ -54,6 +54,9 @@
     amount: ['valor', 'amount', 'valor r', 'valor rs', 'montante'],
     credit: ['credito', 'entrada', 'entradas', 'receita'],
     debit: ['debito', 'saida', 'saidas', 'despesa'],
+    counterparty: ['contraparte', 'favorecido', 'beneficiario', 'fornecedor', 'cliente', 'pagador'],
+    cost_center: ['centro de custo', 'centro custo', 'centro', 'cc', 'departamento'],
+    group: ['grupo', 'categoria', 'classificacao', 'classe'],
     // investimentos
     kind: ['tipo', 'tipo de movimentacao', 'tipo movimentacao', 'operacao', 'tipo de operacao', 'c v', 'compra venda', 'natureza'],
     ticker: ['ticker', 'codigo', 'codigo de negociacao', 'cod negociacao', 'papel', 'ativo', 'codigo do ativo', 'simbolo'],
@@ -63,7 +66,7 @@
     custodian: ['custodiante', 'instituicao', 'corretora', 'banco', 'custodia'],
   };
   F.FIELDS = {
-    extrato: [['date', 'Data', true], ['description', 'Descrição', true], ['amount', 'Valor (negativo = saída)', false], ['credit', 'Crédito (opcional)', false], ['debit', 'Débito (opcional)', false]],
+    extrato: [['date', 'Data', true], ['description', 'Descrição', true], ['amount', 'Valor (negativo = saída)', false], ['credit', 'Crédito (opcional)', false], ['debit', 'Débito (opcional)', false], ['counterparty', 'Contraparte (opcional)', false], ['cost_center', 'Centro de custo (opcional)', false], ['group', 'Grupo (opcional)', false]],
     invest: [['date', 'Data (vazia = hoje, para posições)', false], ['kind', 'Compra/Venda', false], ['ticker', 'Código/ticker', false], ['name', 'Nome do ativo', false], ['qty', 'Quantidade', true], ['unit_price', 'Preço unitário', true], ['custodian', 'Custodiante', false]],
   };
   /** descobre qual coluna é qual pelo cabeçalho */
@@ -87,7 +90,8 @@
         const c = map.credit !== undefined ? W.parseNum(r[map.credit]) : null, d = map.debit !== undefined ? W.parseNum(r[map.debit]) : null;
         if (c || d) amt = (c || 0) - Math.abs(d || 0);
       }
-      if (date && desc && amt) ok.push({ date, description: desc, amount: amt }); else bad.push(i + 2);
+      const cl = (k) => (map[k] !== undefined ? String(r[map[k]] ?? '').replace(/\s+/g, ' ').trim().slice(0, 80) : '');
+      if (date && desc && amt) ok.push({ date, description: desc, amount: amt, counterparty: cl('counterparty'), cost_center: cl('cost_center'), group: cl('group') }); else bad.push(i + 2);
     });
     return { ok, bad };
   };

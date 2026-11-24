@@ -46,8 +46,8 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-040 | Modal de dados de cobrança: erros de CPF/CEP aparecem só no aviso flutuante, não ao lado do campo | Baixa | Agente | próxima rodada | verificação 23/11 (B1) |
 | W-041 | **Resolvida na v2 (pede a senha atual).** Troca de senha em Conta e plano não pede a senha atual nem a confirmação da nova: uma sessão aberta basta. Opções: pedir a senha atual e reautenticar antes de `updateUser`, ou ligar "Secure password change" no Supabase Auth | Média | Agente (front) e Yuri (configuração do Auth) | antes do lançamento | verificação 23/11 (X3) |
 | W-042 | CSV: o "Peso" sai com muitas casas decimais e o "Tipo" das transações sai como código (compra/venda) | Baixa | Agente | próxima rodada | verificação 23/11 (X2) |
-| W-043 | v2: adaptadores de pagamento (Trio Pix Automático, Asaas cartão/boleto) **não testados contra os provedores**; endereços e campos da Trio a preencher (documentação não pública) | Alta | Yuri (credenciais de sandbox e documentação da Trio) | antes de cobrar | v2 23/11 |
-| W-044 | v2: ANBIMA desligada até confirmar a licença de uso dos dados de debêntures/CRI/CRA; endpoints a conferir com a documentação da ANBIMA Data | Média | Yuri (jurídico/contrato) | a definir | v2 23/11 |
+| W-043 | v2: adaptadores de pagamento **não testados contra os provedores**. Trio reescrita conforme a documentação V2 em 24/11 (falta credencial de sandbox); Asaas escrita sem a documentação | Alta | Yuri (credenciais de sandbox e documentação da Trio) | antes de cobrar | v2 23/11 |
+| W-044 | **Licença confirmada (24/11); endpoints conferidos e corrigidos.** Falta só a credencial da ANBIMA | Baixa | Yuri (credencial) | a definir | v2 23/11 |
 | W-045 | v2: mês da assinatura é cobrado inteiro (sem proporcional) | Baixa | Yuri (regra de preço) | a definir | v2 23/11 |
 | W-046 | v2: API sem limite de chamadas por minuto e sem escrita | Média | Agente | próxima rodada | v2 23/11 |
 | W-047 | v2: `w_equity` com benchmark faz uma soma por transação por mês; medir com volume real no branch (1.000+ transações, 60 meses) | Média | Agente | no branch (D-01) | v2 23/11 |
@@ -66,3 +66,8 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-038 | **Resolvida na v3:** índice de trigramas (pg_trgm) sobre o nome sem acento; busca em 50 mil ativos ~10 ms | — | — | — | v3 ciclo 3 |
 | W-060 | v3 C3-B2: "Desde o início" com 41 anos de histórico leva ~800 ms (passo mensal); a meta de 300 ms vale para 1 ano diário, que passou | Baixa | Agente | acompanhar no branch | verificação v3 ciclo 3 |
 | W-061 | v3: linha clicável das faturas sem `tabindex`/`role` (o "Ver" continua acessível por teclado) | Baixa | Agente | próxima rodada | verificação v3 ciclo 3 |
+| W-062 | Trio TR-M3: fatura que perde a janela de agendamento do Pix Automático (2 a 10 dias antes do vencimento) fica com erro a cada rodada; falta um Pix avulso (QR dinâmico) como alternativa, com texto próprio | Média | Agente | antes de cobrar | verificação Trio 24/11 |
+| W-063 | Trio TR-B1: a Trio recusa versões antigas do cabeçalho `Trio-Version` (hoje `2026-10-19.v2`); quando sair uma nova, as chamadas falham até atualizar `TRIO_VERSION` — criar alerta | Baixa | Agente/Yuri | antes de cobrar | verificação Trio 24/11 |
+| W-064 | O mesmo CPF/CNPJ é aceito nos dados de cobrança de usuários diferentes (ex.: uma empresa pagando por várias pessoas). Confirmar se é a regra desejada | Baixa | Yuri (regra) | a definir | verificação Trio 24/11 |
+| W-065 | `w_equity` (v2) com 60 meses × 1.000 lançamentos oscila entre 270 e 304 ms, no limite da meta de 300 ms (ver W-050) | Baixa | Agente | no branch | 24/11 |
+| W-066 | Acessibilidade: ao fechar um modal (Esc ou Fechar), o foco não volta ao botão que o abriu (provavelmente em todos os modais) | Baixa | Agente | próxima rodada | verificação Trio ciclo 3 |

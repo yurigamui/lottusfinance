@@ -22,7 +22,7 @@
   // visão dos preços: "na curva" (taxa contratada) ou "a mercado" (preço de saída hoje)
   W.viewMode = (ctx) => { const v = ctx.q.get('v'); return v === 'mercado' || v === 'curva' ? v : (ctx.w && ctx.w.view_mode) || 'curva'; };
   W.modeBar = (mode) => `<div class="tabs" role="group" aria-label="Visão dos preços">${[['curva', 'Na curva'], ['mercado', 'A mercado']].map(([k, l]) => `<button type="button" data-act="view-mode" data-mode="${k}" class="${mode === k ? 'active' : ''}" aria-pressed="${mode === k}">${l}</button>`).join('')}</div>`;
-  W.modeHint = (mode, has) => `<p class="muted small">${mode === 'mercado' ? (has ? 'A mercado: renda fixa pelo preço estimado de venda hoje (taxa de mercado + spread de emissão); demais ativos pela última cotação.' : 'A mercado: nenhum ativo da carteira tem preço a mercado diferente da curva hoje.') : 'Na curva: renda fixa pela taxa contratada até hoje; demais ativos pela última cotação.'}</p>`;
+  W.modeHint = () => '';  // sem texto explicativo: o seletor "Na curva | A mercado" basta
   W.qs = (ctx, k, v) => { const q = new URLSearchParams(ctx.q); q.set(k, v); return q.toString(); };
   document.addEventListener('error', (e) => { const im = e.target; if (!(im instanceof HTMLImageElement)) return; const box = im.closest('.org-mark.has-logo'); if (!box) return; box.classList.remove('has-logo'); box.textContent = W.initials(im.alt || 'W'); }, true);
   W.pageHead = (title, sub, actions, back) => `<div class="page-head"><div>${back ? `<a class="back" href="#${back[0]}">← ${esc(back[1])}</a><br>` : ''}<h1>${esc(title)}</h1>${sub ? `<div class="page-sub">${esc(sub)}</div>` : ''}</div>${actions ? `<div class="row">${actions}</div>` : ''}</div>`;
@@ -99,10 +99,10 @@
     const b = w ? `/w/${w.id}` : '';
     const g = [{ id: 'carteiras', label: 'Carteiras', items: [{ href: '/carteiras', label: 'Minhas carteiras', icon: 'wallet', exact: true }] }];
     if (w) {
-      g.push({ id: 'patrimonio', label: 'Patrimônio', items: [{ href: `${b}/patrimonio`, label: 'Visão geral', icon: 'layout' }, { href: `${b}/relatorios`, label: 'Relatórios', icon: 'file' }, { href: `${b}/acessos`, label: 'Acessos', icon: 'users' }] });
+      g.push({ id: 'patrimonio', label: 'Patrimônio', items: [{ href: `${b}/patrimonio`, label: 'Patrimônio', icon: 'layout' }] });
       g.push({ id: 'investimentos', label: 'Investimentos', items: [{ href: `${b}/investimentos`, label: 'Visão geral', icon: 'layout' }, { href: `${b}/posicao`, label: 'Posição', icon: 'trend' }, { href: `${b}/transacoes`, label: 'Transações', icon: 'list' }, { href: `${b}/ativos`, label: 'Ativos personalizados', icon: 'tags' }] });
       g.push({ id: 'gastos', label: 'Gastos', items: [{ href: `${b}/gastos`, label: 'Visão geral', icon: 'receipt', exact: true }, { href: `${b}/gastos/transacoes`, label: 'Transações', icon: 'list' }, { href: `${b}/gastos/cadastros`, label: 'Cadastros e regras', icon: 'tags' }] });
-      if (w.role === 'gestor') g.push({ id: 'config', label: 'Configurações', items: [{ href: `${b}/config`, label: 'Configurações', icon: 'gear' }] });
+      g.push({ id: 'config', label: 'Configurações', items: [{ href: `${b}/config`, label: 'Configurações', icon: 'gear' }, { href: `${b}/acessos`, label: 'Acessos', icon: 'users' }] });
     }
     g.push({ id: 'conta', label: 'Conta', items: [{ href: '/conta', label: 'Conta', icon: 'card' }] });
     return g;
@@ -120,7 +120,7 @@
     const me = W.state.me, w = ctx.w, p = ctx.path, wl = W.state.wallets || [];
     const mark = (t) => esc((t || 'W').trim()[0].toUpperCase());
     const orgInner = w
-      ? `${W.orgMark(w)}<div><div class="org-name">${esc(w.name)}${wl.length > 1 ? ' <span class="org-caret" aria-hidden="true">▾</span>' : ''}</div><div class="org-sub">${esc(`${ROLE[w.role]}${w.is_owner ? ' · titular da cobrança' : ''}`)}</div></div>`
+      ? `${W.orgMark(w)}<div><div class="org-name">${esc(w.name)}${wl.length > 1 ? ' <span class="org-caret" aria-hidden="true">▾</span>' : ''}</div><div class="org-sub">${esc(`${ROLE[w.role]}${w.is_owner ? ' · Titular' : ''}`)}</div></div>`
       : `<div class="org-mark logo"></div><div><div class="org-name">Lottus Wealth</div><div class="org-sub">Patrimônio, investimentos e gastos</div></div>`;
     const org = w && wl.length > 1
       ? `<div class="org-wrap"><button class="org org-btn" data-act="org-menu" aria-haspopup="true" aria-expanded="false" aria-label="Trocar de carteira">${orgInner}</button>
@@ -137,7 +137,7 @@
   }
   function banner(ctx) {
     const w = ctx.w, pr = W.state.me.profile;
-    if (w && w.read_only) return `<div class="banner danger">${ico('lock')}<div class="grow">${w.archived ? 'Esta carteira está arquivada.' : 'Esta carteira está somente para visualização, por pendência de pagamento do titular da cobrança.'}${w.is_owner ? ' <a href="#/conta?aba=plano">Regularizar em Conta > Plano</a>' : ''}</div></div>`;
+    if (w && w.read_only) return `<div class="banner danger">${ico('lock')}<div class="grow">${w.archived ? 'Esta carteira está arquivada.' : 'Esta carteira está somente para visualização, por pendência de pagamento do plano do titular.'}${w.is_owner ? ' <a href="#/conta?aba=plano">Regularizar em Conta > Plano</a>' : ''}</div></div>`;
     if (!w && pr.billing_status === 'atrasado') return `<div class="banner danger">${ico('lock')}<div class="grow">Há uma cobrança em atraso: suas carteiras estão somente para visualização. <a href="#/conta?aba=plano">Ver faturas</a></div></div>`;
     return '';
   }
@@ -323,7 +323,7 @@
         ${g.members.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Pessoa</th><th>Acesso</th><th>Desde</th><th></th></tr></thead><tbody>${g.members.map((m) => `<tr><td>${esc(m.name)}<div class="muted small">${esc(m.email)}</div></td><td>${tag(ROLE[m.role])}</td><td>${W.dt(m.since)}</td><td class="actions"><button class="btn danger sm" data-act="gmember-del" data-group="${esc(g.id)}" data-user="${esc(m.user_id)}">Remover</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Ninguém além de você.</div>'}
         <form class="filters" data-form="gmember-add" style="margin-top:14px"><input type="hidden" name="group" value="${esc(g.id)}"><div class="field"><label for="gcpf">CPF da pessoa</label><input class="input" id="gcpf" name="cpf" data-mask="cpf" inputmode="numeric" maxlength="14" required autocomplete="off"></div>
           <div class="field"><label for="grole">Acesso</label><select class="input" id="grole" name="role">${W.opts(Object.entries(ROLE), 'visualizador')}</select></div><div class="field"><label>&nbsp;</label><button class="btn" type="submit">Adicionar</button></div></form>
-        <p class="muted small">A pessoa precisa ter conta no Wealth. Quem é adicionado não paga nada: a cobrança continua com o titular de cada carteira.</p></div>
+        <p class="muted small">A pessoa precisa ter conta no Wealth. Quem é adicionado não paga nada.</p></div>
       ${brandHtml(g)}`;
   });
   const STYLES = [['classico', 'Clássico'], ['moderno', 'Moderno'], ['minimalista', 'Minimalista']], FONTS = [['inter', 'Inter (sem serifa)'], ['serif', 'Serifada'], ['mono', 'Monoespaçada']];
@@ -350,16 +350,21 @@
   document.addEventListener('input', (e) => { const f = e.target.closest('form[data-form=brand-save]'); if (!f) return; const v = W.form(f); const el = document.getElementById('gb-prev'); if (el) el.outerHTML = brandPrev(v); });
   document.addEventListener('change', (e) => { const f = e.target.closest('form[data-form=brand-save]'); if (!f) return; const v = W.form(f); const el = document.getElementById('gb-prev'); if (el) el.outerHTML = brandPrev(v); });
   W.acts['view-mode'] = (el) => { const [path, qs] = location.hash.slice(1).split('?'); const q = new URLSearchParams(qs || ''); q.set('v', el.dataset.mode); location.hash = `${path}?${q}`; };
+  const archivedHtml = (ar) => `<details class="card archived" style="margin-top:20px"><summary class="card-head" style="cursor:pointer;margin:0"><h2>Carteiras arquivadas <span class="muted small">(${ar.wallets.length})</span></h2></summary>
+    <div class="list" style="margin-top:12px">${ar.wallets.map((w) => `<div class="list-row"><div class="grow"><b class="one-line">${esc(w.name)}</b><div class="muted small">Arquivada em ${W.dt(String(w.archived_at).slice(0, 10))} · ${w.tx} ${w.tx === 1 ? 'transação' : 'transações'} · ${w.spend} ${w.spend === 1 ? 'lançamento' : 'lançamentos'}</div></div><button class="btn secondary sm" data-act="wallet-unarchive" data-id="${esc(w.id)}"${ar.can_unarchive ? '' : ' disabled'}>Desarquivar</button></div>`).join('')}</div>
+    ${ar.can_unarchive ? '' : '<p class="muted small" style="margin-top:10px">No plano Grátis só cabe 1 carteira ativa. Para reativar outra, assine o Pro em <a href="#/conta?aba=plano">Conta &gt; Plano</a>.</p>'}</details>`;
+  W.acts['wallet-unarchive'] = async (el) => { await W.busy(el, async () => { await W.rpc('w_wallet_unarchive', { p_wallet: el.dataset.id }); W.state.wallets = []; W.toast('Carteira desarquivada'); W.go(`/w/${el.dataset.id}/patrimonio`); }); };
   W.route('/carteiras', async (ctx) => {
-    const [ws, invites, gr] = await Promise.all([W.loadWallets(), W.rpc('w_invites_mine'), W.rpc('w_groups_list')]); W.groupsCache = gr;
+    const [ws, invites, gr, archived] = await Promise.all([W.loadWallets(), W.rpc('w_invites_mine'), W.rpc('w_groups_list'), W.rpc('w_wallets_archived')]); W.groupsCache = gr;
     const inv = invites.map((i) => `<div class="card row between"><div><b>${esc(i.inviter)}</b> convidou você para a carteira <b>${esc(i.wallet)}</b><div class="muted small">Acesso de ${esc(ROLE[i.role])} · vale até ${W.dt(i.expires_at)}</div></div><div class="row"><button class="btn secondary sm" data-act="invite-no" data-id="${esc(i.id)}">Recusar</button><button class="btn sm" data-act="invite-yes" data-id="${esc(i.id)}">Aceitar</button></div></div>`).join('');
-    const cards = ws.map((w) => `<a class="wallet-card" href="#/w/${esc(w.id)}/patrimonio"><div class="row between">${W.orgMark(w)}<div class="row">${w.is_owner ? tag('Titular da cobrança', 'brand') : ''}${w.read_only ? tag('Somente leitura', 'danger') : ''}</div></div>
+    const cards = ws.map((w) => `<a class="wallet-card" href="#/w/${esc(w.id)}/patrimonio"><div class="row between">${W.orgMark(w)}<div class="row">${w.is_owner ? tag('Titular', 'brand') : ''}${w.read_only ? tag('Somente leitura', 'danger') : ''}</div></div>
       <div><h3>${esc(w.name)}</h3><div class="muted small">${esc(ROLE[w.role])}${w.is_owner ? '' : ` · de ${esc(w.owner_name || '')}`}</div></div>
       <div><div class="muted small">Patrimônio líquido</div><div class="big">${W.brl(w.networth)}</div></div><div class="muted small">${w.members} ${w.members === 1 ? 'pessoa' : 'pessoas'} com acesso</div></a>`).join('');
     return `${W.pageHead('Minhas carteiras', 'Carteiras criadas por você e as que outras pessoas compartilharam.', `<a class="btn" href="#/carteiras/nova">${ico('plus')} Nova carteira</a>`)}
       ${invites.length ? `<div class="stack" style="margin-bottom:20px">${inv}</div>` : ''}
       ${gr.allowed ? groupsHtml(gr, ws) : ''}
-      ${ws.length ? `<div class="wallets">${cards}<a class="wallet-card new" href="#/carteiras/nova">${ico('plus')}<span>Criar uma nova carteira</span></a></div>` : `<div class="card center"><h2>Você ainda não tem carteiras</h2><p class="muted">Crie a primeira carteira ou aguarde um convite.</p><a class="btn" href="#/carteiras/nova">Criar carteira</a></div>`}`;
+      ${ws.length ? `<div class="wallets">${cards}<a class="wallet-card new" href="#/carteiras/nova">${ico('plus')}<span>Criar uma nova carteira</span></a></div>` : `<div class="card center"><h2>Você ainda não tem carteiras</h2><p class="muted">Crie a primeira carteira ou aguarde um convite.</p><a class="btn" href="#/carteiras/nova">Criar carteira</a></div>`}
+      ${archived.wallets.length ? archivedHtml(archived) : ''}`;
   });
   Object.assign(W.acts, {
     'invite-yes': async (el) => { await W.busy(el, async () => { const r = await W.rpc('w_invite_answer', { p_invite: el.dataset.id, p_accept: true }); W.state.wallets = []; W.toast('Convite aceito', 'A carteira já está na sua lista.'); W.go(`/w/${r.wallet_id}/patrimonio`); }); },
@@ -392,14 +397,14 @@
     const [bp, b] = await Promise.all([W.rpc('w_billing_profile_get'), W.rpc('w_billing_me')]); const me = W.state.me; const p = bp || {};
     const price = plan ? b.prices[plan] : null; const n = Math.max(b.owned_wallets, 1);
     W.modal({ title: plan ? `Assinar o ${PLAN_NAME[plan]}` : 'Dados de cobrança', wide: true, body: `<form class="stack" data-form="billing-save"><input type="hidden" name="plan" value="${esc(plan || '')}">
-      ${plan ? `<div class="note-box"><b>${W.brl(price)} por carteira, por mês</b> · hoje você tem ${n} ${n === 1 ? 'carteira' : 'carteiras'} = ${W.brl(price * n)} por mês. A fatura fecha no fim de cada mês e vence 10 dias depois.</div>` : ''}
-      <div class="form-grid"><div class="field full"><label>Nome ou razão social</label><input class="input" name="holder_name" required minlength="3" value="${esc(p.holder_name || me.profile.name || '')}"></div>
+      ${plan ? `<div class="co-sum"><div><div class="co-plan">${PLAN_NAME[plan]}</div><div class="muted small">${n} ${n === 1 ? 'carteira' : 'carteiras'} × ${W.brl(price)}</div></div><div class="co-total">${W.brl(price * n)}<small>/mês</small></div></div>` : ''}
+      <div class="co-h">Dados</div><div class="form-grid"><div class="field full"><label>Nome ou razão social</label><input class="input" name="holder_name" required minlength="3" value="${esc(p.holder_name || me.profile.name || '')}"></div>
         <div class="field"><label>CPF ou CNPJ</label><input class="input" name="doc" data-mask="doc" required inputmode="numeric" value="${esc(p.doc || '')}"></div><div class="field"><label>E-mail de cobrança</label><input class="input" name="email" type="email" required value="${esc(p.email || me.email || '')}"></div>
-        <div class="field"><label>CEP</label><input class="input" name="zip" required inputmode="numeric" maxlength="9" value="${esc(p.zip || '')}" placeholder="00000-000"></div><div class="field"><label>Rua</label><input class="input" name="street" required value="${esc(p.street || '')}"></div>
+        <div class="co-h full" style="grid-column:1/-1">Endereço</div><div class="field"><label>CEP</label><input class="input" name="zip" required inputmode="numeric" maxlength="9" value="${esc(p.zip || '')}" placeholder="00000-000"></div><div class="field"><label>Rua</label><input class="input" name="street" required value="${esc(p.street || '')}"></div>
         <div class="field"><label>Número</label><input class="input" name="number" required value="${esc(p.number || '')}"></div><div class="field"><label>Complemento</label><input class="input" name="complement" value="${esc(p.complement || '')}"></div>
         <div class="field"><label>Bairro</label><input class="input" name="district" required value="${esc(p.district || '')}"></div><div class="field"><label>Cidade</label><input class="input" name="city" required value="${esc(p.city || '')}"></div>
         <div class="field"><label>UF</label><select class="input" name="state" required>${W.opts(UFS.map((u) => [u, u]), p.state || '', 'Escolha')}</select></div></div>
-      <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="label-like">Forma de pagamento</legend><div class="stack-sm">${METHODS.map(([k, l, d]) => `<label class="check" style="align-items:flex-start"><input type="radio" name="method" value="${k}"${(p.method || 'pix') === k ? ' checked' : ''}><span><b>${l}</b><br><span class="muted small">${d}</span></span></label>`).join('')}</div></fieldset>
+      <div class="co-h">Pagamento</div><div class="co-methods" role="radiogroup" aria-label="Forma de pagamento">${METHODS.map(([k, l]) => `<label class="co-method"><input type="radio" name="method" value="${k}"${(p.method || 'pix') === k ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
       <div class="modal-foot"><button type="button" class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn" type="submit">${plan ? `Assinar o ${PLAN_NAME[plan]}` : 'Salvar dados'}</button></div></form>` });
   }
   // pede à função de borda o link de pagamento do provedor (Pix Automático na Trio, cartão na página segura do provedor)
@@ -418,11 +423,20 @@
     await W.rpc('w_billing_profile_save', { p: { holder_name: v.holder_name, doc: v.doc, email: v.email, zip: v.zip, street: v.street, number: v.number, complement: v.complement, district: v.district, city: v.city, state: v.state, method: v.method } });
     if (!v.plan) { W.closeModal(); W.toast('Dados de cobrança salvos'); return route(); }
     await W.rpc('w_plan_change', { p_plan: v.plan }); await loadMe(); W.state.wallets = [];
-    const c = await checkout(); const url = c && safeUrl(c.url);
+    const c = await checkout(); const url = c && safeUrl(c.url); const pix = c && typeof c.pix_payload === 'string' && /^000201[\x20-\x7e]{20,800}$/.test(c.pix_payload) ? c.pix_payload : '';
     W.closeModal(); await route();
-    W.modal({ title: `Plano ${PLAN_NAME[v.plan]} ativo`, body: `<p>Você já pode usar tudo do ${PLAN_NAME[v.plan]}.</p>${url
+    W.modal({ title: `Plano ${PLAN_NAME[v.plan]} ativo`, body: `<p>Você já pode usar tudo do ${PLAN_NAME[v.plan]}.</p>${c && c.authorized ? '<div class="note-box">O Pix Automático já está autorizado: as faturas serão debitadas no vencimento.</div>' : pix
+      ? `<p>Falta autorizar o <b>Pix Automático</b> uma vez: abra o app do seu banco, escolha <b>Pix copia e cola</b>, cole o código abaixo e confirme a autorização. Depois disso, cada fatura é debitada no vencimento.</p><div class="field"><label for="pix-code">Código Pix (copia e cola)</label><textarea class="input" id="pix-code" rows="3" readonly>${esc(pix)}</textarea></div><div><button class="btn secondary sm" data-act="copy-pix">Copiar código</button></div><p class="muted small">O código vale por 2 dias. Se expirar, gere outro em Conta &gt; Plano &gt; Cobrança.</p>`
+      : url
       ? `<p>Falta só ${v.method === 'pix' ? 'autorizar o Pix Automático no app do seu banco' : v.method === 'cartao' ? 'cadastrar o cartão na página segura do provedor de pagamento' : 'conferir o boleto'}:</p><p><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${v.method === 'pix' ? 'Autorizar Pix Automático' : v.method === 'cartao' ? 'Cadastrar cartão' : 'Abrir boleto'}</a></p>`
-      : `<div class="note-box">A cobrança chega no e-mail <b>${esc(v.email)}</b>${v.method === 'pix' ? ' com o pedido de autorização do Pix Automático' : v.method === 'cartao' ? ' com o link para cadastrar o cartão' : ''}. A primeira fatura fecha no fim do mês.</div>`}`, foot: '<button class="btn" data-act="modal-close">Entendi</button>' });
+      : v.method === 'pix' ? '<div class="note-box">Não conseguimos gerar agora o código de autorização do Pix Automático. Gere-o em <b>Conta &gt; Plano &gt; Cobrança</b>, no botão "Gerar código do Pix Automático". A primeira fatura fecha no fim do mês.</div>'
+      : `<div class="note-box">A cobrança chega no e-mail <b>${esc(v.email)}</b>${v.method === 'cartao' ? ' com o link para cadastrar o cartão' : ''}. A primeira fatura fecha no fim do mês.</div>`}`, foot: '<button class="btn" data-act="modal-close">Entendi</button>' });
+  };
+  W.acts['pix-auth'] = async (el) => {
+    if (el.disabled) return; el.disabled = true; let c; try { c = await checkout(); } finally { el.disabled = false; } // um clique, uma chamada
+    const pix = c && typeof c.pix_payload === 'string' && /^000201[\x20-\x7e]{20,800}$/.test(c.pix_payload) ? c.pix_payload : '';
+    if (c && c.authorized) { W.toast('Pix Automático já autorizado'); return route(); }
+    W.modal({ title: 'Autorizar o Pix Automático', body: pix ? `<p>Abra o app do seu banco, escolha <b>Pix copia e cola</b>, cole o código e confirme a autorização.</p><div class="field"><label for="pix-code">Código Pix (copia e cola)</label><textarea class="input" id="pix-code" rows="3" readonly>${esc(pix)}</textarea></div><div><button class="btn secondary sm" data-act="copy-pix">Copiar código</button></div><p class="muted small">Vale por 2 dias.</p>` : '<div class="note-box">Não foi possível gerar o código agora. Tente de novo em alguns minutos; se continuar, fale com o suporte.</div>', foot: '<button class="btn" data-act="modal-close">Fechar</button>' });
   };
   W.acts['plan-free'] = async () => {
     if (!(await W.confirm('Voltar ao plano Grátis?', 'Você fica com 1 carteira, sem grupos, white-label e API. As faturas já fechadas continuam valendo.', 'Voltar ao Grátis', true))) return;
@@ -492,10 +506,10 @@
     const pay = bp ? `${esc(METHOD_NAME[bp.method] || bp.method)}${bp.method === 'cartao' && b.card ? ` · ${esc(b.card.brand || 'Cartão')} final ${esc(b.card.last4)}` : ''} · ${b.payment_ok ? tag('Autorizado', 'success') : tag(bp.method === 'boleto' ? 'Boleto por e-mail' : 'Aguardando autorização', 'warning')}` : '';
     return `${late ? `<div class="banner danger">${ico('lock')}<div class="grow">Há uma fatura em atraso: suas carteiras estão somente para visualização até o pagamento.</div></div>` : ''}${planos}
       <div class="kpis"><div class="kpi"><div class="kpi-label">Plano atual</div><div class="big">${PLAN_NAME[b.plan]}</div></div>
-        <div class="kpi"><div class="kpi-label">Carteiras sob sua cobrança</div><div class="big">${b.owned_wallets}</div></div>
+        <div class="kpi"><div class="kpi-label">Carteiras</div><div class="big">${b.owned_wallets}</div></div>
         <div class="kpi"><div class="kpi-label">Valor mensal</div><div class="big">${b.billed ? W.brl(b.estimate) : 'R$ 0,00'}</div><div class="muted small">${b.billed ? `${b.owned_wallets} × ${W.brl(b.price)}` : 'Plano Grátis'}</div></div></div>
       <div class="grid-2"><div class="card stack"><div class="card-head"><h2>Cobrança</h2>${bp ? '<button class="btn secondary sm" data-act="billing-edit">Editar</button>' : ''}</div>
-        ${bp ? `<dl class="kv"><dt>Titular</dt><dd>${esc(bp.holder_name)}</dd><dt>CPF/CNPJ</dt><dd>${esc(W.docFmt(bp.doc))}</dd><dt>E-mail</dt><dd>${esc(bp.email)}</dd><dt>Endereço</dt><dd>${esc(bp.street)}, ${esc(bp.number)}${bp.complement ? ' · ' + esc(bp.complement) : ''} · ${esc(bp.district)}<br>${esc(bp.city)}/${esc(bp.state)} · CEP ${esc(String(bp.zip || '').replace(/^(\d{5})(\d{3})$/, '$1-$2'))}</dd><dt>Pagamento</dt><dd>${pay}</dd></dl>` : `<div class="empty">Os dados de cobrança são pedidos quando você assina o Pro ou o Fund.</div>`}
+        ${bp ? `<dl class="kv"><dt>Titular</dt><dd>${esc(bp.holder_name)}</dd><dt>CPF/CNPJ</dt><dd>${esc(W.docFmt(bp.doc))}</dd><dt>E-mail</dt><dd>${esc(bp.email)}</dd><dt>Endereço</dt><dd>${esc(bp.street)}, ${esc(bp.number)}${bp.complement ? ' · ' + esc(bp.complement) : ''} · ${esc(bp.district)}<br>${esc(bp.city)}/${esc(bp.state)} · CEP ${esc(String(bp.zip || '').replace(/^(\d{5})(\d{3})$/, '$1-$2'))}</dd><dt>Pagamento</dt><dd>${pay}</dd></dl>${bp.method === 'pix' && !b.payment_ok && b.plan !== 'gratis' ? '<div><button class="btn sm" data-act="pix-auth">Gerar código do Pix Automático</button></div>' : ''}` : `<div class="empty">Os dados de cobrança são pedidos quando você assina o Pro ou o Fund.</div>`}
         <p class="muted small">Atraso superior a ${b.grace_days} dias após o vencimento deixa suas carteiras somente para visualização para todos.</p></div>
       <div class="card"><div class="card-head"><h2>Faturas</h2></div>${b.invoices.length ? `<div class="table-wrap"><table class="tight fit inv-list"><thead><tr><th>Referência</th><th class="num hide-cq">Valor</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody>${b.invoices.map((i) => `<tr class="link" data-href="#/conta/fatura/${esc(i.id)}"><td><b>${W.monthLabel(i.ref_month)}</b> ${tag(INV_TAG[i.status][0], INV_TAG[i.status][1])}<div class="show-cq"><b>${W.brl(i.amount)}</b></div><div class="muted small">vence ${W.dt(i.due_date)} · ${(i.detail || []).length} ${(i.detail || []).length === 1 ? 'carteira' : 'carteiras'}</div>${i.payment_error ? '<div class="small neg">Pagamento recusado</div>' : ''}</td><td class="num hide-cq">${W.brl(i.amount)}</td><td class="actions"><a class="btn ghost sm" href="#/conta/fatura/${esc(i.id)}">Ver</a>${i.status === 'aberta' ? `<button class="btn secondary sm" data-act="inv-pay" data-id="${esc(i.id)}">Pagar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhuma fatura ainda.</div>'}</div></div>`;
   }
@@ -542,7 +556,7 @@
     if (!d.fund) return `<div class="card stack"><span class="badge-soon">Plano Fund</span><h2>API e marca própria</h2><p class="muted">No Fund você integra as carteiras aos seus sistemas por API (chaves só de leitura, restritas às carteiras que escolher) e aplica a sua marca (logo, cores e estilo) nos grupos de carteiras.</p><div><button class="btn" data-act="plan-subscribe" data-plan="fund">Assinar o Fund</button></div></div>
       <div class="card stack" style="margin-top:16px"><h2>O que a API entrega</h2>${apiDoc()}</div>`;
     const owned = (W.state.wallets || []).filter((w) => w.is_owner);
-    return `<div class="card"><div class="card-head"><div><h2>Chaves de API</h2><div class="muted small">Só leitura. Cada chave enxerga as carteiras em que você é o titular da cobrança (todas ou só as escolhidas).</div></div><button class="btn sm" data-act="key-new"${owned.length ? '' : ' disabled'}>${ico('plus')} Nova chave</button></div>
+    return `<div class="card"><div class="card-head"><div><h2>Chaves de API</h2><div class="muted small">Só leitura. Cada chave enxerga as carteiras em que você é o titular (todas ou só as escolhidas).</div></div><button class="btn sm" data-act="key-new"${owned.length ? '' : ' disabled'}>${ico('plus')} Nova chave</button></div>
         ${d.keys.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Nome</th><th>Chave</th><th>Carteiras</th><th>Criada</th><th>Último uso</th><th>Situação</th><th></th></tr></thead><tbody>${d.keys.map((k) => `<tr><td>${esc(k.label)}</td><td class="mono">${esc(k.prefix)}…</td><td>${k.wallets ? (k.wallets.length ? esc(k.wallets.join(', ')) : 'Nenhuma (excluídas)') : 'Todas'}</td><td>${W.dt(k.created_at)}</td><td>${k.last_used_at ? W.dtm(k.last_used_at) : '—'}</td><td>${k.revoked_at ? tag('Revogada') : k.expired ? tag('Expirada', 'warning') : k.wallets && !k.wallets.length ? tag('Sem carteiras', 'warning') : tag(k.expires_at ? `Vale até ${W.dt(k.expires_at)}` : 'Ativa', 'success')}</td><td class="actions">${k.revoked_at ? '' : `<button class="btn danger sm" data-act="key-revoke" data-id="${esc(k.id)}">Revogar</button>`}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhuma chave criada.</div>'}</div>
       <div class="card stack" style="margin-top:16px"><h2>Como usar</h2><p class="muted small">Envie a chave no cabeçalho <code>Authorization: Bearer wk_…</code> a partir do seu servidor (nunca no navegador do cliente). Respostas em JSON; datas em AAAA-MM-DD; valores em reais. Acrescente <code>?visao=mercado</code> ou <code>?visao=curva</code> para escolher a visão dos preços (padrão: a da carteira).</p>
         <pre class="mono code-box">curl -H "Authorization: Bearer wk_…" ${esc(W.cfg.apiUrl)}/v1/carteiras</pre>${apiDoc()}

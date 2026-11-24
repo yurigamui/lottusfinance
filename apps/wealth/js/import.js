@@ -31,9 +31,9 @@
     function show() {
       const ok = parsed.ok, bad = parsed.bad;
       const prev = ok.slice(0, 8).map((r) => (mode === 'extrato'
-        ? `<tr><td>${W.dt(r.date)}</td><td>${esc(r.description)}</td><td class="num ${W.cls(r.amount)}">${W.brl(r.amount)}</td></tr>`
+        ? `<tr><td>${W.dt(r.date)}</td><td class="cell-name" title="${esc(r.description)}">${esc(r.description)}</td><td class="num ${W.cls(r.amount)}">${W.brl(r.amount)}</td><td class="hide-sm">${esc([r.counterparty, r.cost_center, r.group].filter(Boolean).join(' · ') || '—')}</td></tr>`
         : `<tr><td>${W.dt(r.date)}</td><td>${esc(r.kind)}</td><td>${esc(r.ticker || r.name)}</td><td class="num">${W.qty(r.qty)}</td><td class="num">${W.num(r.unit_price, 4)}</td></tr>`)).join('');
-      const head = mode === 'extrato' ? '<th>Data</th><th>Descrição</th><th class="num">Valor</th>' : '<th>Data</th><th>Tipo</th><th>Ativo</th><th class="num">Qtd</th><th class="num">P.U.</th>';
+      const head = mode === 'extrato' ? '<th>Data</th><th>Descrição</th><th class="num">Valor</th><th class="hide-sm">Classificação</th>' : '<th>Data</th><th>Tipo</th><th>Ativo</th><th class="num">Qtd</th><th class="num">P.U.</th>';
       out.innerHTML = `${header.length ? `<div class="card"><h3>Confira as colunas</h3><div class="form-grid">${fields.map(([k, l, req]) => `<div class="field"><label>${esc(l)}${req ? ' *' : ''}</label><select class="input" data-key="${k}">${W.opts(header.map((h, i) => [i, h]), map[k], '—')}</select></div>`).join('')}</div></div>` : ''}
         <div class="card flush"><div class="table-wrap"><table class="tight"><thead><tr>${head}</tr></thead><tbody>${prev || `<tr><td colspan="5" class="empty">Nenhuma linha válida com esse mapeamento.</td></tr>`}</tbody></table></div>
         <div class="pager-bar"><span><b>${ok.length}</b> linhas prontas${bad.length ? ` · ${bad.length} ${bad.length === 1 ? 'ignorada (linha' : 'ignoradas (linhas'} ${bad.slice(0, 6).join(', ')}${bad.length > 6 ? '…' : ''})` : ''}</span><button class="btn" data-go${ok.length ? '' : ' disabled'}>Importar ${ok.length} linhas</button></div></div>`;

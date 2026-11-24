@@ -163,7 +163,7 @@
   }
 
   const docMask = (el) => only(el, /[^0-9a-zA-Z]/g, (v) => { const d = v.replace(/\D/g, ''); return /^\d*$/.test(v) && d.length <= 11 ? d.slice(0, 11).replace(/^(\d{3})(\d{0,3})(\d{0,3})(\d{0,2}).*/, (m, a, b, c, d2) => a + (b ? '.' + b : '') + (c ? '.' + c : '') + (d2 ? '-' + d2 : '')) : v.toUpperCase().slice(0, 14).replace(/^(.{2})(.{0,3})(.{0,3})(.{0,4})(.{0,2}).*/, (m, a, b, c, d3, e) => a + (b ? '.' + b : '') + (c ? '.' + c : '') + (d3 ? '/' + d3 : '') + (e ? '-' + e : '')); });
-  const KINDS = { doc: docMask, money: (e) => money(e, 2), rate: (e) => money(e, 2), pu: (e) => money(e, 12, 2), int: intMask, cnpj: cnpjMask, cpf: cpfMask, phone: phoneMask, date: dateMask };
+  const KINDS = { doc: docMask, money: (e) => money(e, 2), rate: (e) => money(e, 2), pu: (e) => money(e, 10, 2), qty: (e) => money(e, 8, 0), pct: (e) => money(e, 4, 2), int: intMask, cnpj: cnpjMask, cpf: cpfMask, phone: phoneMask, date: dateMask };
   function attach(root) {
     (root || document).querySelectorAll('[data-mask]').forEach((el) => { if (el.__masked) return; el.__masked = true; (KINDS[el.dataset.mask] || (() => {}))(el); });
   }
