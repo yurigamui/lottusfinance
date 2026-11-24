@@ -23,3 +23,7 @@
 | A-019 | Recolher « da lateral desktop nunca existiu (ícone sem uso); decidir se entra | Baixa | Designer | seção 10 | s2 (B2) |
 | A-020 | Abas com role=tab sem setas; busca `text:true` não casa NBSP em "R$ 5"; foco após gaveta vai ao botão Menu | Baixa | Dev | seção 10 | s2 (B3, B4, B6) |
 | A-021 | Ficha com id não UUID mostra barra de abas (ids reais são UUID) | Baixa | Dev | seção 6 | s2 (B5) |
+| A-022 | `validDest` aceita `#//evil.com` (só vira hash e cai em painel; sem risco externo): exigir `^#/[A-Za-z0-9_-]` após `#/` | Baixa | Dev | seção 3 | s2 ciclo 2 (N1) |
+| A-023 | Caixa de bloqueio: migalha ainda diz "Admin · Equipe/E-mails" e não há h1 | Baixa | Dev | seção 3 | s2 ciclo 2 (N2) |
+| A-024 | Destino guardado em sessionStorage pode ser herdado por outro usuário na mesma aba (só hash, acesso validado por nível); limpar no login de outro usuário | Baixa | Dev | seção 10 | s2 ciclo 2 |
+| A-025 | MFA e expiração por inatividade com restauração de destino só lidos no código; h1 do Motor não confirmado com fixture completa | Média | Verificador | com usuário de teste no branch (A-004) | s2 ciclo 2 |

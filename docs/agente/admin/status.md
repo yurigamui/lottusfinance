@@ -2,7 +2,7 @@
 
 **Modo:** Beta (código existe; auditoria parcial em `relatorio.md`) + pedido novo de evolução (Admin v2).
 **Leitura adotada (G0, sem resposta ainda):** o Yuri quer (1) reorganizar a UX do Admin, hoje com informação demais numa tela; (2) vincular o Admin a todas as plataformas Lottus; (3) automatizar a cobrança; (4) trocar plano e definir preço personalizado por cliente. Preço, plano e regra de cobrança são decisão dele (manual, seção 15).
-**Fase atual:** Parte 1, seção 2 (Menu e roteador com ALIAS). Seção 1 aprovada com ressalvas (relatório do verificador resumido em pendências A-010 a A-016). D2 a D4 abertas (só travam a Parte 4).
+**Fase atual:** Parte 1, seção 3 (Início "Para fazer hoje"). Seções 1 e 2 aprovadas com ressalvas. D2 a D4 abertas (só travam a Parte 4).
 
 ## Linha de base (Fase 0, fatos verificados em 23/11/2026)
 - Front: 1 página, 20 módulos JS (~4,8 mil linhas), 89 RPCs chamadas. Menu: 6 grupos, 18 itens (Configurações mistura Motor, Equipe, E-mails, Auditoria, Indicações e Taxa).
@@ -19,10 +19,11 @@
 | Base | Conferência manual da NF-e | sim | sim | sim | Aprovada c/ ressalvas | 2 |
 | (demais seções existentes) | — | — | existem | não | não verificado | 0 |
 | v2/P1 | 1 Base visual | sim | sim | sim | **Aprovada com ressalvas** | 1 |
-| v2/P1 | 2 a 10 (menu, Início, listas, abas, fichas, fechamento) | `ficha-parte-1.md` | não | não | — | 0 |
+| v2/P1 | 2 Menu e roteador | sim | sim | sim | **Aprovada com ressalvas** | 2 (1 reprovação: rota E-mails aberta por link) |
+| v2/P1 | 3 a 10 (Início, listas, abas, fichas, fechamento) | `ficha-parte-1.md` | não | não | — | 0 |
 
 ## Próximo passo exato
-1. Construir seção 2 (menu/roteador), corrigindo A-010, A-012 a A-015; verificar; seguir `ficha-parte-1.md`.
+1. Micro-spec e construção da seção 3 (Início por tarefa; `bo_dashboard`), incluindo A-022 e A-023; verificar; seguir `ficha-parte-1.md`.
 2. Fase 2, Parte 1 "Navegação e organização" (sem regra de negócio): Ficha da Parte, depois micro-spec da seção "Menu e Início".
 3. Em paralelo possível, só leitura: B0 completo (mapa de vínculos real) em `mapa-de-vinculos.md`.
 
