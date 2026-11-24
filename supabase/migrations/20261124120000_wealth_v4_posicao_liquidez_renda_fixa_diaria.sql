@@ -100,7 +100,8 @@ revoke all on function public._w_pu_on(uuid, uuid, date, text), public._w_asset_
 grant execute on function public._w_pu_on(uuid, uuid, date, text), public._w_asset_perf(uuid, uuid, date, date, text) to service_role;
 
 drop function if exists public.w_positions(uuid, text);
-create or replace function public.w_positions(p_wallet uuid, p_mode text default null, p_from date default null, p_to date default null)
+-- p_perf = false pula o cálculo de TWR/P&L por ativo (gráficos de alocação só precisam de valores)
+create or replace function public.w_positions(p_wallet uuid, p_mode text default null, p_from date default null, p_to date default null, p_perf boolean default true)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare v_total numeric; m text; v_asof date := least(coalesce(p_to, current_date), current_date);
 begin
@@ -114,15 +115,15 @@ begin
       'value_curva', p.qty * p.pu, 'value_mercado', case when p.pu_mercado is not null then p.qty * p.pu_mercado end,
       'value', p.qty * x.pu_v, 'pu_view', x.pu_v, 'mode', m,
       'result', p.qty * (x.pu_v - p.avg_pu), 'result_pct', case when p.avg_pu > 0 then x.pu_v / p.avg_pu - 1 end,
-      'twr', perf.twr, 'pnl', perf.pnl, 'v_start', perf.v_start, 'income', perf.income,
+      'twr', (perf.pj->>'twr')::numeric, 'pnl', (perf.pj->>'pnl')::numeric, 'v_start', (perf.pj->>'v_start')::numeric, 'income', (perf.pj->>'income')::numeric,
       'custodian', (select t.custodian from public.w_invest_tx t where t.wallet_id = p_wallet and t.asset_id = a.id and nullif(t.custodian, '') is not null order by t.date desc, t.created_at desc limit 1),
       'weight', case when v_total > 0 then p.qty * x.pu_v / v_total end) order by p.qty * x.pu_v desc)
       from public._w_pos(p_wallet, v_asof) p join public.w_assets a on a.id = p.asset_id
       cross join lateral (select case when m = 'mercado' then coalesce(p.pu_mercado, p.pu) else p.pu end as pu_v) x
-      cross join lateral public._w_asset_perf(p_wallet, a.id, p_from, v_asof, m) perf), '[]'::jsonb);
+      cross join lateral (select case when p_perf then (select to_jsonb(z) from public._w_asset_perf(p_wallet, a.id, p_from, v_asof, m) z) end as pj) perf), '[]'::jsonb);
 end $$;
-revoke all on function public.w_positions(uuid, text, date, date) from public, anon;
-grant execute on function public.w_positions(uuid, text, date, date) to authenticated;
+revoke all on function public.w_positions(uuid, text, date, date, boolean) from public, anon;
+grant execute on function public.w_positions(uuid, text, date, date, boolean) to authenticated;
 
 -- ============ 4. Liquidez por vencimento ============
 create or replace function public.w_liquidity(p_wallet uuid, p_mode text default null)
