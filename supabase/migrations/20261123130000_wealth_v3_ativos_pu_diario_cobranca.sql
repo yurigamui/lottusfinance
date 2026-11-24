@@ -334,19 +334,25 @@ grant execute on function public._w_norm(text) to authenticated, service_role;
 
 create or replace function public.w_asset_search(p_wallet uuid, p_q text)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare q text := replace(replace(replace(public._w_norm(trim(coalesce(p_q, ''))), '\', '\\'), '%', '\%'), '_', '\_');
+declare q text := replace(replace(replace(public._w_norm(trim(coalesce(p_q, ''))), '\', '\\'), '%', '\%'), '_', '\_'); ids uuid[];
 begin
   perform public._w_need(p_wallet, 'visualizador');
   if char_length(q) < 2 then return '[]'::jsonb; end if;
+  -- 1) ativos da própria carteira (sempre poucos) entram todos; 2) código exato; 3) catálogo, limitado antes de ordenar:
+  --    com 2 letras só pelo início do código (índice btree do ticker; o de trigramas precisa de 3+ letras), com 3+ pelo nome sem acento.
+  --    Consultas separadas por tamanho do termo para o planejador usar o índice certo.
+  ids := array(select id from public.w_assets where wallet_id = p_wallet and (public._w_norm(name) like '%' || q || '%' or lower(ticker) like q || '%') limit 30)
+      || array(select id from public.w_assets where wallet_id is null and upper(ticker) = upper(q) limit 5);
+  if char_length(q) < 3 then
+    ids := ids || array(select id from public.w_assets where wallet_id is null and upper(ticker) >= upper(q) and upper(ticker) < upper(q) || 'ZZZZZZZZZZ' limit 300);
+  else
+    ids := ids || array(select id from public.w_assets where wallet_id is null and (public._w_norm(name) like '%' || q || '%' or lower(ticker) like q || '%') limit 300);
+  end if;
   return coalesce((select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'ticker', ticker, 'kind', kind, 'custom', custom,
       'last_pu', (select pu from public.w_asset_prices p where p.asset_id = s.id order by date desc limit 1),
       'last_date', (select date from public.w_asset_prices p where p.asset_id = s.id order by date desc limit 1)))
-    -- termos curtos casam milhares de ativos: limitamos antes de ordenar (código exato primeiro, pelo índice do ticker)
-    from (select * from (
-            (select * from public.w_assets where (wallet_id = p_wallet or wallet_id is null) and upper(ticker) = upper(q) limit 5)
-            union
-            (select * from public.w_assets where (wallet_id = p_wallet or wallet_id is null) and (public._w_norm(name) like '%' || q || '%' or lower(ticker) like q || '%') limit 300)) u
-          order by (lower(ticker) = q) desc, (wallet_id is not null) desc, ticker nulls last, name limit 30) s), '[]'::jsonb);
+    from (select * from public.w_assets where id = any(ids)
+          order by (lower(ticker) = q) desc, (wallet_id is not null) desc, (lower(ticker) like q || '%') desc, ticker nulls last, name limit 30) s), '[]'::jsonb);
 end $$;
 
 create or replace function public.w_custodian_search(p_q text)
