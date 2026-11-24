@@ -12,3 +12,5 @@
 | S-008 | Após publicar: cadastrar o site no Google Search Console e no Bing Webmaster, enviar `sitemap.xml`, validar o JSON-LD no Teste de Resultados Ricos; medir LCP/INP/CLS em 4G real | Média | Yuri / agente | no lançamento | SEO 24/11 |
 | S-009 | `build.py`/`legal.py` seguem desatualizados e NÃO geram o novo SEO nem o bloco do Sign. Rodá-los apagaria as mudanças | Alta (risco) | Agente | com S-003 | 24/11 |
 | S-010 | Confirmar `lottusfinance.com.br` sem `www` como endereço canônico (redirecionar o outro na hospedagem) | Baixa | Yuri | no lançamento | SEO 24/11 |
+| S-011 | `ciencia.html` e `pagar.html` sem h1 estático (privadas, noindex; título vem do JS?). Conferir | Baixa | Agente | com S-003 | verificação 24/11 |
+| S-012 | Não medidos: LCP/INP/CLS, Safari/Firefox, leitor de screen reader, Tab completo, envio real do lead, fluxos de `pagar`/`ciencia`/`descadastrar` com token | Média | Agente / Yuri | antes de divulgar | verificação 24/11 |

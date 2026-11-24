@@ -85,3 +85,6 @@
 .row-cta { display: flex; flex-wrap: wrap; }
 .row-cta .btn { max-width: 100%; white-space: normal; text-align: center; justify-content: center; }
 @media (max-width: 380px) { .row-cta .btn { padding-inline: 18px; } }
+
+/* Contraste AA na pílula "Aguardando" da ilustração */
+.mock-pill:not(.ok) { color: #a3203f; }
