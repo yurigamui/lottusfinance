@@ -88,3 +88,13 @@
 
 /* Contraste AA na pílula "Aguardando" da ilustração */
 .mock-pill:not(.ok) { color: #a3203f; }
+
+/* Acessibilidade: alvos de toque de 44 px e contraste AA */
+.mock-pill.ok { color: #1f6b45; }
+.hero-card:not(.home) .eyebrow { color: #a3203f; }
+.nav-links a, .hero-card .nav-links a { min-height: 44px; display: flex; align-items: center; }
+.foot-links a { display: inline-flex; align-items: center; min-height: 44px; }
+.foot-links { gap: 0 28px; }
+.foot-social a, .foot-social a.has-img { min-width: 44px; min-height: 44px; }
+.foot-social a.has-img { width: 44px; height: 44px; }
+.foot-social a:not(.has-img) { display: inline-flex; align-items: center; justify-content: center; }

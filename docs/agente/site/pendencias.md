@@ -14,3 +14,4 @@
 | S-010 | Confirmar `lottusfinance.com.br` sem `www` como endereço canônico (redirecionar o outro na hospedagem) | Baixa | Yuri | no lançamento | SEO 24/11 |
 | S-011 | `ciencia.html` e `pagar.html` sem h1 estático (privadas, noindex; título vem do JS?). Conferir | Baixa | Agente | com S-003 | verificação 24/11 |
 | S-012 | Não medidos: LCP/INP/CLS, Safari/Firefox, leitor de screen reader, Tab completo, envio real do lead, fluxos de `pagar`/`ciencia`/`descadastrar` com token | Média | Agente / Yuri | antes de divulgar | verificação 24/11 |
+| S-013 | Conferir com ferramenta de contraste o eyebrow rosa sobre o gradiente do hero das páginas internas (medida aproximada 4,31:1; escurecido para #a3203f) e o link inline "Política de Preços" no FAQ (alvo de 20 px, texto em linha) | Baixa | Agente | antes de divulgar | verificação 24/11 |
