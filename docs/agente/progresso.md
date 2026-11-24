@@ -15,6 +15,7 @@ Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (enviada ao GitHub; có
 - **Banco transversal:** migração de RLS/helpers **aprovada com ressalvas**.
 - **Admin:** RPC que faltava criada (**aprovada com ressalvas**, 2 ciclos). `admin/relatorio.md`.
 - **Site e News:** CSP e scripts corrigidos; pendências de conteúdo. `site/relatorio.md`.
+- **Site (24/11):** Sign no molde do Partners, páginas `/partners/` e `/sign/`, SEO técnico (JSON-LD, sitemap, robots, OG), alvos de 44 px, páginas `/wealth/` e `/invest/` (em breve); 5 verificações, todas aprovadas ao final (uma reprovada no meio e corrigida). `site/status.md`.
 - **Sign:** sem achados nas 3 páginas públicas. `sign/relatorio.md`.
 - **Invest:** banco conferido; app fora do repo → bloqueado. `invest/relatorio.md`.
 - **API:** 3 de 22 funções sem JWT lidas e corretas; 19 não avaliadas. `api/relatorio.md`.

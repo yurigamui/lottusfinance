@@ -75,3 +75,30 @@
 .hub-art:has(.shot) { padding: clamp(18px, 2.5vw, 32px); }
 .hub-art .shot { margin-right: 0; }
 @media (max-width: 1040px) { .hub-grid:has(.shot) { grid-template-columns: minmax(0, 1fr); } }
+
+/* Solução espelhada (arte à esquerda, texto à direita); em tela estreita o texto vem primeiro, como no Partners */
+.intro-flip { padding-top: 0; }
+.hub-grid-flip { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr); }
+@media (max-width: 1040px) { .hub-grid-flip { grid-template-columns: minmax(0, 1fr); } .hub-grid-flip > .stack-lg { order: -1; } }
+
+/* Botões de chamada nunca passam da coluna em telas de 320 px */
+.row-cta { display: flex; flex-wrap: wrap; }
+.row-cta .btn { max-width: 100%; white-space: normal; text-align: center; justify-content: center; }
+@media (max-width: 380px) { .row-cta .btn { padding-inline: 18px; } }
+
+/* Contraste AA na pílula "Aguardando" da ilustração */
+.mock-pill:not(.ok) { color: #a3203f; }
+
+/* Acessibilidade: alvos de toque de 44 px e contraste AA */
+.mock-pill.ok { color: #1f6b45; }
+.hero-card:not(.home) .eyebrow { color: #a3203f; }
+.nav-links a, .hero-card .nav-links a { min-height: 44px; display: flex; align-items: center; }
+.foot-links a { display: inline-flex; align-items: center; min-height: 44px; }
+.foot-links { gap: 0 28px; }
+.foot-social a, .foot-social a.has-img { min-width: 44px; min-height: 44px; }
+.foot-social a.has-img { width: 44px; height: 44px; }
+.foot-social a:not(.has-img) { display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 400px) { .foot-links span { flex-basis: 100%; margin-top: 8px; } }
+.mock-kpi b.ok { color: #1f6b45; }
+.hero-actions .btn { max-width: 100%; white-space: normal; text-align: center; }
+@media (max-width: 380px) { .hero-actions .btn { padding-inline: 18px; } }
