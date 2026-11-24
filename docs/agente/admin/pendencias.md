@@ -18,3 +18,8 @@
 | A-014 | Rastro da rota `#/_base` diz "Painel" | Baixa | Dev | seção 2 | s1 (A5) |
 | A-015 | Borda do campo de busca com contraste <3:1 | Baixa | Dev | seção 2 | s1 (A6) |
 | A-016 | `base-demo.js` vai a produção (inalcançável fora de admin); remover do index.html no fechamento da Parte 1 se o Yuri preferir | Baixa | Maestro | seção 10 | build s1 |
+| A-017 | Duas barras de abas empilhadas em telas com abas internas (Quitações, Identidade, Crédito, Taxa); decisão de design, tratar na seção 5 | Média | Designer | seção 5 | verificação s2 (M3) |
+| A-018 | Breakpoint do bloco mobile passou de 760 para 768 px (h1 24px, raio 24px em 761–768); aceito | Baixa | Dev | seção 10 | s2 (B1) |
+| A-019 | Recolher « da lateral desktop nunca existiu (ícone sem uso); decidir se entra | Baixa | Designer | seção 10 | s2 (B2) |
+| A-020 | Abas com role=tab sem setas; busca `text:true` não casa NBSP em "R$ 5"; foco após gaveta vai ao botão Menu | Baixa | Dev | seção 10 | s2 (B3, B4, B6) |
+| A-021 | Ficha com id não UUID mostra barra de abas (ids reais são UUID) | Baixa | Dev | seção 6 | s2 (B5) |

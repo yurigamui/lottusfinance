@@ -78,8 +78,8 @@
       { id: 'juridico', label: 'Jurídico', tabs: [{ id: 'juridico', label: 'Documentos assinados', count: 'legal' }, { id: 'contratos', label: 'Modelos' }] },
       { id: 'motor', label: 'Configurações', tabs: [
         { id: 'motor', label: 'Motor' },
-        { id: 'equipe', label: 'Equipe', admin: true },
-        { id: 'emails', label: 'E-mails', admin: true },
+        { id: 'equipe', label: 'Equipe', admin: true, denied: 'Só administradores gerenciam a equipe.' },
+        { id: 'emails', label: 'E-mails', admin: true, denied: 'Só administradores gerenciam os e-mails.' },
         { id: 'auditoria', label: 'Auditoria' },
       ] },
     ] },
@@ -399,7 +399,7 @@
     if (cs) cs.onclick = () => (window.BO.copy ? window.BO.copy(cs.dataset.copySecret) : navigator.clipboard.writeText(cs.dataset.copySecret));
     const otp = wireOtp(form, () => form.requestSubmit());
     otp.focus();
-    document.getElementById('cancel').onclick = signOut;
+    document.getElementById('cancel').onclick = () => signOut();
     let busy = false;
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -421,7 +421,15 @@
     });
   }
 
-  async function signOut() {
+  // Destino guardado quando a sessão expira no meio do uso (só rota interna, nada sensível)
+  const DEST_KEY = 'lottus.bo.dest';
+  const validDest = (h) => typeof h === 'string' && h.length <= 200 && /^#\/[A-Za-z0-9_\-./%]*$/.test(h) && !h.includes('..');
+  function saveDest() { try { if (validDest(location.hash)) sessionStorage.setItem(DEST_KEY, location.hash); } catch { /* sem armazenamento */ } }
+  function takeDest() {
+    try { const h = sessionStorage.getItem(DEST_KEY); sessionStorage.removeItem(DEST_KEY); return validDest(h) ? h : ''; } catch { return ''; }
+  }
+  async function signOut(keepDest) {
+    if (keepDest !== true) { try { sessionStorage.removeItem(DEST_KEY); } catch { /* ok */ } }
     await sb.auth.signOut();
     me = null;
     location.hash = '';
@@ -602,13 +610,14 @@
           </div>
         </main>
       </div>`;
-    document.getElementById('logout').onclick = signOut;
+    document.getElementById('logout').onclick = () => signOut();
     wireDrawer();
     const avatar = document.getElementById('avatar'), menu = document.getElementById('profile-menu');
     avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });
     const home = me.partner ? '#/assinar' : '#/painel';
-    if (!location.hash || location.hash === '#/' || (me.partner && !location.hash.startsWith('#/assinar'))) location.hash = home;
+    if (!location.hash || location.hash === '#/') { const d = takeDest(); location.hash = d && (!me.partner || d.startsWith('#/assinar')) ? d : home; }
+    else if (me.partner && !location.hash.startsWith('#/assinar')) location.hash = home;
     route();
     refreshCounts();
   }
@@ -638,16 +647,36 @@
   const currentView = () => (location.hash.replace(/^#\//, '').split('/')[0] || 'painel');
   const activeParent = () => (me && me.partner ? 'assinar' : resolveRoute(currentView()).pai);
 
+  // Devolve o item/aba admin:true que corresponde à rota, se o nível atual não for admin
+  function adminOnlyTab(view) {
+    if (isAdmin()) return null;
+    for (const n of NAV) {
+      if (n.id === view && n.admin) return n;
+      const t = (n.tabs || []).find((x) => x.id === view);
+      if (t && (t.admin || n.admin)) return t.admin ? t : n;
+    }
+    return null;
+  }
+
   async function route() {
     if (!me) return;
     const [view, ...params] = location.hash.replace(/^#\//, '').split('/');
-    const r = me.partner ? { pai: 'assinar', aba: 'assinar' } : resolveRoute(view);
+    let r = me.partner ? { pai: 'assinar', aba: 'assinar' } : resolveRoute(view);
+    // Aba/item marcado admin:true: bloqueia por nível antes de chamar a tela (nenhuma RPC)
+    const blocked = me.partner ? null : adminOnlyTab(view);
+    if (blocked) r = { pai: r.pai, aba: '__bloqueada' };
     paintNav(r.pai);
-    paintTabs(r, params);
+    paintTabs(r, blocked ? [] : params);
     closeDrawer(false);
     const crumb = document.getElementById('crumb');
     if (crumb) crumb.textContent = (me.partner ? 'Lottus Partners · ' : 'Admin · ') + (me.partner ? 'Operações' : SECTION_TITLE[view] || 'Início');
     const el = document.getElementById('view');
+    if (blocked) {
+      el.innerHTML = `<div class="card"><div class="empty"><p>${esc(blocked.denied || 'Só administradores acessam esta página.')}</p>
+        <p><a class="btn secondary" href="#/painel">Voltar ao Início</a></p></div></div>`;
+      el.scrollTop = 0;
+      return;
+    }
     const fn = me.partner ? window.BO.views.assinar : window.BO.views[view] || window.BO.views.painel;
     el.innerHTML = '<div class="spinner" aria-label="Carregando"></div>';
     el.scrollTop = 0;
@@ -655,7 +684,7 @@
       await fn(el, params.map(decodeURIComponent), me);
     } catch (e) {
       const msg = message(e);
-      if (/mfa_required|forbidden|JWT|session/i.test(e.message || '')) { signOut(); return; }
+      if (/mfa_required|forbidden|JWT|session/i.test(e.message || '')) { saveDest(); signOut(true); return; }
       el.innerHTML = `<div class="card"><div class="error-box">${esc(msg)}</div>
         <div style="margin-top:12px"><button class="btn secondary" data-reload>Tentar de novo</button></div></div>`;
     }
@@ -673,7 +702,7 @@
   let idle;
   const bump = () => {
     clearTimeout(idle);
-    idle = setTimeout(() => { if (me) { signOut(); window.BO.toast('Sessão encerrada por inatividade.'); } },
+    idle = setTimeout(() => { if (me) { saveDest(); signOut(true); window.BO.toast('Sessão encerrada por inatividade.'); } },
       (window.LOTTUS_CONFIG.idleMinutes || 30) * 60000);
   };
   ['click', 'keydown', 'mousemove', 'scroll'].forEach((ev) => window.addEventListener(ev, bump, { passive: true }));

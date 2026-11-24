@@ -52,7 +52,7 @@
     const admin = can(me, 'admin');
     const missing = !d.lottus_cnpj || !d.lottus_address || !d.contract_forum;
     el.innerHTML = `
-      ${head('Contratos', 'Dados da Lottus que entram em todos os contratos e os modelos em uso')}
+      ${head('Modelos de contrato', 'Dados da Lottus que entram em todos os contratos e os modelos em uso')}
       <div class="stack">
         ${missing ? '<div class="note-box">Faltam dados da Lottus. Enquanto não forem preenchidos, os contratos mostram “[a preencher]” nesses campos.</div>' : ''}
         <div class="card"><h2>Dados da Lottus</h2>
