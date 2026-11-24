@@ -18,7 +18,7 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 ## Painel
 | Parte | Seção | Especificada | Construída | Verificada | Veredito | Ciclos |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 Conta e identidade | 1.1 Entrar e criar conta | não | não | não | — | 0 |
+| 1 Conta e identidade | 1.1 Entrar e criar conta | sim (secao-1-1-entrar-e-criar-conta.md) | não | não | — | 0 |
 | 1 | 1.2 Recuperar senha | não | não | não | — | 0 |
 | 1 | 1.3 Onboarding | não | não | não | — | 0 |
 | 1 | 1.4 Perfil e conta | não | não | não | — | 0 |

@@ -25,3 +25,4 @@
 | RN7 | Trocar o número mantém `phone_verified_at`: número novo aparece como verificado | Alta | Arquiteto | Seção 1.5 | parte-1-arquitetura.md |
 | T-07 | Edge Functions `sign-messenger` (entrega do OTP) e a de validação da cadeia do certificado não estão no repositório; versionar antes da seção 1.5 | Média | Yuri (D-02) | Seção 1.5 | parte-1-arquitetura.md |
 | T-08 | Conferir em produção (SELECT): `sms_enabled`, `require_mfa`, `unique(cpf)` em `profiles` e a duplicidade de nome/CPF (T-02) | Média | Auditor | G2 | parte-1-arquitetura.md |
+| P1-12 / P1-13 | Conferir no painel do Auth (Confirm email, senha mínima, enumeração de e-mail, redirecionamentos); RPC `sign_terms_accept` (não aplicada) | Média | Yuri / Arquiteto | Seção 1.1 | micro-especificação 1.1 |
