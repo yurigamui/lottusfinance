@@ -1,4 +1,7 @@
-# STATUS: Admin · atualizado em 23/11/2026
+# STATUS: Admin · atualizado em 24/11/2026
+
+> **MODO SEM SUPERVISÃO (ordem do Yuri em 24/11: "não pergunte mais nada, nem solicite aprovação, termine a plataforma").** O Maestro adota a leitura mais razoável, registra aqui e segue. Continuam valendo, sem exceção: nada aplicado em produção, nenhum preço/texto jurídico inventado, nada apagado. Entrega final = código + migrações prontas e testadas só em Postgres local + roteiro de release; a aplicação em produção e a publicação ficam como passo do Yuri.
+> **Suposições adotadas (hipóteses marcadas, todas configuráveis, a rever antes do release):** D2 ciclo mensal, vencimento no dia 10 (`billing_settings.due_day`), cobrança pós-paga por `ref_month`. D3 carência de 15 dias (`grace_days` atual); depois dela: lembrete por e-mail e entrada na fila "Em atraso"; sem bloqueio nem rebaixa automáticos (ação manual da equipe). D4 desconto personalizado: aprovador até 20%, acima disso só administrador; todo preço personalizado exige motivo, validade e fica na auditoria. Valores de planos = os que já existem no banco; nenhum preço novo.
 
 **Modo:** Beta (código existe; auditoria parcial em `relatorio.md`) + pedido novo de evolução (Admin v2).
 **Leitura adotada (G0, sem resposta ainda):** o Yuri quer (1) reorganizar a UX do Admin, hoje com informação demais numa tela; (2) vincular o Admin a todas as plataformas Lottus; (3) automatizar a cobrança; (4) trocar plano e definir preço personalizado por cliente. Preço, plano e regra de cobrança são decisão dele (manual, seção 15).
