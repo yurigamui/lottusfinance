@@ -338,7 +338,7 @@
         ${f.members.length === 0 ? `<div class="empty-cta">${icon('representantes')}<b>Ninguém com acesso ainda</b><span class="muted small">Convide quem assina o aceite das cessões pelo fundo. A pessoa recebe um e-mail para criar a senha.</span></div>`
         : `<div class="list">${f.members.map((m) => { const [tone, label] = state(m); return `<div class="list-row member">
           <div class="avatar-sm">${esc(m.name.split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase())}</div>
-          <div class="grow"><b>${esc(m.name)}</b>${m.can_sign ? ' <span class="tag brand">Assina</span>' : ' <span class="tag">Só consulta</span>'}
+          <div class="grow"><b>${esc(m.name)}</b>${m.is_admin ? ' <span class="tag brand">Administrador</span>' : m.can_sign ? ` <span class="tag brand">Aprovador${m.approval_limit ? ' até ' + brl(m.approval_limit) : ' · sem limite'}</span>` : ' <span class="tag">Só consulta</span>'}
             <div class="small muted">${esc(m.email || '')}${m.role ? ' · ' + esc(m.role) : ''} · CPF ${esc(cpf(m.cpf))}</div>
             <div class="small muted">${m.last_sign_in_at ? 'Último acesso ' + dateTime(m.last_sign_in_at) : m.invited_at ? 'Convidado em ' + dateTime(m.invited_at) : ''}${!m.last_sign_in_at && m.last_email ? ` · e-mail ${B.emailTag ? B.emailTag(m.last_email.status) : ''}${m.last_email.error ? ' ' + esc(m.last_email.error) : ''}` : ''}</div></div>
           <span class="tag ${tone}">${label}</span>
@@ -364,23 +364,34 @@
               ${m ? '' : '<div class="help">Use um e-mail que não seja de cliente do app Lottus.</div>'}</div>
             <div class="grid-2"><div class="field"><label for="m-cpf">CPF</label><input class="input" id="m-cpf" name="cpf" inputmode="numeric" value="${esc(m ? cpf(m.cpf) : '')}"></div>
               <div class="field"><label for="m-role">Cargo</label><input class="input" id="m-role" name="role" value="${esc(m ? m.role || '' : '')}" placeholder="Diretor, procurador…"></div></div>
-            ${toggle('can_sign', 'Pode assinar o aceite das cessões', 'Sem isso, a pessoa só consulta.', !m || m.can_sign)}
+            <div class="field"><label for="m-access">Acesso</label>
+              <select class="input" id="m-access" name="access">
+                <option value="admin" ${m && m.is_admin ? 'selected' : ''}>Administrador — configura o fundo e aprova</option>
+                <option value="approver" ${!m || (!m.is_admin && m.can_sign) ? 'selected' : ''}>Aprovador — assina o aceite das cessões</option>
+                <option value="viewer" ${m && !m.is_admin && !m.can_sign ? 'selected' : ''}>Consulta — só visualiza</option></select></div>
+            <div class="field" id="lim-f"><label for="m-limit">Alçada em R$ <span class="small muted">(valor máximo que aprova por operação)</span></label>
+              <input class="input" id="m-limit" name="limit" inputmode="decimal" placeholder="Sem limite" value="${m && m.approval_limit ? esc(Number(m.approval_limit).toLocaleString('pt-BR', { minimumFractionDigits: 2 })) : ''}" autocomplete="off">
+              <div class="help">Em branco, o aprovador não tem limite de valor.</div></div>
             ${m ? toggle('active', 'Acesso ativo', 'Desligue para bloquear a entrada no portal.', m.active) : ''}
           </form>`,
           foot: `<button class="btn secondary" data-close-btn>Cancelar</button><button class="btn" id="msave">${m ? 'Salvar' : 'Enviar convite'}</button>`,
         });
         const mf = mel.querySelector('#mf');
+        const syncLim = () => { mel.querySelector('#lim-f').hidden = mf.access.value !== 'approver'; };
+        mf.access.addEventListener('change', syncLim); syncLim();
+        const readLimit = () => { const t = mf.limit.value.replace(/[^\d,]/g, '').replace(',', '.'); const n = parseFloat(t); return mf.access.value === 'approver' && n > 0 ? n : null; };
         mf.cpf.addEventListener('input', () => { const d = mf.cpf.value.replace(/\D/g, '').slice(0, 11); mf.cpf.value = d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2'); });
         mel.querySelector('[data-close-btn]').onclick = closeModal;
         mel.querySelector('#msave').onclick = async (ev) => {
           if (!mf.name.value.trim() || mf.cpf.value.replace(/\D/g, '').length !== 11 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mf.email.value.trim())) return toast('Preencha nome, e-mail e CPF.', true);
           if (m) {
-            const ok = await run(ev.target, () => rpc('bo_save_funder_member', { p_funder: id, p_email: mf.email.value, p_name: mf.name.value, p_cpf: mf.cpf.value, p_role: mf.role.value, p_can_sign: mf.can_sign.checked, p_active: mf.active.checked }), 'Representante salvo').then(() => true, () => false);
+            const ok = await run(ev.target, () => rpc('bo_save_funder_member', { p_funder: id, p_email: mf.email.value, p_name: mf.name.value, p_cpf: mf.cpf.value, p_role: mf.role.value, p_can_sign: mf.access.value !== 'viewer', p_active: mf.active.checked, p_access: mf.access.value, p_limit: readLimit() }), 'Representante salvo').then(() => true, () => false);
             if (ok) { closeModal(); B.reload(); }
             return;
           }
-          const out = await run(ev.target, () => callAccess({ action: 'invite_partner', funder_id: id, email: mf.email.value, name: mf.name.value, cpf: mf.cpf.value, role: mf.role.value, can_sign: mf.can_sign.checked }), null).catch(() => null);
+          const out = await run(ev.target, () => callAccess({ action: 'invite_partner', funder_id: id, email: mf.email.value, name: mf.name.value, cpf: mf.cpf.value, role: mf.role.value, can_sign: mf.access.value !== 'viewer' }), null).catch(() => null);
           if (!out) return;
+          if (mf.access.value !== 'approver' || readLimit()) { try { await rpc('bo_save_funder_member', { p_funder: id, p_email: mf.email.value, p_name: mf.name.value, p_cpf: mf.cpf.value, p_role: mf.role.value, p_can_sign: mf.access.value !== 'viewer', p_active: true, p_access: mf.access.value, p_limit: readLimit() }); } catch (_) { toast('Convite enviado, mas não consegui definir o acesso. Edite o representante.', true); } }
           closeModal();
           if (out.sent) { toast(`Convite enviado para ${mf.email.value.trim()}`); B.reload(); } else showLink(out.link, mf.email.value.trim(), out.error);
         };
