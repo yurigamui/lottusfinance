@@ -1402,8 +1402,8 @@ table tr.clk:hover td { background: var(--field); }
 .sg-card h1 { font-size: clamp(22px, 6vw, 28px); }
 .sg-card h1:focus { outline: none; }
 .sg-lead { margin: 0; color: var(--muted); font-size: 14.5px; }
-.sg-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--field); border-radius: 14px; }
-.sg-tabs [role='tab'] { min-height: 44px; border: 0; border-radius: 11px; background: transparent; color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer; }
+.sg-tabs { display: grid; grid-template-columns: repeat(2, minmax(44px, 1fr)); gap: 4px; padding: 4px; background: var(--field); border-radius: 14px; }
+.sg-tabs [role='tab'] { min-height: 44px; min-width: 44px; padding: 0 4px; border: 0; border-radius: 11px; background: transparent; color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer; }
 .sg-tabs [role='tab']:hover { color: var(--ink); }
 .sg-tabs [role='tab'][aria-selected='true'] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(43, 35, 33, 0.14); }
 .sg-form { display: grid; gap: 14px; }
@@ -1419,7 +1419,8 @@ table tr.clk:hover td { background: var(--field); }
 .sg-count:empty { display: none; }
 .sg-check { display: flex; gap: 12px; align-items: flex-start; }
 .sg-check input { width: 24px; height: 24px; margin: 10px 0 0; flex: none; accent-color: var(--rosa); }
-.sg-check label { flex: 1; min-height: 44px; display: flex; align-items: center; font-size: 13.5px; color: var(--ink); font-weight: 400; }
+.sg-check label { flex: 1; min-height: 44px; display: block; padding: 10px 0; font-size: 13.5px; color: var(--ink); font-weight: 400; }
+.sg-check a, .sg-nolink { overflow-wrap: normal; display: inline-block; padding: 12px 2px; margin: -12px 0; }
 .sg-nolink { text-decoration: underline; text-decoration-style: dotted; }
 .sg-msg:empty { display: none; }
 .sg-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; font-weight: 600; }
@@ -1447,3 +1448,10 @@ table tr.clk:hover td { background: var(--field); }
   .sg-single .sg-brand { justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { .btn[aria-busy='true']::after, .spinner { animation-duration: 2s; } }
+/* zoom de 200% em 320 px (≈160 px de largura útil): menos margem e aceite em coluna */
+@media (max-width: 240px) {
+  .sg-page { padding-left: 8px; padding-right: 8px; }
+  .sg-card { padding: 12px 8px; }
+  .sg-check { flex-direction: column; gap: 0; }
+  .sg-check input { margin: 0; }
+}

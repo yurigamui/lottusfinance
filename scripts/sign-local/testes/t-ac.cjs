@@ -23,6 +23,8 @@ async function criar(p, { email, nome = 'Ana Teste', pw = 'uma-senha-longa', ace
     check('título da aba', (await p.title()) === 'Entrar · Lottus Sign', await p.title());
     check('raiz do site abre #/entrar', await (async () => { await p.goto(d.origin + '/'); await p.waitForSelector('h1'); return (await hash(p)) === '' || (await text(p, 'h1')) === 'Entrar'; })());
     check('sem erros de JS/CSP', d.errors.length === 0, d.errors);
+    await p.goto(d.origin + '/?q=1#/criar'); await p.waitForSelector('#nome');
+    check('Criar: nenhum texto "null"/"undefined" perdido na tela', !/\bnull\b|undefined/.test(await text(p, '#sign')), await text(p, '#sign'));
   });
 
   await t('AC2 login com onboarding pendente', open, {}, async (d) => {

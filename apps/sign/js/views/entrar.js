@@ -232,8 +232,8 @@ function drawForm(card, focusFirst) {
   }
   st.flash = null;
 
-  card.replaceChildren(tabs(), h('h1', { tabindex: '-1' }, criar ? 'Criar conta' : 'Entrar'), criar ? null : h('p', { class: 'sg-lead' }, 'Acesse seus documentos e envios.'), form,
-    h('div', { class: 'sg-links' }, forgot, h('a', { class: 'sg-link', href: 'verificar.html' }, 'Verificar um documento')));
+  card.replaceChildren(...[tabs(), h('h1', { tabindex: '-1' }, criar ? 'Criar conta' : 'Entrar'), criar ? null : h('p', { class: 'sg-lead' }, 'Acesse seus documentos e envios.'), form,
+    h('div', { class: 'sg-links' }, forgot, h('a', { class: 'sg-link', href: 'verificar.html' }, 'Verificar um documento'))].filter(Boolean));
   if (focusFirst) focusEl(email.input);
 }
 
