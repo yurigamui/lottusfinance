@@ -2,7 +2,7 @@
 
 **Leitura adotada (G0):** Modo **Parcial**. O back-end já existe no banco de produção (22 tabelas com RLS, ~50 RPCs `sign_*`/`verify_*`); o front logado não existe no repositório. As 3 páginas públicas são auditadas (relatorio.md, 23/11) e usam só as RPCs antigas (`sign_public_*`, `sign_collection_*`, `verify_collection*`); as RPCs de envelope (`sign_env_*`, `verify_envelope*`) não têm tela. Pedido do Yuri: construir o Sign completo, funcional, conforme a regulação brasileira.
 
-Fase atual: **2 (Parte 1: Conta e identidade), G1 liberado em 24/11/2026** · Parte atual: nenhuma · Seção atual: nenhuma
+Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Seção atual: 1.1 Entrar e criar conta · Parte atual: nenhuma · Seção atual: nenhuma
 
 ## Linha de base (só leitura em produção, 24/11/2026)
 | Item | Achado |
@@ -18,11 +18,16 @@ Fase atual: **2 (Parte 1: Conta e identidade), G1 liberado em 24/11/2026** · Pa
 ## Painel
 | Parte | Seção | Especificada | Construída | Verificada | Veredito | Ciclos |
 | --- | --- | --- | --- | --- | --- | --- |
-| (aguardando G1) | | | | | | |
+| 1 Conta e identidade | 1.1 Entrar e criar conta | não | não | não | — | 0 |
+| 1 | 1.2 Recuperar senha | não | não | não | — | 0 |
+| 1 | 1.3 Onboarding | não | não | não | — | 0 |
+| 1 | 1.4 Perfil e conta | não | não | não | — | 0 |
+| 1 | 1.5 Verificação de identidade | não | não | não | — | 0 |
+| 1 | 1.6 Segurança da conta | não | não | não | — | 0 |
 
 ## Próximo passo exato
-1. Em andamento (24/11): `scripts/sign-local` (Postgres local com o esquema real, só leitura em produção) e a Ficha da Parte 1 (`parte-1-conta-e-identidade.md`).
-2. Quando ambos chegarem: `arquiteto` revisa dados (OTP por e-mail, canal WhatsApp desligado, T-02/T-04), `designer` revisa fluxos, Maestro confere G2 e começa a seção 1.1.
+1. Micro-especificação da 1.1 (`idealizador`, com `parte-1-design.md` e `parte-1-arquitetura.md`), depois `desenvolvedor` constrói em módulos ES (`js/app.js`, `js/lib/*`, `js/views/*`), depois `verificador` + `auditor-dados` com contexto limpo.
+2. A migração do OTP/canal e-mail (esboço em `parte-1-arquitetura.md`, seção 3) só entra na seção 1.5; não aplicar em produção.
 
 ## Bloqueios que dependem do Yuri
 Ver `pendencias.md` (J-01 a J-04, jurídico) e `docs/agente/depende-de-mim.md` (D-01 branch Supabase).
