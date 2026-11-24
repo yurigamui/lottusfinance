@@ -15,3 +15,7 @@
 | S-011 | `ciencia.html` e `pagar.html` sem h1 estático (privadas, noindex; título vem do JS?). Conferir | Baixa | Agente | com S-003 | verificação 24/11 |
 | S-012 | Não medidos: LCP/INP/CLS, Safari/Firefox, leitor de screen reader, Tab completo, envio real do lead, fluxos de `pagar`/`ciencia`/`descadastrar` com token | Média | Agente / Yuri | antes de divulgar | verificação 24/11 |
 | S-013 | Conferir com ferramenta de contraste o eyebrow rosa sobre o gradiente do hero das páginas internas (medida aproximada 4,31:1; escurecido para #a3203f) e o link inline "Política de Preços" no FAQ (alvo de 20 px, texto em linha) | Baixa | Agente | antes de divulgar | verificação 24/11 |
+| S-014 | **Revisão jurídica** dos textos de `/invest/` e `/wealth/` (CVM: comunicação de debêntures privadas, "convite do emissor", ausência de oferta/recomendação; LGPD) antes de divulgar | Alta | Yuri / jurídico | antes de divulgar | 24/11 |
+| S-015 | Quando Wealth e Invest forem ao ar: trocar "em breve" e o CTA por link do app e atualizar a home, JSON-LD e FAQ. Wealth: incluir preços só depois de W-031 | Média | Agente | no lançamento | 24/11 |
+| S-016 | Confirmar na função `site_lead` (fora do repositório) que aceita `wealth` e `invest` em `product`; hoje há reenvio como "ambos" | Baixa | Agente / Yuri | antes de divulgar | 24/11 |
+| S-017 | O status do Invest no site ("em breve") assume que o app ainda não está no ar; Yuri confirmar a data e o endereço | Média | Yuri | no lançamento | 24/11 |
