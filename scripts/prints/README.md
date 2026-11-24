@@ -1,6 +1,6 @@
 # Prints do painel para o site
 
-Geram `apps/site/img/sign-painel.webp`, `wealth-painel.webp` e `wealth-gastos.webp` (1600x1000) a partir do front real
+Geram `apps/site/img/sign-painel.webp`, `wealth-painel.webp` (1600x1000) a partir do front real
 (`apps/sign`, `apps/wealth`), servido localmente com a CSP do `_headers`. Toda a rede é interceptada e respondida com
 dados fictícios definidos nos próprios scripts; nada toca o Supabase de produção.
 

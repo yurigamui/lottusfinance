@@ -25,3 +25,4 @@
 | S-021 | Faixa "R$ 0" do Partners e plano "Grátis" do Sign aparecem nas tabelas de planos (vêm da Política de Preços). Yuri decide se ficam | Média | Yuri | antes de divulgar | 24/11 |
 | S-022 | Wealth: tabela de planos só depois de W-031/W-039 (preço, Grátis com 1 ou 3 carteiras) | Média | Yuri | no lançamento | 24/11 |
 | S-023 | Prints têm nomes fictícios ("Alfa Capital Securitizadora" etc.): conferir se algum coincide com empresa real | Baixa | Yuri | antes de divulgar | 24/11 |
+| S-024 | Textos do Sign ajustados ao que está documentado: "conta com identidade confirmada" (quem envia) e "signatário assina pelo link com o CPF conferido". A promessa de confirmação de identidade do signatário (OTP, T-04) e o nível da assinatura (J-01) voltam ao site só depois de implementados e aprovados pelo jurídico | Alta | Yuri / jurídico | antes de divulgar | verificação 24/11 |

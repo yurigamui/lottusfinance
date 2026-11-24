@@ -114,7 +114,7 @@
 .hero-card.home .nav-links .sub-toggle:hover, .hero-card.home .has-sub.open .sub-toggle { background: rgba(255, 255, 255, 0.14); }
 .sub { position: absolute; top: 100%; left: 0; z-index: 30; min-width: 220px; margin: 6px 0 0; padding: 8px; list-style: none; background: #fffdf9; border: 1px solid #ddd2c4; border-radius: 18px; box-shadow: 0 24px 48px rgba(43, 35, 33, 0.16); opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.16s, transform 0.16s, visibility 0.16s; }
 .sub::before { content: ""; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }
-.has-sub:hover .sub, .has-sub.open .sub, .has-sub:focus-within .sub { opacity: 1; visibility: visible; transform: none; }
+.has-sub:hover .sub, .has-sub.open .sub { opacity: 1; visibility: visible; transform: none; }
 .nav-links .sub a, .hero-card .nav-links .sub a, .hero-card.home .nav-links .sub a { display: flex; align-items: center; min-height: 44px; padding: 10px 14px; border-radius: 12px; color: #2b2321; font-weight: 600; background: none; white-space: nowrap; }
 .nav-links .sub a:hover, .hero-card .nav-links .sub a:hover, .hero-card.home .nav-links .sub a:hover { background: rgba(43, 35, 33, 0.07); color: #2b2321; }
 @media (max-width: 820px) {
