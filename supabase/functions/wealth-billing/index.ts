@@ -1,7 +1,7 @@
 // Lottus Wealth — cobrança. NÃO PUBLICADA (a versão em produção em 23/11 é a de 1 provedor "manual").
 // Provedores por forma de pagamento (decisão W-v2-03):
-//   pix    → Trio (Pix Automático). A documentação da Trio não é pública: o adaptador está pronto para receber os
-//            endereços e campos reais (TRIO_*), e até lá devolve "não configurado" e a fatura fica aguardando.
+//   pix    → Trio (Pix Automático), conforme a documentação da API V2 (docs.trio.com.br, lida em 24/11/2026).
+//            Sem credenciais (TRIO_*), devolve "não configurado" e a fatura fica aguardando.
 //   cartao → Asaas (assinatura mensal no cartão; o cartão é digitado na página do Asaas, nunca aqui).
 //   boleto → Asaas (cobrança avulsa por fatura).
 // NADA AQUI FOI TESTADO CONTRA OS PROVEDORES (sem credenciais de sandbox nesta sessão). Ver depende-de-mim.md (W-v2).
@@ -20,14 +20,14 @@ const live = () => env('BILLING_LIVE') === '1';
 type Profile = { holder_name: string; doc: string; email: string; zip: string; street: string; number: string; complement?: string; district: string; city: string; state: string; method: 'pix' | 'cartao' | 'boleto'; provider?: string; provider_customer_id?: string };
 type Pending = { invoice: string; user: string; amount: number; due_date: string; ref_month: string; profile: Profile };
 type Charge = { provider: string; charge_id: string; method: string; pix_payload?: string; boleto_url?: string; boleto_line?: string };
-type Event = { event_id: string; type: 'paid' | 'failed' | 'canceled' | 'refunded' | 'authorized' | 'ignore'; charge_id?: string; customer_id?: string; card_brand?: string; card_last4?: string; payload: unknown };
+type Event = { event_id: string; type: 'paid' | 'failed' | 'canceled' | 'refunded' | 'authorized' | 'deauthorized' | 'ignore'; user?: string; charge_id?: string; customer_id?: string; card_brand?: string; card_last4?: string; payload: unknown };
 type Checkout = { provider: string; url: string | null; customer_id?: string; pix_payload?: string | null; authorized?: boolean };
 
 interface Provider {
   name: string;
   checkout(user: string, p: Profile, monthly: number, firstDue: string, unitPrice: number): Promise<Checkout>;
   createCharge(p: Pending): Promise<Charge | null>;
-  parseWebhook(body: any, headers: Headers, raw: string): Event | null | Promise<Event | null>;
+  parseWebhook(body: any, headers: Headers, raw: Uint8Array): Event | null | Promise<Event | null>;
 }
 
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json' } });
@@ -104,7 +104,7 @@ const asaasProv: Provider = {
    Autenticação: HTTP Basic (client_id:client_secret) + cabeçalho Trio-Version. Webhook: cabeçalho x-webhook-secret e assinatura
    HMAC-SHA-256 (hexadecimal maiúsculo) do corpo cru em x-webhook-signature, com a notification_key do webhook. */
 const TRIO_VERSION_DEFAULT = '2026-10-19.v2'; // versão vigente na documentação em 24/11/2026 (enum do cabeçalho Trio-Version)
-const trioReady = () => !!(env('TRIO_CLIENT_ID') && env('TRIO_CLIENT_SECRET') && env('TRIO_BANK_ACCOUNT_ID'));
+const trioReady = () => !!(env('TRIO_CLIENT_ID') && env('TRIO_CLIENT_SECRET') && env('TRIO_BANK_ACCOUNT_ID') && env('TRIO_REQUESTER_TAX_NUMBER'));
 async function trio(method: string, path: string, body?: unknown) {
   const base = env('TRIO_BASE_URL') || 'https://api.sandbox.trio.com.br';
   const r = await fetch(`${base}${path}`, { method, headers: { authorization: `Basic ${btoa(`${env('TRIO_CLIENT_ID')}:${env('TRIO_CLIENT_SECRET')}`)}`, 'trio-version': env('TRIO_VERSION') || TRIO_VERSION_DEFAULT, 'content-type': 'application/json', accept: 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -116,9 +116,9 @@ async function trio(method: string, path: string, body?: unknown) {
 const cents = (v: number) => Math.round(Number(v) * 100);
 const daysUntil = (d: string) => Math.round((D(d).getTime() - D(new Date().toISOString().slice(0, 10)).getTime()) / 864e5);
 const D = (s: string) => new Date(s + 'T00:00:00Z');
-async function hmacHexUpper(key: string, raw: string) {
+async function hmacHexUpper(key: string, raw: Uint8Array) {
   const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const s = new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(raw)));
+  const s = new Uint8Array(await crypto.subtle.sign('HMAC', k, raw)); // bytes exatos do corpo, como pede a documentação
   return [...s].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 const sameText = (a: string, b: string) => { if (a.length !== b.length) return false; let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0; };
@@ -127,9 +127,14 @@ const trioProv: Provider = {
   async checkout(user, p, monthly, firstDue, unitPrice) {
     if (!trioReady()) return { provider: 'trio', url: null };
     // já autorizado: nada a fazer; pendente ou recusado: nova recorrência (o QR anterior expira sozinho)
+    // uma recorrência por titular: autorizada → nada a fazer; pendente com QR ainda válido → devolve o MESMO código
+    // (assim, autorizar qualquer código gerado vale); pendente vencida → cancela antes de criar outra
     if (p.provider === 'trio' && p.provider_customer_id) {
       const cur = await trio('GET', `/v2/in/pix/recurrences/${encodeURIComponent(p.provider_customer_id)}`).catch(() => null);
       if (cur?.status === 'approved' || cur?.authorized_at) return { provider: 'trio', url: null, authorized: true, customer_id: cur.id };
+      const age = cur?.inserted_at ? (Date.now() - Date.parse(cur.inserted_at)) / 1000 : Infinity;
+      if (cur?.status === 'created' && typeof cur?.qrcode?.hash === 'string' && age < 172800 - 3600) return { provider: 'trio', url: null, customer_id: cur.id, pix_payload: cur.qrcode.hash };
+      if (cur?.status === 'created') await trio('POST', `/v2/in/pix/recurrences/${encodeURIComponent(cur.id)}/cancel`, { requester_tax_number: env('TRIO_REQUESTER_TAX_NUMBER') }).catch(() => null);
     }
     const start = daysUntil(firstDue) >= 3 ? firstDue : new Date(Date.now() + 4 * 864e5).toISOString().slice(0, 10); // start_date: no mínimo 3 dias à frente
     const rec = await trio('POST', '/v2/in/pix/recurrences', {
@@ -155,7 +160,7 @@ const trioProv: Provider = {
       await trio('POST', `/v2/in/pix/recurrences/collections/${encodeURIComponent(col.id)}/schedule`, { amount: cents(p.amount), due_date: p.due_date, external_id: p.invoice });
     } catch (e) {
       // não deixa cobrança criada e não agendada: cancela e devolve o erro para nova tentativa
-      await trio('POST', `/v2/in/pix/recurrences/collections/${encodeURIComponent(col.id)}/cancel`, { requester_tax_number: env('TRIO_REQUESTER_TAX_NUMBER') || p.profile.doc }).catch(() => null);
+      await trio('POST', `/v2/in/pix/recurrences/collections/${encodeURIComponent(col.id)}/cancel`, { requester_tax_number: env('TRIO_REQUESTER_TAX_NUMBER') }).catch(() => null);
       throw e;
     }
     return { provider: 'trio', charge_id: String(col.id), method: 'pix' };
@@ -169,7 +174,10 @@ const trioProv: Provider = {
     if (!cat || !type || !ref) return null;
     const event_id = `${ref}:${cat}:${type}`; // a Trio reenvia notificações: ref_id + categoria + tipo identificam a notificação
     const payload = { category: cat, type, ref_id: ref, status: data.status ?? null };
-    if (cat === 'recurrence' && type === 'approved') return { event_id, type: 'authorized', customer_id: String(data.id ?? ref), payload };
+    // external_id da recorrência = id do titular no Wealth: se a aprovação vier de uma recorrência que não é a guardada, ainda achamos o titular
+    if (cat === 'recurrence' && type === 'approved') return { event_id, type: 'authorized', customer_id: String(data.id ?? ref), user: typeof data.external_id === 'string' ? data.external_id : undefined, payload };
+    // pagador cancelou o Pix Automático no banco (ou a recorrência foi recusada/expirou): desliga a autorização e a tela volta a pedir o código
+    if (cat === 'recurrence' && ['cancelled', 'rejected', 'expired'].includes(type)) return { event_id, type: 'deauthorized', customer_id: String(data.id ?? ref), payload };
     if (cat === 'recurrence_collection') {
       const map: Record<string, Event['type']> = { settled: 'paid', expired: 'failed', rejected: 'failed', cancelled: 'canceled' };
       if (map[type]) return { event_id, type: map[type], charge_id: String(data.id ?? ref), payload };
@@ -182,10 +190,19 @@ const PROVIDERS: Record<string, Provider> = { manual, asaas: asaasProv, trio: tr
 const forMethod = (m: string): Provider => (!live() ? manual : m === 'pix' ? trioProv : m === 'cartao' || m === 'boleto' ? asaasProv : manual);
 
 async function applyEvent(prov: Provider, ev: Event) {
+  if (ev.type === 'deauthorized') {
+    const { error } = await sb.rpc('w_billing_deauthorized', { p_provider: prov.name, p_customer_id: ev.customer_id }); if (error) throw new Error(error.message);
+    return 'ok';
+  }
   if (ev.type === 'authorized' || (ev.type === 'paid' && ev.customer_id && ev.card_last4)) {
-    const { data: auth, error: ae } = await sb.rpc('w_billing_authorized', { p_provider: prov.name, p_customer_id: ev.customer_id, p_card_brand: ev.card_brand ?? null, p_card_last4: ev.card_last4 ?? null });
+    let { data: auth, error: ae } = await sb.rpc('w_billing_authorized', { p_provider: prov.name, p_customer_id: ev.customer_id, p_card_brand: ev.card_brand ?? null, p_card_last4: ev.card_last4 ?? null });
     if (ae) throw new Error(ae.message);
-    if (auth !== 'ok') console.warn('autorização sem cliente conhecido', prov.name);
+    if (auth !== 'ok' && ev.user && /^[0-9a-f-]{36}$/i.test(ev.user)) {
+      await sb.rpc('w_billing_set_customer', { p_user: ev.user, p_provider: prov.name, p_customer_id: ev.customer_id });
+      ({ data: auth, error: ae } = await sb.rpc('w_billing_authorized', { p_provider: prov.name, p_customer_id: ev.customer_id, p_card_brand: null, p_card_last4: null }));
+      if (ae) throw new Error(ae.message);
+    }
+    if (auth !== 'ok') throw new Error('autorização sem titular conhecido'); // 500: a Trio reenvia e o erro fica no registro
     if (ev.type === 'authorized') return 'ok';
   }
   const { data, error } = await sb.rpc('w_payment_event_apply', { p_provider: prov.name, p_event_id: ev.event_id, p_type: ev.type, p_charge_id: ev.charge_id, p_payload: ev.payload });
@@ -213,7 +230,7 @@ Deno.serve(async (req) => {
   if (action === 'webhook') {
     const pname = url.searchParams.get('provider') ?? 'manual'; const prov = Object.hasOwn(PROVIDERS, pname) ? PROVIDERS[pname] : null;
     if (!prov) return new Response('not found', { status: 404 });
-    const raw = await req.text(); let body: any = null; try { body = JSON.parse(raw); } catch { /* corpo inválido */ }
+    const raw = new Uint8Array(await req.arrayBuffer()); let body: any = null; try { body = JSON.parse(new TextDecoder().decode(raw)); } catch { /* corpo inválido */ }
     const ev = await prov.parseWebhook(body, req.headers, raw);
     if (!ev) return new Response('forbidden', { status: 403 });
     if (ev.type === 'ignore') return json({ ok: true, ignored: true });

@@ -389,7 +389,7 @@ async function anbima(assets: Asset[], todayIso: string) {
       const r = await fetch(`${base}${path}`, { headers: { client_id: id, access_token: tok, accept: 'application/json' } });
       if (!r.ok) { log.push(`ANBIMA ${path}: ${r.status}${r.status === 403 ? ' (recurso fora do plano contratado?)' : ''}`); continue; }
       for (const x of (await r.json()) as any[]) {
-        const code = String(x.codigo_ativo ?? '').toUpperCase(); const pu = Number(x.pu); const dt = String(x.data_referencia ?? todayIso).slice(0, 10);
+        const code = String(x.codigo_ativo ?? '').toUpperCase(); const pu = Number(x.pu_retificado) > 0 ? Number(x.pu_retificado) : Number(x.pu); // retificado, quando houver const dt = String(x.data_referencia ?? todayIso).slice(0, 10);
         if (!(pu > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(dt)) continue;
         for (const a of byCode.get(code) ?? []) rows.push({ asset_id: a.id, date: dt, pu });
       }
@@ -398,7 +398,8 @@ async function anbima(assets: Asset[], todayIso: string) {
     const curved = new Set(list.filter((a) => a.issue_date && a.rate !== null && ['rf_pre', 'rf_pos', 'rf_ipca'].includes(a.kind)).map((a) => a.id));
     let upd = 0, ins = 0;
     for (const x of rows) {
-      if (curved.has(x.asset_id)) { const { count } = await sb.from('w_asset_prices').update({ pu_mercado: x.pu }, { count: 'exact' }).eq('asset_id', x.asset_id).eq('date', x.date); if (count) { upd++; continue; } }
+      // com curva: só o preço a mercado (a coluna da curva é do cálculo); sem linha da curva no dia, espera a próxima execução
+      if (curved.has(x.asset_id)) { const { count } = await sb.from('w_asset_prices').update({ pu_mercado: x.pu }, { count: 'exact' }).eq('asset_id', x.asset_id).eq('date', x.date); if (count) upd++; continue; }
       await upsertPrices([{ asset_id: x.asset_id, date: x.date, pu: x.pu, pu_mercado: x.pu, source: 'anbima' }]); ins++;
     }
     log.push(`ANBIMA: ${rows.length} PUs indicativos (${upd} como preço a mercado, ${ins} como preço do ativo)`);

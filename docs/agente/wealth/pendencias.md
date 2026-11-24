@@ -66,3 +66,7 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-038 | **Resolvida na v3:** índice de trigramas (pg_trgm) sobre o nome sem acento; busca em 50 mil ativos ~10 ms | — | — | — | v3 ciclo 3 |
 | W-060 | v3 C3-B2: "Desde o início" com 41 anos de histórico leva ~800 ms (passo mensal); a meta de 300 ms vale para 1 ano diário, que passou | Baixa | Agente | acompanhar no branch | verificação v3 ciclo 3 |
 | W-061 | v3: linha clicável das faturas sem `tabindex`/`role` (o "Ver" continua acessível por teclado) | Baixa | Agente | próxima rodada | verificação v3 ciclo 3 |
+| W-062 | Trio TR-M3: fatura que perde a janela de agendamento do Pix Automático (2 a 10 dias antes do vencimento) fica com erro a cada rodada; falta um Pix avulso (QR dinâmico) como alternativa, com texto próprio | Média | Agente | antes de cobrar | verificação Trio 24/11 |
+| W-063 | Trio TR-B1: a Trio recusa versões antigas do cabeçalho `Trio-Version` (hoje `2026-10-19.v2`); quando sair uma nova, as chamadas falham até atualizar `TRIO_VERSION` — criar alerta | Baixa | Agente/Yuri | antes de cobrar | verificação Trio 24/11 |
+| W-064 | O mesmo CPF/CNPJ é aceito nos dados de cobrança de usuários diferentes (ex.: uma empresa pagando por várias pessoas). Confirmar se é a regra desejada | Baixa | Yuri (regra) | a definir | verificação Trio 24/11 |
+| W-065 | `w_equity` (v2) com 60 meses × 1.000 lançamentos oscila entre 270 e 304 ms, no limite da meta de 300 ms (ver W-050) | Baixa | Agente | no branch | 24/11 |
