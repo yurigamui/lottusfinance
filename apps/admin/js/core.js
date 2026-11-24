@@ -22,7 +22,6 @@
     insufficient_level: 'Seu nível de acesso não permite esta ação.',
     not_found: 'Não encontrado. Atualize a página.',
     note_required: 'Escreva o motivo. Ele aparece para o cliente.',
-    manual_note_required: 'Escreva a anotação da conferência, de 3 a 500 caracteres (por exemplo a data e o protocolo do portal).',
     invalid: 'Confira os valores informados.',
     pix_key_required: 'Cadastre a chave Pix da Lottus antes de ligar o repasse.',
     invalid_status: 'Esta ação não vale para a situação atual. Atualize a página.',

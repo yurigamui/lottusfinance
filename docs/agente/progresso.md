@@ -15,6 +15,7 @@ Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (enviada ao GitHub; có
 - **Banco transversal:** migração de RLS/helpers **aprovada com ressalvas**.
 - **Admin:** RPC que faltava criada (**aprovada com ressalvas**, 2 ciclos). `admin/relatorio.md`.
 - **Site e News:** CSP e scripts corrigidos; pendências de conteúdo. `site/relatorio.md`.
+- **Site (24/11):** Sign no molde do Partners, páginas `/partners/` e `/sign/`, SEO técnico (JSON-LD, sitemap, robots, OG), alvos de 44 px, páginas `/wealth/` e `/invest/` (em breve); 5 verificações, todas aprovadas ao final (uma reprovada no meio e corrigida). `site/status.md`.
 - **Sign:** sem achados nas 3 páginas públicas. `sign/relatorio.md`.
 - **Invest:** banco conferido; app fora do repo → bloqueado. `invest/relatorio.md`.
 - **API:** 3 de 22 funções sem JWT lidas e corretas; 19 não avaliadas. `api/relatorio.md`.
@@ -22,7 +23,7 @@ Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (enviada ao GitHub; có
 - **Partners:** injeção de HTML corrigida (**aprovada com ressalvas**, 2 ciclos); 192 RPCs conferidas. `partners/relatorio.md`.
 
 ## Em andamento
-- Nada. Todo o restante está bloqueado por itens de `depende-de-mim.md` (ver `resumo-final.md`).
+- Nada. **Wealth v2 e v3 concluídas no ambiente local (24/11)**: ver `wealth/status.md`. Todo o restante está bloqueado por itens de `depende-de-mim.md` (ver `resumo-final.md`).
 
 ## Próximo passo exato (para "retome")
 1. Se o branch do Supabase existir (D-01): aplicar `supabase/migrations/*.sql` no branch, nesta ordem, rodar `supabase/tests/*.sql` e os testes de `scripts/wealth-local/testes/` contra ele; ler os advisors.
