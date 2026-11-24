@@ -1877,3 +1877,23 @@ table.pos th.allpos { width: 100%; min-width: 0; }
 table.pos td.c-cust { max-width: 160px; }
 .show-md { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 1280px) { .c-cust { display: none; } .show-md { display: block; } }
+
+/* Dashboard do Patrimônio */
+.dash-top { display: flex; flex-wrap: wrap; gap: 8px 40px; align-items: flex-end; margin: 4px 0 18px; }
+.dash-name { font-size: 18px; font-weight: 700; }
+.dash-kpi { display: grid; gap: 2px; min-width: 0; }
+.dash-kpi b { font-size: clamp(18px, 3.2vw, 24px); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dash-kpi .pill { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--soft); margin-left: 6px; vertical-align: middle; }
+.dash-range { margin-bottom: 8px; }
+.dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.dash-card { min-width: 0; margin: 0; padding-bottom: 8px; }
+.dash-card .card-head { padding: 0 4px 8px; }
+.span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
+@media (max-width: 1100px) { .span-8, .span-7, .span-5, .span-4 { grid-column: span 12; } }
+.dash-alloc { display: grid; gap: 12px; }
+.dash-t th, .dash-t td { white-space: nowrap; }
+.dash-t th[scope=row] { text-align: left; font-weight: 600; }
+.dash-t tr.sub th, .dash-t tr.sub td { font-weight: 400; color: var(--muted); }
+.dash-card .table-wrap { overflow-x: auto; }
+.dash-card .table-wrap > table { min-width: 0 !important; }
+@media (max-width: 640px) { .dash-card .table-wrap > table.dash-t { min-width: 0 !important; font-size: 12.5px; } .dash-t th, .dash-t td { padding: 8px 6px !important; } }
