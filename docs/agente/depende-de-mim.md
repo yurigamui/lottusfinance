@@ -14,7 +14,7 @@ Lista consolidada do que o time de agentes não pode ou não deve fazer sozinho.
 - **Por quê:** o banco de produção já tem as migrações `wealth_1` a `wealth_12` aplicadas (19/11), mas o front do Wealth e o Invest não podem ser construídos, testados nem verificados sem o código.
 - **Passo a passo:** copie as pastas para `apps/wealth/`, `apps/invest/`, `apps/business/` e as funções para `supabase/functions/` (sem `.env` nem chaves). Para as migrações: `supabase link --project-ref <ref>` e `supabase db pull`, revisando antes se algum arquivo contém segredo (por exemplo, tokens em `cron.schedule` ou `vault.create_secret`). O repositório é público: só suba o que pode ficar público.
 
-### D-03 · Aplicar em produção as migrações prontas (quando houver OK)
+### D-03 · Aplicar em produção as migrações prontas — FEITO em 24/11/2026 (120000 a 130000), com OK do Yuri
 - Lista e ordem em `supabase/migrations/README.md`. Antes: backup, teste no branch (D-01) e plano de reversão escrito no topo de cada arquivo.
 
 ## 2. Segredos e chaves
@@ -118,4 +118,12 @@ O repositório é **público**. Em *Settings*:
 
 ### W-v2-03 · Publicar a v2
 - **Ordem:** 1) branch do Supabase (D-01) com as migrações até `20261123125000`; 2) testes `supabase/tests` e `scripts/wealth-local/testes`; 3) publicar as funções `wealth-pu`, `wealth-billing`, `wealth-api` (verify_jwt desligado; ver `supabase/functions/README.md`); 4) publicar `apps/wealth`; 5) produção só com o seu OK.
+
+### W-v3-PUB · Publicar as funções de borda novas (decisão sua)
+- **Situação:** o banco e o front estão na v3, mas as funções `wealth-pu`, `wealth-billing` e `wealth-api` em produção são as antigas. Efeitos hoje: o P.U. do Tesouro segue parado e os CDBs só ganham preço pela curva com a função nova; "Gerar código do Pix Automático" e o P.U. buscado na fonte respondem "não foi possível" (a tela segue normalmente).
+- **Passo a passo:** com o seu OK eu publico as três (verify_jwt desligado; ver `supabase/functions/README.md`). A `wealth-billing` nova fica em modo manual até você gravar as credenciais e `BILLING_LIVE=1`.
+
+### W-v3-CF · Script de estatísticas do Cloudflare bloqueado pela CSP
+- **O que é:** a hospedagem injeta `static.cloudflareinsights.com/beacon.min.js` (Web Analytics) e a CSP do Wealth bloqueia, como deve. Não quebra nada.
+- **Recomendação:** desligar o Web Analytics desse site no painel do Cloudflare (Analytics > Web Analytics). Liberar o script na CSP traria um rastreador de terceiro (avaliar LGPD antes).
 
