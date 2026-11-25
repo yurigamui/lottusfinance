@@ -10,7 +10,7 @@
   const KINDS = [['', 'Não informado'], ['securitizadora', 'Securitizadora'], ['fidc', 'FIDC'], ['gestora', 'Gestora'], ['bancarizador', 'Bancarizador'], ['empresa', 'Empresa'], ['escritorio', 'Escritório'], ['pessoa', 'Pessoa física'], ['outro', 'Outro']];
   const TKIND = [['ligar', 'Ligar'], ['email', 'E-mail'], ['reuniao', 'Reunião'], ['proposta', 'Enviar proposta'], ['retorno', 'Retorno'], ['outro', 'Outro']];
   const opt = (arr, v) => arr.map(([k, l]) => `<option value="${esc(k)}" ${k === (v || '') ? 'selected' : ''}>${esc(l)}</option>`).join('');
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => B.today();
   const days = (a, b = new Date()) => Math.max(0, Math.round((new Date(b) - new Date(a)) / 864e5));
   const num = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
   let staffCache = null, campCache = null;
@@ -198,7 +198,7 @@
       <div class="u-mb16">${tabs(SC, scope)}</div><div id="tl"></div>`;
     const paint = async () => {
       const list = await rpc('bo_tasks', { p_scope: scope });
-      const t0 = today(), wk = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+      const t0 = today(), wk = B.addDays(t0, 7);
       const groups = scope === 'done' ? [['Feitas', list]] : [
         ['Atrasadas', list.filter((t) => t.due_on < t0)], ['Hoje', list.filter((t) => t.due_on === t0)],
         ['Próximos 7 dias', list.filter((t) => t.due_on > t0 && t.due_on <= wk)], ['Depois', list.filter((t) => t.due_on > wk)]];

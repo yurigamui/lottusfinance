@@ -52,7 +52,7 @@
     const stagesMax = Math.max(1, ...STAGES.map(([k]) => Number(((d.stages || {})[k] || {}).count || 0)));
 
     el.innerHTML = `
-      ${head(`Olá, ${esc(me.name.split(' ')[0])}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+      ${head(`Olá, ${esc(me.name.split(' ')[0])}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: B.TZ }),
         `<div class="row" style="gap:8px">${tabs(PERIODS, months)}${can(me, 'admin') ? '<button class="btn secondary sm" id="goals">Metas</button>' : ''}</div>`)}
       ${todo.length ? `<div class="card today"><h2>Hoje</h2><div class="queue">${todo.map(([, txt, href, act, hot]) =>
         `<a class="queue-row" href="#/${href}"><span class="dot ${hot ? 'hot' : ''}" aria-hidden="true"></span><span class="queue-label">${esc(txt)}</span><span class="btn secondary sm">${esc(act)}</span></a>`).join('')}</div></div>` : ''}

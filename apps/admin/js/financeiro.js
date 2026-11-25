@@ -8,7 +8,7 @@
   const CAT = { pessoal: 'Pessoal', tecnologia: 'Tecnologia', marketing: 'Marketing', juridico: 'Jurídico', contabil: 'Contabilidade', impostos: 'Impostos', escritorio: 'Escritório', financeiro: 'Tarifas e juros', outros: 'Outros' };
   const REC = { none: 'Não se repete', monthly: 'Todo mês', yearly: 'Todo ano' };
   const PH = { open: ['A vencer', 'brand'], soon: ['Vence em 7 dias', 'warning'], overdue: ['Vencida', 'danger'], paid: ['Paga', 'success'], cancelled: ['Cancelada', ''] };
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => B.today();
   const num = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
   const opts = (map, v) => Object.entries(map).map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const phase = (p) => { const [l, c] = PH[p] || [p, '']; return `<span class="tag ${c}">${esc(l)}</span>`; };
@@ -106,9 +106,9 @@
     cf.items.forEach((x) => { const d = String(x.day).slice(0, 10); byDay.set(d, (byDay.get(d) || 0) + (x.kind === 'in' ? 1 : -1) * Number(x.amount)); });
     const weeks = [];
     for (let i = 0; i < 13; i++) {
-      const s = new Date(Date.now() + i * 7 * 864e5), e = new Date(Date.now() + (i * 7 + 6) * 864e5);
-      for (let d = new Date(s); d <= e; d = new Date(+d + 864e5)) { const k = d.toISOString().slice(0, 10); bal += byDay.get(k) || 0; if (low == null || bal < low.v) low = { v: bal, d: k }; }
-      weeks.push({ label: `${s.getDate()}/${MONTH[s.getMonth()]}`, long: `semana de ${s.toLocaleDateString('pt-BR')}`, value: Math.round(bal * 100) / 100 });
+      const s = B.addDays(B.today(), i * 7);
+      for (let k = 0; k < 7; k++) { const d = B.addDays(s, k); bal += byDay.get(d) || 0; if (low == null || bal < low.v) low = { v: bal, d }; }
+      weeks.push({ label: `${Number(s.slice(8))}/${MONTH[Number(s.slice(5, 7)) - 1]}`, long: `semana de ${date(s)}`, value: Math.round(bal * 100) / 100 });
     }
     const ins = cf.items.filter((x) => x.kind === 'in').reduce((t, x) => t + Number(x.amount), 0), outs = cf.items.filter((x) => x.kind === 'out').reduce((t, x) => t + Number(x.amount), 0);
     const min = Number(cf.cash_min || 0);
@@ -129,7 +129,7 @@
           ${acc.rows.length ? acc.rows.map((a) => `<div class="list-row"><div class="grow"><b>${esc(a.name)}</b> <span class="small muted">${esc(a.bank || (a.kind === 'trio' ? 'Trio' : ''))}</span><div>${status(a)}</div></div><b>${brl(a.balance)}</b>${admin ? `<button class="btn ghost sm" data-acc="${esc(a.id)}">Editar</button>` : ''}</div>`).join('')
             : empty('Cadastre a conta da Lottus na Trio para o saldo entrar sozinho, ou lance outra conta à mão.')}
           ${(acc.egress_ips || []).length ? `<p class="small muted" style="margin-top:10px">Na chave da Trio, libere os IPs: ${esc(acc.egress_ips.join(', '))}</p>` : ''}</div>
-        <div class="card"><h2>Próximos 30 dias</h2>${cf.items.filter((x) => String(x.day) <= new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)).slice(0, 14).map((x) =>
+        <div class="card"><h2>Próximos 30 dias</h2>${cf.items.filter((x) => String(x.day) <= B.addDays(B.today(), 30)).slice(0, 14).map((x) =>
           `<div class="list-row"><span class="small muted nowrap" style="width:64px">${date(x.day).slice(0, 5)}</span><span class="grow small">${esc(x.label)}${x.late ? ' <span class="tag danger">atrasada</span>' : ''}${x.ref === 'forecast' ? ' <span class="tag">previsão</span>' : ''}</span><b class="${x.kind === 'in' ? 'pos' : 'neg'}">${x.kind === 'in' ? '+' : '−'}${brl(x.amount)}</b></div>`).join('') || empty('Nada previsto.')}</div>
       </div>`;
     B.columnChart(el.querySelector('#ch'), weeks, { name: 'Saldo previsto' });
@@ -184,13 +184,13 @@
 
   /* -------------------------------------------------------------- resultado */
   B.views.resultado = async (el, [y]) => {
-    const year = Number(y) || new Date().getFullYear();
+    const nowYear = Number(B.today().slice(0, 4)), year = Number(y) || nowYear;
     const r = await rpc('bo_fin_result', { p_year: year });
     const ms = r.months, mt = r.metrics;
     const tot = (k) => shownRef.reduce((t, m) => t + Number(m[k] || 0), 0);
     let shownRef = [];
     const cats = [...new Set(ms.flatMap((m) => Object.keys(m.expenses || {})))];
-    const cur = new Date().getMonth(), shown = year === new Date().getFullYear() ? ms.slice(0, cur + 1) : ms;
+    const cur = Number(B.today().slice(5, 7)) - 1, shown = year === nowYear ? ms.slice(0, cur + 1) : ms;
     shownRef = shown;
     const cell = (v, neg) => `<td class="num ${neg && v < 0 ? 'neg' : ''}">${v ? brl(v) : '<span class="muted">—</span>'}</td>`;
     const rev = (m) => Number(m.rev_partners) + Number(m.rev_sign) + Number(m.rev_other);

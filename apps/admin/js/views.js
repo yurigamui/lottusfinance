@@ -25,7 +25,7 @@
       `<a class="kpi ${alert && Number(value) > 0 ? 'alert' : ''}" href="#/${href}"><span class="kpi-label">${esc(label)}</span><span class="kpi-value">${brl(value)}</span></a>`;
     const latest = recent.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 6);
     el.innerHTML = `
-      ${head(`Visão geral, ${me.name.split(' ')[0]}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}
+      ${head(`Visão geral, ${me.name.split(' ')[0]}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: B.TZ }))}
       <div class="kpis">
         ${kpi('Desembolsado em 30 dias', d.volume_30d, 'operacoes/liquidadas')}
         ${kpi('Limites aprovados', d.approved_limits, 'credito/aprovados')}

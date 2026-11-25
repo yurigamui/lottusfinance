@@ -9,8 +9,8 @@
   const phaseTag = (i) => { const [l, t] = PHASE[i.phase] || [i.phase, '']; return `<span class="tag ${t}">${esc(l)}</span>`; };
   const KIND = { funder: 'Fundo (Partners)', sign: 'Lottus Sign', lead: 'Lead', other: 'Outro' };
   const METHODS = [['pix', 'Pix'], ['boleto', 'Boleto'], ['ted', 'TED'], ['cartao', 'Cartão'], ['outro', 'Outro']];
-  const today = () => new Date().toISOString().slice(0, 10);
-  const monthStart = () => today().slice(0, 7) + '-01';
+  const today = () => B.today();
+  const monthStart = () => B.monthStart();
   const num = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
   const csvCell = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
 

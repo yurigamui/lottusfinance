@@ -7,7 +7,7 @@
 
   const CHANNEL = { email: 'E-mail', instagram: 'Instagram', linkedin: 'LinkedIn', whatsapp: 'WhatsApp', anuncio: 'Anúncio pago', evento: 'Evento', outro: 'Outro' };
   const STATUS = { rascunho: ['Rascunho', ''], em_andamento: ['No ar', 'success'], pausada: ['Pausada', 'warning'], concluida: ['Concluída', 'brand'] };
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => B.today();
   const int = (v) => Math.max(0, Math.round(Number(String(v || '').replace(/\./g, '').replace(',', '.')) || 0));
   const dec = (v) => Number(String(v || '').replace(/\./g, '').replace(',', '.')) || 0;
   const n = (v) => Number(v || 0).toLocaleString('pt-BR');

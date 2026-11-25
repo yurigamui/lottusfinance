@@ -60,7 +60,7 @@
 
   B.downloadCsv = (name, rows) => {
     const blob = new Blob(['﻿' + rows.map((r) => r.map(csvCell).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}-${B.today()}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
 
   /* ------------------------------------------------------------ ficha */

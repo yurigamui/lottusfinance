@@ -76,9 +76,9 @@
     if (!v) return '—';
     const s = String(v);
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; }
-    return new Date(s).toLocaleDateString('pt-BR');
+    return new Date(s).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   };
-  const dateTime = (v) => (v ? new Date(v).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+  const dateTime = (v) => (v ? new Date(v).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }) : '—');
   const ago = (v) => {
     if (!v) return '';
     const m = Math.round((Date.now() - new Date(v).getTime()) / 60000);
@@ -94,6 +94,28 @@
   const cpf = (v) => {
     const s = String(v || '');
     return s.length === 11 ? `${s.slice(0, 3)}.${s.slice(3, 6)}.${s.slice(6, 9)}-${s.slice(9)}` : s;
+  };
+  /* Datas do dia sempre no fuso de Brasília (nunca toISOString, que usa UTC e vira o mês às 21h) */
+  const TZ = 'America/Sao_Paulo';
+  const tzFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+  /** Data de Brasília (AAAA-MM-DD) de um instante; sem argumento, agora. */
+  const isoOf = (d) => {
+    const p = {};
+    tzFmt.formatToParts(d == null ? new Date() : new Date(d)).forEach((x) => { p[x.type] = x.value; });
+    return `${p.year}-${p.month}-${p.day}`;
+  };
+  const today = () => isoOf();
+  /** Primeiro dia do mês (AAAA-MM-01) da data informada; sem argumento, do mês atual em Brasília. */
+  const monthStart = (iso) => String(iso || today()).slice(0, 7) + '-01';
+  /** Soma dias a uma data AAAA-MM-DD (conta de calendário, sem fuso). */
+  const addDays = (iso, n) => {
+    const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + Number(n || 0))).toISOString().slice(0, 10);
+  };
+  /** Soma meses e devolve o dia 1 do mês resultante. */
+  const addMonths = (iso, n) => {
+    const [y, m] = String(iso).slice(0, 7).split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1 + Number(n || 0), 1)).toISOString().slice(0, 10);
   };
   const yearsSince = (d) => (d ? Math.floor((Date.now() - new Date(d).getTime()) / (365.25 * 86400000)) : null);
 
@@ -254,6 +276,7 @@
 
   window.BO = {
     sb, rpc, safeUrl, message, esc, brl, pct, date, dateTime, ago, cnpj, cpf, yearsSince, tag, check,
+    TZ, isoOf, today, monthStart, addDays, addMonths,
     DOC_KIND, ACCESS, ROLE, LEVEL, REVENUE, toast, modal, closeModal, confirmAction, run,
     signedUrl, openFile, isImage, copy,
   };

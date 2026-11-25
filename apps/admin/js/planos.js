@@ -14,7 +14,7 @@
   const parse = (s) => { const t = String(s ?? '').trim().replace(/\./g, '').replace(',', '.'); return t === '' ? null : Number(t); };
   const mi = (n) => (n >= 1e6 ? (n / 1e6).toString().replace('.', ',') + ' mi' : n >= 1e3 ? (n / 1e3).toString().replace('.', ',') + ' mil' : String(n));
   const monthLabel = (m) => { const d = new Date(String(m).slice(0, 10) + 'T12:00:00'); const t = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); return t.charAt(0).toUpperCase() + t.slice(1); };
-  const shiftMonth = (m, n) => { const d = new Date(String(m).slice(0, 10) + 'T12:00:00'); d.setMonth(d.getMonth() + n, 1); return d.toISOString().slice(0, 10); };
+  const shiftMonth = (m, n) => B.addMonths(m, n);
   const csv = (name, rows) => {
     const cell = (v) => { const s = v == null ? '' : typeof v === 'number' ? String(v).replace('.', ',') : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
     const blob = new Blob(['﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
@@ -85,7 +85,7 @@
     const used = rows.reduce((t, r) => t + r.used, 0), rev = rows.reduce((t, r) => t + Number(r.total || 0), 0);
     const reqs = rows.filter((r) => r.plan_requested).length;
     const kpi = (l, v, cls) => `<div class="kpi${cls ? ' ' + cls : ''}"><span class="kpi-label">${l}</span><span class="kpi-value">${v}</span></div>`;
-    const thisMonth = new Date().toISOString().slice(0, 7) === m.slice(0, 7);
+    const thisMonth = B.today().slice(0, 7) === m.slice(0, 7);
     host.innerHTML = `<div class="kpis">${kpi('Documentos no mês', used)}${kpi('Receita do mês', brl(rev))}${kpi('Contas ativas no mês', rows.filter((r) => r.used > 0).length)}${kpi('Pedidos de plano', reqs, reqs ? 'alert' : '')}</div>
       <div class="card stack">
         <div class="row between" style="flex-wrap:wrap;gap:12px"><div class="row" style="gap:8px;align-items:center"><button class="btn secondary sm" id="mprev" aria-label="Mês anterior">‹</button><h2 style="margin:0;min-width:170px;text-align:center">${esc(monthLabel(m))}</h2><button class="btn secondary sm" id="mnext" aria-label="Próximo mês" ${thisMonth ? 'disabled' : ''}>›</button></div>
