@@ -493,13 +493,14 @@ Deno.serve(async (req) => {
     // Renda fixa: a CURVA (P.U. de todo dia útil, ancorada na 1ª compra) é calculada e gravada pelo próprio banco
     // (w_rf_reprice_all, no cron e no gatilho de edição do ativo). Aqui só se acrescenta o preço A MERCADO (pré e IPCA+, que
     // dependem das curvas do Tesouro): mantém o P.U. já gravado pelo banco e preenche pu_mercado onde falta (e o dia de hoje).
-    const rf = assets.filter((a) => ['rf_pre', 'rf_ipca'].includes(a.kind) && !a.custom && a.issue_date && a.maturity && a.rate !== null);
+    const rf = assets.filter((a) => ['rf_pre', 'rf_ipca'].includes(a.kind) && !a.custom && a.issue_date && a.maturity && a.maturity > todayIso && a.rate !== null);
     const rows: any[] = [];
     for (const a of rf) {
-      const { data: ex } = await sb.from('w_asset_prices').select('date,pu,pu_mercado').eq('asset_id', a.id).eq('source', 'curva').or(`pu_mercado.is.null,date.eq.${todayIso}`).order('date', { ascending: false }).limit(1500);
+      const { data: ex } = await sb.from('w_asset_prices').select('date,pu,pu_mercado').eq('asset_id', a.id).eq('source', 'curva').or(`pu_mercado.is.null,date.eq.${todayIso}`).order('date', { ascending: false }).limit(300);
       for (const x of ex ?? []) {
         const p = priceAsset(a, x.date, curves, ylds);
-        if (p && p.pu_mercado !== null) rows.push({ asset_id: a.id, date: x.date, pu: Number(x.pu), pu_mercado: r8(p.pu_mercado), source: 'curva' });
+        // o P.U. do banco é ancorado na 1ª compra e o cálculo daqui na emissão: leva o preço a mercado para a escala do P.U. gravado
+        if (p && p.pu_mercado !== null && p.pu > 0 && Number(x.pu) > 0) rows.push({ asset_id: a.id, date: x.date, pu: Number(x.pu), pu_mercado: r8(p.pu_mercado * (Number(x.pu) / p.pu)), source: 'curva' });
       }
     }
     await upsertPrices(rows);
