@@ -22,6 +22,11 @@
 -- ANTES DE APLICAR: comparar _platform_fee_run, _plan_fee e _staff com pg_get_functiondef de produção; o create or replace falha se a assinatura diferir.
 -- (Premissas conferidas em docs/agente/admin/b2-defs-producao.sql, leitura real de 25/11/2026: _plan_fee(numeric) devolve numeric; rate_aa é FRAÇÃO ao ano;
 --  PL vem de _funder_pl(funder_id, data); _staff levanta forbidden | mfa_required | insufficient_level.)
+-- REGRAS DE COBRANÇA AUTOMÁTICA
+--   * Vigência: o override vale se estiver vigente no ÚLTIMO DIA do mês de competência (ref_month); override criado hoje não retroage a competência já fechada.
+--   * Fatura CANCELADA conta como "já tratada": _bill_generate_auto não recria para o mesmo (cliente, ref_month, source). Para refazer, a equipe emite
+--     manualmente (bo_inv_save) a nova fatura.
+--   * Limite D4 (20%): mede o preço resultante contra o preço de TABELA; custom_price do Sign + desconto acima de 20% sobre a tabela exige administrador.
 -- ATENÇÃO antes de aplicar (ler com o Yuri)
 --   * _platform_fee_run é o corpo REAL de produção (25/11/2026) com 3 linhas de override; sem override o resultado é idêntico. Antes de aplicar, salvar a
 --     versão que estiver em produção na hora (pode ter mudado): select pg_get_functiondef('public._platform_fee_run'::regproc);
@@ -220,7 +225,7 @@ end $f$;
 -- ============ 4. Geração automática de faturas ============
 create or replace function public._bill_generate_auto(p_month date default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare m date := coalesce(date_trunc('month', p_month)::date, (date_trunc('month', current_date) - interval '1 month')::date);
+declare m date := coalesce(date_trunc('month', p_month)::date, (date_trunc('month', public._today_br()) - interval '1 month')::date);
   v_end date := (m + interval '1 month - 1 day')::date;
   dd int; v_due date; r record; v_amt numeric; n_fee int := 0; n_sign int := 0;
 begin
@@ -232,19 +237,19 @@ begin
   for r in select pf.id, pf.funder_id, pf.amount, fu.legal_name, fu.cnpj, fu.email
              from public.platform_fees pf join public.funders fu on fu.id = pf.funder_id
             where pf.ref_month = m and pf.amount > 0 and pf.status <> 'paid'
-              and not exists (select 1 from public.bill_invoices b where b.funder_id = pf.funder_id and b.ref_month = m and b.source = 'platform_fee' and b.status <> 'cancelled') loop
+              and not exists (select 1 from public.bill_invoices b where b.funder_id = pf.funder_id and b.ref_month = m and b.source = 'platform_fee' ) loop
     insert into public.bill_invoices (number, customer_kind, funder_id, customer_name, customer_doc, customer_email, description, ref_month, amount, due_date, source, source_ref)
     values ('F-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('public.bill_seq')::text, 4, '0'), 'funder', r.funder_id, r.legal_name, r.cnpj, r.email,
             'Taxa de plataforma ' || to_char(m, 'MM/YYYY'), m, r.amount, v_due, 'platform_fee', r.id::text);
     n_fee := n_fee + 1;
   end loop;
 
-  -- mensalidade do Sign: contas não isentas criadas até o fim da competência; preço = custom_price (se houver) ou do plano, com override
+  -- mensalidade do Sign: contas não isentas criadas até o fim da competência; preço = custom_price (se houver) ou do plano, com override;
+  -- gera se o preço EFETIVO for > 0 (inclusive plano de tabela 0 com override fixo vigente)
   for r in select sa.id, sa.name, sa.doc, sa.custom_price, sp.price_month, sp.name plan_name
              from public.sign_accounts sa join public.sign_plans sp on sp.code = sa.plan
             where not sa.exempt and sa.created_at < (v_end + 1)
-              and (coalesce(sp.price_month, 0) > 0 or coalesce(sa.custom_price, 0) > 0)
-              and not exists (select 1 from public.bill_invoices b where b.sign_account_id = sa.id and b.ref_month = m and b.source = 'sign' and b.status <> 'cancelled') loop
+              and not exists (select 1 from public.bill_invoices b where b.sign_account_id = sa.id and b.ref_month = m and b.source = 'sign' ) loop
     v_amt := public._effective_price('sign', r.id, coalesce(r.custom_price, r.price_month), v_end);
     if coalesce(v_amt, 0) <= 0 then continue; end if;
     insert into public.bill_invoices (number, customer_kind, sign_account_id, customer_name, customer_doc, description, ref_month, amount, due_date, source, source_ref)
@@ -325,9 +330,11 @@ begin
   if sub is null then raise exception 'subject_not_found'; end if;
   if v_kind = 'fee_rate' and sub->>'origin' is distinct from 'invite' then raise exception 'fee_rate_needs_contract'; end if;
 
-  -- D4: redução efetiva sobre o preço (ou a taxa) de tabela; acima de 20% só administrador
+  -- D4: redução do preço resultante em relação ao preço de TABELA; o novo override incide sobre o preço vigente sem ele
+  -- (Sign: coalesce(custom_price, tabela)), logo custom_price já baixo + desconto também pode passar de 20% e exigir administrador.
   v_red := case v_kind
-    when 'discount_pct' then v_value
+    when 'discount_pct' then case when (sub->>'list_price')::numeric > 0
+        then ((sub->>'list_price')::numeric - coalesce((sub->>'custom_price')::numeric, (sub->>'list_price')::numeric) * (1 - v_value / 100)) / (sub->>'list_price')::numeric * 100 else 0 end
     when 'fixed' then case when (sub->>'list_price')::numeric > 0 then ((sub->>'list_price')::numeric - v_value) / (sub->>'list_price')::numeric * 100 else 0 end
     else case when coalesce((sub->>'list_rate')::numeric, 0) > 0 then ((sub->>'list_rate')::numeric - v_value) / (sub->>'list_rate')::numeric * 100 else 0 end end;
   if v_red > 20 then
@@ -344,7 +351,7 @@ begin
     if o.kind = v_kind and o.value = round(v_value, 6) and o.valid_from = v_from and o.valid_until is not distinct from v_until and o.reason = v_reason then
       return jsonb_build_object('id', o.id, 'unchanged', true, 'replaced_id', null);   -- reenvio idêntico: nada novo
     end if;
-    update public.price_overrides set revoked_at = now(), revoked_by = s.user_id, revoke_reason = 'substituído por novo preço personalizado' where id = o.id;
+    update public.price_overrides set revoked_at = now(), revoked_by = s.user_id, revoke_reason = 'substituído por novo preço personalizado' where id = o.id and revoked_at is null;
     v_old := o.id;
   end if;
   insert into public.price_overrides (product, subject_kind, subject_id, kind, value, valid_from, valid_until, reason, created_by, created_by_name)
@@ -364,7 +371,7 @@ begin
   select * into o from public.price_overrides where id = p_id for update;
   if not found then raise exception 'not_found'; end if;
   if o.revoked_at is not null then return jsonb_build_object('id', o.id, 'unchanged', true); end if;
-  update public.price_overrides set revoked_at = now(), revoked_by = s.user_id, revoke_reason = v_reason where id = p_id;
+  update public.price_overrides set revoked_at = now(), revoked_by = s.user_id, revoke_reason = v_reason where id = p_id and revoked_at is null;
   perform public._staff_log(s, 'price_override_revoke', 'price_override', p_id::text, null,
     jsonb_build_object('product', o.product, 'subject', o.subject_id, 'reason', v_reason));
   return jsonb_build_object('id', p_id, 'unchanged', false);

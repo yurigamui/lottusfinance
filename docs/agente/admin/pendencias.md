@@ -39,3 +39,4 @@
 | A-105 | (B1 A-05) Preço personalizado/plano sem motivo, validade, alçada, confirmação | Alta | Dev | Pacote 3 (usa migração 20261125120000) | relatorio-b1 |
 | A-106 | (B1 A-06..A-19) Médios do relatório B1 (corrida, listas, alvos, modal, validações, rotas mortas) | Média | Dev | Pacotes 1 e 2 | relatorio-b1 |
 | A-107 | (B1 A-20..A-24) Baixos do relatório B1 | Baixa | Dev | Pacote 2 | relatorio-b1 |
+| A-030 | Migração de preços: correções M1 a M3/B1/B2/B4 do verificador aplicadas (134 de 134 no local); falta reverificação independente das mudanças e teste de concorrência (B3) | Média | Verificador | Fase 6 | verificação da migração |

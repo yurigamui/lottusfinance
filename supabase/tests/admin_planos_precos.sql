@@ -233,14 +233,36 @@ do $$ declare r1 jsonb; r2 jsonb; fa uuid := 'f0000000-0000-0000-0000-0000000000
   perform public.bo_inv_generate('2026-10-01');
   r1 := public._bill_generate_auto('2026-10-01');
   perform pg_temp.chk('G9 manual + automático não duplicam a taxa de plataforma', (r1->>'platform_fee')::int = 0 and (select count(*) from public.bill_invoices where source = 'platform_fee') = 2);
-  -- cancelada pode ser regerada; due_day respeitado
-  update public.bill_invoices set status = 'cancelled' where source = 'sign';
+  -- due_day limitado a 28 (competência de agosto, ainda sem faturas)
   update public.billing_settings set due_day = 40 where id = 1;
+  perform pg_temp.act(null);
+  perform public._bill_generate_auto('2026-08-01');
+  perform pg_temp.chk('G10 due_day é limitado a 28', (select min(due_date) from public.bill_invoices where source = 'sign' and ref_month = '2026-08-01') = '2026-09-28');
+  -- M2: cancelada conta como já tratada (não recria; vale para taxa de plataforma e Sign)
+  update public.bill_invoices set status = 'cancelled' where ref_month = '2026-10-01';
   r1 := public._bill_generate_auto('2026-10-01');
-  perform pg_temp.chk('G10 due_day é limitado a 28', (select min(due_date) from public.bill_invoices where source = 'sign' and status = 'open') = '2026-11-28');
+  perform pg_temp.chk('G10b fatura cancelada não é recriada (taxa e Sign)', (r1->>'platform_fee')::int = 0 and (r1->>'sign')::int = 0
+    and not exists (select 1 from public.bill_invoices where ref_month = '2026-10-01' and status = 'open'));
   update public.billing_settings set due_day = 10 where id = 1;
   perform pg_temp.chk('G11 execução direta negada para authenticated e anon', pg_temp.err('select public._bill_generate_auto()', 'authenticated') ilike 'permission denied%'
     and pg_temp.err('select public._bill_generate_auto()', 'anon') ilike 'permission denied%');
+end $$;
+
+-- ---- M1: plano de tabela 0 + override fixo vigente gera fatura; M3: limite D4 contra o preço de tabela ----
+do $$ declare gr uuid := '50000000-0000-0000-0000-000000000003'; em uuid := '50000000-0000-0000-0000-000000000006'; r jsonb; begin
+  insert into public.sign_accounts (id, name, doc, plan, custom_price, created_at) values (em, 'Conta Sign Empresa Custom', '66666666666', 'empresa', 100, '2026-01-10');
+  perform pg_temp.act('approver');
+  perform pg_temp.chk('M1a override fixo 20 em plano grátis (tabela 0) liberado ao aprovador', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"sign","subject":"%s","kind":"fixed","value":20,"valid_from":"2026-01-01","reason":"plano grátis com taxa"}')$q$, gr), 'authenticated') is null);
+  perform pg_temp.act(null);
+  r := public._bill_generate_auto('2026-09-01');
+  perform pg_temp.chk('M1b gera fatura de 20,00 mesmo com plano de tabela 0', (select amount from public.bill_invoices where sign_account_id = gr and ref_month = '2026-09-01') = 20.00);
+  perform pg_temp.chk('M1c grátis sem override continua sem fatura', not exists (select 1 from public.bill_invoices where sign_account_id = '50000000-0000-0000-0000-000000000004' and ref_month = '2026-09-01'));
+  perform pg_temp.act('approver');
+  perform pg_temp.chk('M3a empresa (tabela 249) custom 100 + 20% pelo aprovador: barrado (preço 80 = -67% da tabela)', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"sign","subject":"%s","kind":"discount_pct","value":20,"reason":"acúmulo sobre custom"}')$q$, em), 'authenticated') = 'discount_needs_admin');
+  perform pg_temp.act('admin');
+  perform pg_temp.run(format($q$select public.bo_price_override_set('{"product":"sign","subject":"%s","kind":"discount_pct","value":20,"reason":"acúmulo sobre custom"}')$q$, em), 'authenticated');
+  perform pg_temp.chk('M3b o mesmo pedido pelo admin passa', (select msg from t_last) is null);
+  perform pg_temp.chk('M3c preço efetivo = 80,00 sobre o custom_price', (public.bo_customer_plan('sign', em)->>'effective_price')::numeric = 80.00);
 end $$;
 
 -- ---- bo_overdue_list ----
