@@ -67,9 +67,9 @@ revoke all on function public.w_admin_set_plan(uuid, text, boolean) from public,
 grant execute on function public.w_admin_set_plan(uuid, text, boolean) to service_role;
 
 create sequence public.bill_seq;
-create table public.bill_invoices (id uuid primary key default gen_random_uuid(), number text, customer_kind text, funder_id uuid, sign_account_id uuid,
-  customer_name text, customer_doc text, customer_email text, description text, ref_month date, amount numeric not null default 0, due_date date,
-  status text not null default 'open', paid_at timestamptz, paid_method text, notes text, source text, source_ref text, reminders_paused boolean not null default false,
+create table public.bill_invoices (id uuid primary key default gen_random_uuid(), number text, customer_kind text check (customer_kind in ('funder','sign','lead','other','customer')), funder_id uuid, sign_account_id uuid,
+  customer_name text, customer_doc text, customer_email text, description text, ref_month date, amount numeric not null default 0 check (amount >= 0), due_date date,
+  status text not null default 'open' check (status in ('open','paid','cancelled')), paid_at timestamptz, paid_method text, notes text, source text check (source in ('platform_fee','sign','manual')), source_ref text, reminders_paused boolean not null default false,
   created_by uuid, created_at timestamptz not null default now(), updated_at timestamptz default now(), org_id uuid, customer_id uuid, contract_id uuid, proposal_id uuid,
   items jsonb, public_token text, bank_conn_id uuid, charge_ref text, charge_status text, charge_error text, pix_payload text, pix_qr text, boleto_url text,
   boleto_line text, pay_url text, paid_amount numeric, nfse_status text, nfse_number text, nfse_url text, billing_period text);

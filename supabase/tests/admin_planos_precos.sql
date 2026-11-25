@@ -222,6 +222,10 @@ do $$ declare r1 jsonb; r2 jsonb; fa uuid := 'f0000000-0000-0000-0000-0000000000
   perform pg_temp.chk('G5 taxa de plataforma = platform_fees', (select amount from public.bill_invoices where funder_id = fa) = 5000.00);
   perform pg_temp.chk('G6 vencimento = dia 10 do mês seguinte, ref_month = 01/10', (select count(*) from public.bill_invoices where due_date = '2026-11-10' and ref_month = '2026-10-01') = 4);
   perform pg_temp.chk('G7 faturas abertas, com origem e número', (select count(*) from public.bill_invoices where status = 'open' and source is not null and number like 'F-%') = 4);
+  perform pg_temp.chk('G7b só valores permitidos pelos CHECKs reais (kind, source, status, amount)', (select count(*) from public.bill_invoices) = 4
+    and not exists (select 1 from public.bill_invoices where customer_kind not in ('funder','sign') or source not in ('platform_fee','sign') or status <> 'open' or amount < 0 or org_id is not null)
+    and (select count(*) from public.bill_invoices where customer_kind = 'funder' and source = 'platform_fee') = 2 and (select count(*) from public.bill_invoices where customer_kind = 'sign' and source = 'sign') = 2);
+  perform pg_temp.chk('G7c o stub rejeita valor inválido (source antigo)', pg_temp.err($q$insert into public.bill_invoices (number, source) values ('F-X', 'sign_subscription')$q$) ilike '%bill_invoices_source_check%');
   perform pg_temp.chk('G8 sem fatura para isenta, grátis e conta criada depois', not exists (select 1 from public.bill_invoices where sign_account_id in
     ('50000000-0000-0000-0000-000000000003', '50000000-0000-0000-0000-000000000004', '50000000-0000-0000-0000-000000000005')));
   -- fatura gerada antes pelo botão manual (bo_inv_generate) não é duplicada pelo automático
@@ -230,10 +234,10 @@ do $$ declare r1 jsonb; r2 jsonb; fa uuid := 'f0000000-0000-0000-0000-0000000000
   r1 := public._bill_generate_auto('2026-10-01');
   perform pg_temp.chk('G9 manual + automático não duplicam a taxa de plataforma', (r1->>'platform_fee')::int = 0 and (select count(*) from public.bill_invoices where source = 'platform_fee') = 2);
   -- cancelada pode ser regerada; due_day respeitado
-  update public.bill_invoices set status = 'cancelled' where source = 'sign_subscription';
+  update public.bill_invoices set status = 'cancelled' where source = 'sign';
   update public.billing_settings set due_day = 40 where id = 1;
   r1 := public._bill_generate_auto('2026-10-01');
-  perform pg_temp.chk('G10 due_day é limitado a 28', (select min(due_date) from public.bill_invoices where source = 'sign_subscription' and status = 'open') = '2026-11-28');
+  perform pg_temp.chk('G10 due_day é limitado a 28', (select min(due_date) from public.bill_invoices where source = 'sign' and status = 'open') = '2026-11-28');
   update public.billing_settings set due_day = 10 where id = 1;
   perform pg_temp.chk('G11 execução direta negada para authenticated e anon', pg_temp.err('select public._bill_generate_auto()', 'authenticated') ilike 'permission denied%'
     and pg_temp.err('select public._bill_generate_auto()', 'anon') ilike 'permission denied%');
@@ -243,13 +247,13 @@ end $$;
 do $$ declare o jsonb; begin
   delete from public.bill_invoices;
   insert into public.bill_invoices (number, customer_kind, customer_name, amount, due_date, status, source) values
-    ('F-T-1', 'funder', 'Cliente Exemplo 1', 100, current_date - 3, 'open', 'x'),
-    ('F-T-2', 'sign', 'Cliente Exemplo 2', 250.50, current_date - 15, 'open', 'x'),
-    ('F-T-3', 'sign', 'Cliente Exemplo 3', 80, current_date - 16, 'open', 'x'),
-    ('F-T-4', 'sign', 'Paga', 70, current_date - 40, 'paid', 'x'),
-    ('F-T-5', 'sign', 'A vencer', 60, current_date + 2, 'open', 'x'),
-    ('F-T-6', 'sign', 'Vence hoje', 60, current_date, 'open', 'x'),
-    ('F-T-7', 'sign', 'Cancelada', 60, current_date - 20, 'cancelled', 'x');
+    ('F-T-1', 'funder', 'Cliente Exemplo 1', 100, current_date - 3, 'open', 'manual'),
+    ('F-T-2', 'sign', 'Cliente Exemplo 2', 250.50, current_date - 15, 'open', 'manual'),
+    ('F-T-3', 'sign', 'Cliente Exemplo 3', 80, current_date - 16, 'open', 'manual'),
+    ('F-T-4', 'sign', 'Paga', 70, current_date - 40, 'paid', 'manual'),
+    ('F-T-5', 'sign', 'A vencer', 60, current_date + 2, 'open', 'manual'),
+    ('F-T-6', 'sign', 'Vence hoje', 60, current_date, 'open', 'manual'),
+    ('F-T-7', 'sign', 'Cancelada', 60, current_date - 20, 'cancelled', 'manual');
   perform pg_temp.act('analyst');
   o := public.bo_overdue_list();
   perform pg_temp.chk('O1 só abertas vencidas (3), total 430,50', (o->>'total')::int = 3 and (o->>'total_amount')::numeric = 430.50);

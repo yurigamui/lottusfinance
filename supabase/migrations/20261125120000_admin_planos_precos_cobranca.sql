@@ -17,7 +17,7 @@
 --      Sem override o resultado é idêntico ao anterior.
 --   4. _bill_generate_auto(mês): gera em bill_invoices as faturas do mês anterior (taxa de plataforma a partir de platform_fees e
 --      mensalidade do Sign), idempotente por (cliente, ref_month, source); job pg_cron 'lottus-billing-auto' (0 13 2 * *, 10:00 UTC-3), só se
---      a extensão pg_cron existir. O envio continua na régua existente (lottus-bill-reminders).
+--      a extensão pg_cron existir. O envio NÃO está coberto: ver A-028 abaixo.
 --
 -- ANTES DE APLICAR: comparar _platform_fee_run, _plan_fee e _staff com pg_get_functiondef de produção; o create or replace falha se a assinatura diferir.
 -- (Premissas conferidas em docs/agente/admin/b2-defs-producao.sql, leitura real de 25/11/2026: _plan_fee(numeric) devolve numeric; rate_aa é FRAÇÃO ao ano;
@@ -27,8 +27,11 @@
 --     versão que estiver em produção na hora (pode ter mudado): select pg_get_functiondef('public._platform_fee_run'::regproc);
 --   * fee_rate só vale para fundo no ramo contrato/'invite' (substitui v_rate); em fundo 'self' (tabela global) é recusado ('fee_rate_needs_contract').
 --     rate_aa e fee_rate são FRAÇÃO ao ano (0,001 = 0,1% a.a.); por isso price_overrides.value é numeric(14,6).
---   * customer_kind 'sign' e source ('platform_fee' | 'sign_subscription') em bill_invoices são hipóteses a conferir ('funder' é o valor real de bo_inv_generate);
---     o e-mail da fatura do Sign fica nulo (sign_accounts não tem e-mail): sem e-mail a régua não envia.
+--   * bill_invoices tem CHECKs reais: customer_kind in ('funder','sign','lead','other','customer'), source in ('platform_fee','sign','manual'),
+--     status in ('open','paid','cancelled'), amount >= 0. _bill_generate_auto usa só customer_kind 'funder'/'sign' e source 'platform_fee'/'sign'.
+--     O e-mail da fatura do Sign fica nulo (sign_accounts não tem e-mail).
+--   * A-028 (pendência): a régua real _bill_reminders_run só considera faturas com org_id em one_orgs com remind_enabled. As faturas geradas aqui
+--     (taxa de plataforma e Sign) saem SEM org_id e, portanto, NÃO recebem lembrete por ela. _bill_reminders_run NÃO foi alterada; decidir à parte.
 --   * Esta migração não altera _w_price nem w_billing_close: oferece _w_price_for(user, plano) para a cobrança do Wealth passar a usar
 --     (próximo passo, fora deste escopo).
 --
@@ -241,12 +244,12 @@ begin
              from public.sign_accounts sa join public.sign_plans sp on sp.code = sa.plan
             where not sa.exempt and sa.created_at < (v_end + 1)
               and (coalesce(sp.price_month, 0) > 0 or coalesce(sa.custom_price, 0) > 0)
-              and not exists (select 1 from public.bill_invoices b where b.sign_account_id = sa.id and b.ref_month = m and b.source = 'sign_subscription' and b.status <> 'cancelled') loop
+              and not exists (select 1 from public.bill_invoices b where b.sign_account_id = sa.id and b.ref_month = m and b.source = 'sign' and b.status <> 'cancelled') loop
     v_amt := public._effective_price('sign', r.id, coalesce(r.custom_price, r.price_month), v_end);
     if coalesce(v_amt, 0) <= 0 then continue; end if;
     insert into public.bill_invoices (number, customer_kind, sign_account_id, customer_name, customer_doc, description, ref_month, amount, due_date, source, source_ref)
     values ('F-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('public.bill_seq')::text, 4, '0'), 'sign', r.id, r.name, r.doc,
-            'Mensalidade Sign (' || r.plan_name || ') ' || to_char(m, 'MM/YYYY'), m, v_amt, v_due, 'sign_subscription', r.id::text);
+            'Mensalidade Sign (' || r.plan_name || ') ' || to_char(m, 'MM/YYYY'), m, v_amt, v_due, 'sign', r.id::text);
     n_sign := n_sign + 1;
   end loop;
   return jsonb_build_object('ref_month', m, 'platform_fee', n_fee, 'sign', n_sign);
