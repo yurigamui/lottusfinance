@@ -96,9 +96,9 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', 'a0000000-0000-4000-8000-000000000001', 'role', 'authenticated')::text, true);
   r := public.w_equity_range(wid, current_date - 365, current_date, 'curva');
   perform pg_temp.ok(r->>'step' = 'dia' and jsonb_array_length(r->'points') = 366, 'E1 366 pontos diários em 1 ano');
-  for pt in select p from jsonb_array_elements(r->'points') p where (p->>'date')::date in (current_date - 300, current_date - 150, current_date - 101, current_date - 99, current_date - 30, current_date) loop
+  for pt in select p from jsonb_array_elements(r->'points') p where (p->>'date')::date in (current_date - 300, current_date - 150, current_date - 101, current_date - 99, current_date - 30, current_date) and not exists (select 1 from public.w_invest_tx x where x.wallet_id = wid and x.date <= (p->>'date')::date and not exists (select 1 from public.w_asset_prices q where q.asset_id = x.asset_id and q.date <= (p->>'date')::date)) loop
     perform pg_temp.ok(round((pt->>'investimentos')::numeric, 2) = round(public._w_invest_value(wid, (pt->>'date')::date), 2)
-      and round((pt->>'contas')::numeric, 2) = round(public._w_cash(wid, (pt->>'date')::date), 2) and round((pt->>'aportes')::numeric, 2) = round(public._w_contrib(wid, (pt->>'date')::date), 2), 'E1 confere em ' || (pt->>'date'));
+      and round((pt->>'contas')::numeric, 2) = round(public._w_cash(wid, (pt->>'date')::date), 2) and round((pt->>'aportes')::numeric, 2) = round(public._w_contrib(wid, (pt->>'date')::date), 2), 'E1 confere em ' || (pt->>'date'));  -- (datas antes da 1ª cotação de um ativo ficam de fora: a série interpola; coberto por v5.sql)
   end loop;
   perform pg_temp.ok(round((r->'points'->-1->>'total')::numeric, 2) = round((public.w_networth(wid, 'curva')->>'total')::numeric, 2), 'E1 último ponto = patrimônio de hoje');
   r := public.w_equity_range(wid, current_date - 365, current_date, 'mercado');

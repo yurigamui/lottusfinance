@@ -28,19 +28,20 @@
   W.lineChart = (host, rows, o = {}) => {
     const { wrap, tip } = shell(host); const fmt = o.format || W.brl; const H = o.height || 260; const names = o.names || ['Valor', 'Aportes'];
     // seleção por arraste (como no Google): o balão mostra o desempenho só do trecho escolhido
-    let sel = null, drag = null; const bubble = document.createElement('div'); bubble.className = 'chart-sel'; bubble.hidden = true; wrap.appendChild(bubble);
+    let sel = null, drag = null, curX = null; const bubble = document.createElement('div'); bubble.className = 'chart-sel'; bubble.hidden = true; wrap.appendChild(bubble);
     const paintBubble = () => {
       if (!sel || !o.onRange) { bubble.hidden = true; return; }
       const r = o.onRange(Math.min(sel.a, sel.b), Math.max(sel.a, sel.b)); if (!r) { bubble.hidden = true; return; }
       const cls = W.cls(r.money); bubble.hidden = false;
       bubble.innerHTML = `<span class="sel-val ${cls}">${r.money === null || r.money === undefined ? '' : W.sign(r.money, fmt)}${r.pct === null || r.pct === undefined ? '' : ` (${W.sign(r.pct, (v) => W.pct(v, 2))})`} <span aria-hidden="true">${Number(r.money) >= 0 ? '↑' : '↓'}</span></span><span class="sel-per">${W.esc(r.from)} – ${W.esc(r.to)}</span><button type="button" class="sel-x" aria-label="Limpar seleção">×</button>`;
       bubble.querySelector('.sel-x').onclick = () => { sel = null; draw(); };
+      if (curX) { const lo = Math.min(sel.a, sel.b), hi = Math.max(sel.a, sel.b), bw = bubble.offsetWidth, ww = wrap.clientWidth; bubble.style.left = `${Math.max(0, Math.min((curX(lo) + curX(hi)) / 2 - bw / 2, ww - bw))}px`; bubble.style.top = '2px'; }
     };
     function draw() {
       const Wd = Math.max(200, wrap.clientWidth), m = { t: 16, r: 8, b: 26, l: 56 }, pw = Wd - m.l - m.r, ph = H - m.t - m.b;
       const vals = rows.flatMap((r) => [r.a, r.b, r.c]).filter((v) => v !== undefined && v !== null).map(Number);
       const [lo, hi] = niceRange(Math.min(0, ...vals), Math.max(0, ...vals));
-      const y = (v) => m.t + ph - ((v - lo) / (hi - lo || 1)) * ph; const x = (i) => m.l + (rows.length === 1 ? pw / 2 : (pw * i) / (rows.length - 1));
+      const y = (v) => m.t + ph - ((v - lo) / (hi - lo || 1)) * ph; const x = (i) => m.l + (rows.length === 1 ? pw / 2 : (pw * i) / (rows.length - 1)); curX = x;
       const svg = el('svg', { width: Wd, height: H, viewBox: `0 0 ${Wd} ${H}`, role: 'img', 'aria-label': o.name || 'Gráfico' });
       for (let i = 0; i <= 4; i++) {
         const v = lo + ((hi - lo) / 4) * i, yy = Math.round(y(v)) + 0.5;

@@ -118,9 +118,9 @@ update public.w_assets set rate = 1.0 where id = '44444444-0000-4000-8000-000000
 do $$
 declare a numeric; b numeric;
 begin
-  select pu into a from public.w_asset_prices where asset_id = '44444444-0000-4000-8000-0000000000a1' and date = (select max(date) from public.w_asset_prices where asset_id = '44444444-0000-4000-8000-0000000000a1');
+  select pu into a from public.w_asset_prices where asset_id = '44444444-0000-4000-8000-0000000000a1' and date = (select max(date) from public.w_indices where name = 'CDI' and date <= current_date);
   update public.w_assets set rate = 1.2 where id = '44444444-0000-4000-8000-0000000000a1';
-  select pu into b from public.w_asset_prices where asset_id = '44444444-0000-4000-8000-0000000000a1' and date = (select max(date) from public.w_asset_prices where asset_id = '44444444-0000-4000-8000-0000000000a1');
+  select pu into b from public.w_asset_prices where asset_id = '44444444-0000-4000-8000-0000000000a1' and date = (select max(date) from public.w_indices where name = 'CDI' and date <= current_date);
   perform pg_temp.ok(b > a, format('A2 trocar 100%% para 120%% do CDI reprecifica na hora (%s → %s)', round(a, 4), round(b, 4)));
 end $$;
 rollback;

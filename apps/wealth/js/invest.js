@@ -28,8 +28,6 @@
     if (!f && !to) { q.set('de', 'inicio'); q.delete('ate'); } else { if (f) q.set('de', f); else q.delete('de'); if (to) q.set('ate', to); else q.delete('ate'); }
     location.hash = `${path}?${q}`;
   });
-  // rendimento do benchmark no período, aplicado aos aportes (mesmo dinheiro, mesmas datas)
-  const benchKpi = (eq, bm) => { const l = eq[eq.length - 1]; if (!bm || !l || l.benchmark === null || l.benchmark === undefined || !(Number(l.aportes) > 0)) return null; return { val: Number(l.benchmark), diff: Number(l.investimentos) - Number(l.benchmark) }; };
   // desempenho de um trecho escolhido no gráfico (arrastando): "rent" = investimentos sem o efeito dos aportes (TWR diário); "pl" = variação do total
   const retInfo = (rows, mode) => (i0, i1) => {
     const a = rows[i0], b = rows[i1]; if (!a || !b || i1 <= i0) return null;
@@ -40,39 +38,14 @@
     const m = Number(b.a) - Number(a.a); return { money: m, pct: Number(a.a) ? m / Math.abs(Number(a.a)) : null, from: a.long, to: b.long };
   };
   const kpi = (l, v, sub, c = '') => `<div class="kpi"><div class="kpi-label">${l}</div><div class="big ${c}" title="${esc(String(v).replace(/<[^>]+>/g, ''))}">${v}</div>${sub ? `<div class="muted small one-line">${sub}</div>` : ''}</div>`;
+  W.inv = { get periodOf() { return periodOf; }, get periodBar() { return periodBar; }, get retInfo() { return retInfo; }, get kpi() { return kpi; }, get resultSub() { return resultSub; }, BM, KIND };
   const resultSub = (nw) => `${W.sign(nw.resultado, W.brl)}${nw.rentabilidade === null ? '' : ` (${W.sign(nw.rentabilidade, (v) => W.pct(v, 2))})`}`;
 
   /* ================= Patrimônio ================= */
-  const LIQ_N = 3;
-  const liquidityCard = (liq) => {
-    const rows = liq.buckets.filter((b) => b.count > 0);
-    if (!rows.length) return '';
-    return `<div class="card flush" style="margin-bottom:16px"><div class="card-head" style="padding:18px 24px 0"><h2>Vencimentos e liquidez</h2></div><div class="table-wrap"><table class="tight fit liq"><thead><tr><th>Prazo</th><th class="num">Valor</th><th class="num">% da carteira</th><th class="num hide-sm">Acumulado</th></tr></thead><tbody>${rows.map((b) => `<tr><td><b>${esc(b.label)}</b><div class="muted small one-line">${b.items.slice(0, LIQ_N).map((i) => esc(i.ticker || i.name)).join(' · ')}${b.count > LIQ_N ? ` · +${b.count - LIQ_N}` : ''}</div></td><td class="num">${W.brl(b.value)}</td><td class="num"><span class="bar" style="--w:${Math.round((b.share || 0) * 100)}%"></span>${W.pct(b.share || 0, 1)}</td><td class="num hide-sm">${W.pct(b.cumulative || 0, 1)}</td></tr>`).join('')}</tbody><tfoot><tr><td><b>Total</b></td><td class="num"><b>${W.brl(liq.total)}</b></td><td class="num">100%</td><td class="hide-sm"></td></tr></tfoot></table></div></div>`;
-  };
   // Bens e dívidas saiu na v2: o endereço antigo leva ao Patrimônio
   W.route('/w/:id/bens', async (ctx) => { W.go(`/w/${ctx.w.id}/patrimonio`); return ''; }, { wallet: true });
   const curId = () => (location.hash.match(/#\/w\/([^/?]+)/) || [])[1];
   W.curId = curId;
-
-  /* ================= Visão geral de investimentos ================= */
-  W.route('/w/:id/investimentos', async (ctx) => {
-    const id = ctx.w.id; const mode = W.viewMode(ctx); const per = periodOf(ctx);
-    const [nw, rg, pos] = await Promise.all([W.rpc('w_networth', { p_wallet: id, p_mode: mode }), W.rpc('w_equity_range', { p_wallet: id, p_from: per.from, p_to: per.to, p_mode: mode }), W.rpc('w_positions', { p_wallet: id, p_mode: mode, p_perf: false })]);
-    const eq = rg.points; const lab = rangeLabel(rg); const bm = BM[nw.benchmark] || ''; const bk = benchKpi(eq, bm);
-    const top = [...pos].sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 6); const tot = pos.reduce((x, p) => x + Number(p.value), 0);
-    ctx.after = () => {
-      W.cur = ctx;
-      const rows = eq.map((p) => ({ label: lab(p), long: W.dt(p.date), a: p.investimentos, b: p.aportes, inv: p.investimentos, ...(bm ? { c: p.benchmark } : {}) }));
-      W.lineChart(document.getElementById('ch-inv'), rows, { names: ['Investimentos', 'Aportes líquidos', `Aportes rendendo ${bm}`], name: 'Evolução dos investimentos', onRange: retInfo(rows, 'rent') });
-      const kinds = {}; pos.forEach((p) => { kinds[KIND[p.kind] || 'Outro'] = (kinds[KIND[p.kind] || 'Outro'] || 0) + Number(p.value); });
-      W.donut(document.getElementById('ch-alloc'), Object.entries(kinds).map(([name, value]) => ({ name, value })), { name: 'Alocação por tipo de ativo' });
-    };
-    return `${W.pageHead('Visão geral', '', `${W.modeBar(mode)}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
-      <div class="kpis">${kpi('Valor atual', W.brl(nw.investimentos))}${kpi('Aportes líquidos', W.brl(nw.aportes))}${kpi('Resultado', W.sign(nw.resultado, W.brl), nw.rentabilidade === null ? '' : W.sign(nw.rentabilidade, (v) => W.pct(v, 2)), W.cls(nw.resultado))}${bk ? kpi(`Comparado ao ${bm}`, W.sign(bk.diff, W.brl), '', W.cls(bk.diff)) : kpi('Maior posição', top.length && tot > 0 ? W.pct(Number(top[0].value) / tot, 1) : '—', top.length ? esc(top[0].ticker || top[0].name) : '')}</div>
-      <div class="card" style="margin-bottom:16px" data-evo-range><div class="card-head"><h2>Evolução</h2></div>${periodBar(ctx, per)}<div class="legend-bench"><span><i></i>Investimentos</span><span><i class="alt"></i>Aportes líquidos</span>${bm ? `<span><i class="bench"></i>Aportes rendendo ${bm}</span>` : ''}</div><div id="ch-inv"></div></div>
-      <div class="grid-2"><div class="card"><div class="card-head"><h2>Alocação por tipo</h2></div><div id="ch-alloc"></div></div>
-        <div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Maiores posições</h2><a href="#/w/${id}/posicao" class="muted small">Ver todas</a></div>${top.length ? `<div class="table-wrap"><table class="tight fit"><thead><tr><th>Ativo</th><th class="num">Valor</th><th class="num">Peso</th></tr></thead><tbody>${top.map((p) => `<tr class="link" data-href="#/w/${id}/ativo/${esc(p.asset_id)}"><td class="cell-name" title="${esc(p.name)}"><b>${esc(p.ticker || p.name)}</b></td><td class="num">${W.brl(p.value)}</td><td class="num">${tot > 0 ? W.pct(Number(p.value) / tot, 1) : '—'}</td></tr>`).join('')}</tbody></table></div>` : empty('Nenhum investimento registrado.')}</div></div>`;
-  });
 
   /* ================= Posição (classes → subclasses → ativos, com TWR, P&L e custodiante) ================= */
   const classOf = (p) => {
@@ -118,7 +91,7 @@
     const id = ctx.w.id; const mode = W.viewMode(ctx); const per = periodOf(ctx, true);
     const pos = await W.rpc('w_positions', { p_wallet: id, p_mode: mode, p_from: per.from, p_to: per.to });
     ctx.after = () => {
-      W.cur = ctx; const host = document.getElementById('pos-table');
+      W.cur = ctx; const host = document.getElementById('pos-table'); if (!host) return;
       const paint = () => {
         const r = renderPos(id, pos); host.querySelector('tbody').innerHTML = r.body; host.querySelector('tfoot').innerHTML = r.foot; host.__keys = r.keys;
         host.querySelectorAll('th[data-sort]').forEach((th) => { th.setAttribute('aria-sort', th.dataset.sort === posSort.key ? (posSort.dir > 0 ? 'ascending' : 'descending') : 'none'); th.querySelector('.srt').textContent = th.dataset.sort === posSort.key ? (posSort.dir > 0 ? '▲' : '▼') : '↕'; });
@@ -133,7 +106,7 @@
     };
     return `${W.pageHead('Posição', '', `${W.modeBar(mode)}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
       <div data-evo-range>${periodBar(ctx, per)}</div>
-      <div class="card flush">${pos.length ? `<div class="table-wrap"><table class="pos" id="pos-table"><thead><tr><th class="allpos"><button type="button" class="ghost-ico" data-allpos aria-label="Expandir ou recolher tudo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l5 5 5-5M7 13l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></th>${POS_COLS.slice(1).map(([k, l, c]) => `<th class="${c}" data-sort="${k}" aria-sort="none" tabindex="0"><span>${l}</span> <span class="srt" aria-hidden="true">↕</span></th>`).join('')}<th></th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>` : empty('Nenhuma posição na data escolhida.')}</div>`;
+      <div class="card flush">${pos.length ? `<div class="table-wrap"><table class="pos" id="pos-table"><thead><tr><th class="allpos"><button type="button" class="ghost-ico" data-allpos aria-label="Expandir ou recolher tudo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l5 5 5-5M7 13l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></th>${POS_COLS.slice(1).map(([k, l, c]) => `<th class="${c}" data-sort="${k}" aria-sort="none" tabindex="0"><span>${l}</span> <span class="srt" aria-hidden="true">↕</span></th>`).join('')}<th></th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>` : empty('Nenhuma posição na data escolhida.', ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button> <a class="btn" href="#/w/${id}/transacoes?new=1">Nova transação</a>` : '')}</div>`;
   });
   document.addEventListener('click', (e) => { const r = e.target.closest('tr.link[data-href]'); if (r && !e.target.closest('a,button')) location.hash = r.dataset.href.slice(1); });
 
@@ -162,7 +135,7 @@
   W.acts['imp-open'] = () => {
     const id = curId();
     W.modal({ title: 'Importar arquivo', wide: true, body: '<p class="muted small">Arraste aqui o CSV com todas as suas posições (ativo, quantidade e preço médio) ou o extrato de negociação da corretora. Você confere as colunas antes de importar; linhas repetidas não entram duas vezes.</p><div id="imp-host" style="margin-top:14px"></div>' });
-    W.importUI(document.getElementById('imp-host'), { mode: 'invest', label: 'Arraste o CSV de posições aqui', onImport: async (rows, name) => { const r = await W.rpc('w_tx_import', { p_wallet: id, p_filename: name, p_rows: rows }); return `<p><b>${r.new}</b> lançamentos novos · ${r.duplicates} já existiam · ${r.invalid} inválidos.</p><button class="btn" data-act="imp-done">Concluir</button>`; } });
+    W.importUI(document.getElementById('imp-host'), { mode: 'invest', label: 'Arraste o CSV de posições aqui', onImport: async (rows, name) => { const r = await W.rpc('w_tx_import', { p_wallet: id, p_filename: name, p_rows: rows }); return `<p><b>${r.new}</b> lançamentos novos${r.renda_fixa ? ` (${r.renda_fixa} ${r.renda_fixa === 1 ? 'título' : 'títulos'} de renda fixa com a curva calculada)` : ''} · ${r.duplicates} já existiam · ${r.invalid} inválidos.</p><button class="btn" data-act="imp-done">Concluir</button>`; } });
   };
   W.acts['imp-done'] = () => { W.closeModal(); W.refresh(); };
   W.acts['tx-edit'] = (el) => openTx(W.cur, W.txRows.find((t) => t.id === el.dataset.id));
