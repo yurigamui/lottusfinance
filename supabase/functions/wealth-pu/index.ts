@@ -1,4 +1,4 @@
-// Lottus Wealth — atualização diária de P.U. NÃO PUBLICADA nesta versão (a de produção em 23/11 é a v4, sem cripto nem ANBIMA).
+// Lottus Wealth — atualização diária de P.U. (publicada em 25/11/2026 com OK do Yuri; a curva da renda fixa é do banco).
 // Fontes gratuitas: BCB SGS (CDI 12, IPCA 433), Tesouro Transparente, CVM (informe diário), B3 COTAHIST e Mercado Bitcoin (cripto).
 // Novidades da v2 (pedido de 23/11):
 //  · Cripto: cotação em reais pela API pública do Mercado Bitcoin (CRYPTO_SOURCE=0 desliga).
@@ -490,25 +490,20 @@ Deno.serve(async (req) => {
     const ylds = await tesouro(assets, todayIso, cov);
     const cdi = await fetchAll('CDI'), ipca = await fetchAll('IPCA');
     const curves = makeCurves(cdi, ipca);
-    // renda fixa pela curva: P.U. de todo dia útil desde a emissão (só os dias que faltam), com o preço a mercado
-    const rf = assets.filter((a) => ['rf_pre', 'rf_pos', 'rf_ipca'].includes(a.kind) && !a.custom && a.issue_date && a.rate !== null);
+    // Renda fixa: a CURVA (P.U. de todo dia útil, ancorada na 1ª compra) é calculada e gravada pelo próprio banco
+    // (w_rf_reprice_all, no cron e no gatilho de edição do ativo). Aqui só se acrescenta o preço A MERCADO (pré e IPCA+, que
+    // dependem das curvas do Tesouro): mantém o P.U. já gravado pelo banco e preenche pu_mercado onde falta (e o dia de hoje).
+    const rf = assets.filter((a) => ['rf_pre', 'rf_ipca'].includes(a.kind) && !a.custom && a.issue_date && a.maturity && a.rate !== null);
     const rows: any[] = [];
     for (const a of rf) {
-      const c = cov.get(a.id);
-      // se taxa, emissão ou P.U. de emissão mudaram (ex.: edição em lote), o P.U. guardado no 1º dia não bate: recalcula tudo desde a emissão
-      let firstBiz = D(a.issue_date!); while (!isBiz(firstBiz)) firstBiz = new Date(firstBiz.getTime() + 864e5); // emissão em fim de semana/feriado
-      const firstOk = !!(c?.first_price && c.first_price <= iso(firstBiz) && c.first_pu !== null && c.first_pu !== undefined && (() => { const q = priceAsset(a, c.first_price!, curves, null); return !!q && Math.abs(q.pu - Number(c.first_pu)) < 1e-6 * Math.max(1, q.pu); })());
-      if (c && !firstOk && c.first_price) await sb.from('w_asset_prices').delete().eq('asset_id', a.id).eq('source', 'curva');
-      let start = firstOk && c?.last_price ? addDays(c.last_price, 1) : a.issue_date!;
-      if (c?.last_price && start > todayIso) start = todayIso; // recalcula o dia de hoje (índice novo pode ter chegado)
-      for (let t = D(start); iso(t) <= todayIso; t = new Date(t.getTime() + 864e5)) {
-        if (!isBiz(t) && iso(t) !== todayIso) continue;
-        const dt = iso(t); const p = priceAsset(a, dt, curves, ylds);
-        if (p) rows.push({ asset_id: a.id, date: dt, pu: r8(p.pu), pu_mercado: p.pu_mercado === null ? null : r8(p.pu_mercado), source: 'curva' });
+      const { data: ex } = await sb.from('w_asset_prices').select('date,pu,pu_mercado').eq('asset_id', a.id).eq('source', 'curva').or(`pu_mercado.is.null,date.eq.${todayIso}`).order('date', { ascending: false }).limit(1500);
+      for (const x of ex ?? []) {
+        const p = priceAsset(a, x.date, curves, ylds);
+        if (p && p.pu_mercado !== null) rows.push({ asset_id: a.id, date: x.date, pu: Number(x.pu), pu_mercado: r8(p.pu_mercado), source: 'curva' });
       }
     }
     await upsertPrices(rows);
-    log.push(`Renda fixa (curva e mercado): ${rows.length} preços para ${rf.length} ativos, ${rows.filter((x) => x.pu_mercado !== null).length} com preço a mercado`);
+    log.push(`Renda fixa a mercado: ${rows.length} preços para ${rf.length} ativos (a curva é do banco)`);
     await anbima(assets, todayIso);
     await crypto(assets, todayIso);
     await b3(assets, today, keepAll, cov);
