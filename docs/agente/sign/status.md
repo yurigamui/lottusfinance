@@ -25,9 +25,11 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 | 1 | 1.5 Verificação de identidade | não | não | não | — | 0 |
 | 1 | 1.6 Segurança da conta | não | não | não | — | 0 |
 
+## Modo de operação (25/11/2026)
+Autônomo: sem perguntas ao Yuri; produção só leitura; jurídico `[preencher]`. Em andamento: `ux-alinhamento.md` (designer) e Fichas das Partes 2 a 6 (idealizador).
+
 ## Próximo passo exato
-1. Micro-especificação da 1.2 Recuperar senha (`idealizador`), depois construir, verificar. Corrigir M-1, M-3, B-1, B-3, B-4 e T-09 (da 1.1) antes do G5 da Parte 1, junto com a 1.2, porque ambas mexem em `app.js` e `router.js`.
-2. Relatório da 1.1: `verificacao-1-1-ciclo-1.md`.
+1. **Seção 1.0 "Shell da área logada + correções da 1.1"**: micro-especificação (idealizador, a partir de `ux-alinhamento.md` e das pendências M-1, M-3, B-1, B-3, B-4, T-09) → construir → verificar. Depois 1.3, 1.5 e a ordem de `plano-de-construcao.md`.
 
 ## Bloqueios que dependem do Yuri
 Ver `pendencias.md` (J-01 a J-04, jurídico) e `docs/agente/depende-de-mim.md` (D-01 branch Supabase).
