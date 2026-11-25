@@ -13,7 +13,11 @@ trap 'q "$BIN/pg_ctl -D $WORK/data -m fast stop >/dev/null" || true; rm -rf "$WO
 export PGOPTIONS="-c client_min_messages=warning"
 P=(psql -X -q -v ON_ERROR_STOP=1 -h "$WORK" -p "$PORT" -U postgres -d postgres)
 "${P[@]}" -f "$ROOT/supabase/tests/_stub_wealth.sql"
-for m in "$ROOT"/supabase/migrations/*.sql; do echo "· aplicando $(basename "$m")"; "${P[@]}" -f "$m"; done
-for m in "$ROOT"/supabase/migrations/*.sql; do "${P[@]}" -f "$m"; done   # idempotência
+"${P[@]}" -f "$ROOT/supabase/tests/_stub_admin_billing.sql"   # Admin: planos, preços e cobrança (reprodução mínima de produção)
+# PG_ONLY="regex" (opcional) roda só migrações e testes cujo nome casa (ex.: PG_ONLY='admin|seguranca'); o padrão roda tudo.
+sel() { if [ -n "${PG_ONLY:-}" ]; then grep -E "$PG_ONLY" || true; else cat; fi; }
+MIGS=$(ls "$ROOT"/supabase/migrations/*.sql | sel); TESTS=$(ls "$ROOT"/supabase/tests/[!_]*.sql | sel)
+for m in $MIGS; do echo "· aplicando $(basename "$m")"; "${P[@]}" -f "$m"; done
+for m in $MIGS; do "${P[@]}" -f "$m"; done   # idempotência
 echo "· migrações reaplicadas sem erro (idempotentes)"
-for t in "$ROOT"/supabase/tests/[!_]*.sql; do echo "· teste $(basename "$t")"; PGOPTIONS="" "${P[@]}" -t -f "$t" 2>&1 | sed 's/^psql:[^ ]* NOTICE:  /  /; s/^NOTICE:  /  /' | grep -v '^\s*$'; done
+for t in $TESTS; do echo "· teste $(basename "$t")"; PGOPTIONS="" "${P[@]}" -t -f "$t" 2>&1 | sed 's/^psql:[^ ]* NOTICE:  /  /; s/^NOTICE:  /  /' | grep -v '^\s*$'; done
