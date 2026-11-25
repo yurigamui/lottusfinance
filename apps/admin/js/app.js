@@ -52,48 +52,12 @@
     sun: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
     moon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
     system: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-    menu: 'M4 6h16M4 12h16M4 18h16',
-    close: 'M6 6l12 12M18 6L6 18',
     logout: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
   };
   const icon = (name, cls = 'ico') =>
     `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
   window.BO.icon = icon;
 
-  // Menu em 5 grupos. Cada item é uma tela "pai"; as abas são telas que já existiam e mantêm o próprio id.
-  const NAV_GROUPS = [
-    { id: 'painel', label: 'Início', items: [{ id: 'painel', label: 'Início' }] },
-    { id: 'analises', label: 'Fila de análise', items: [
-      { id: 'identidade', label: 'Análises', tabs: [
-        { id: 'identidade', label: 'Identidade', count: 'identity' },
-        { id: 'documentos', label: 'Documentos', count: 'documents' },
-        { id: 'credito', label: 'Crédito', count: 'credit' },
-        { id: 'verificacoes', label: 'Verificações', count: 'verify' },
-      ] },
-      { id: 'operacoes', label: 'Operações', tabs: [
-        { id: 'operacoes', label: 'Operações' },
-        { id: 'quitacoes', label: 'Quitações' },
-        { id: 'agendamentos', label: 'Agendamentos' },
-      ] },
-    ] },
-    { id: 'partes', label: 'Cadastros', items: [
-      { id: 'empresas', label: 'Cedentes e sacados', tabs: [{ id: 'empresas', label: 'Cedentes' }, { id: 'sacados', label: 'Sacados' }] },
-      { id: 'parceiros', label: 'Fundos' },
-      { id: 'plataformas', label: 'Plataformas (API)' },
-    ] },
-    { id: 'crescimento', label: 'Comercial', items: [
-      { id: 'taxa', label: 'Taxa e repasse', tabs: [{ id: 'taxa', label: 'Taxa e repasse' }, { id: 'indicacoes', label: 'Indicações' }] },
-    ], soon: ['Clientes', 'Planos', 'Cobrança'] },
-    { id: 'controle', label: 'Jurídico e controle', items: [
-      { id: 'juridico', label: 'Jurídico', tabs: [{ id: 'juridico', label: 'Documentos assinados', count: 'legal' }, { id: 'contratos', label: 'Modelos' }] },
-      { id: 'motor', label: 'Configurações', tabs: [
-        { id: 'motor', label: 'Motor' },
-        { id: 'equipe', label: 'Equipe', admin: true, denied: 'Só administradores gerenciam a equipe.' },
-        { id: 'emails', label: 'E-mails', admin: true, denied: 'Só administradores gerenciam os e-mails.' },
-        { id: 'auditoria', label: 'Auditoria' },
-      ] },
-    ] },
-  ];
   // Menu em grupos. "empresas" e "parceiros" mantêm o id (links antigos continuam valendo).
   // Cada grupo é um botão só no menu; as páginas do grupo viram abas no topo da tela (tabs: true)
   const NAV_GROUPS = [
@@ -138,34 +102,9 @@
   // Páginas que continuam abrindo por link, fora do menu
   const EXTRA_TITLES = [['representantes', 'Representantes']];
   const NAV = NAV_GROUPS.flatMap((g) => g.items);
-  // Todo id antigo continua abrindo a mesma tela: o roteador só decide qual item pai fica ativo.
-  const ALIAS = {
-    documentos: { pai: 'identidade', aba: 'documentos' },
-    credito: { pai: 'identidade', aba: 'credito' },
-    verificacoes: { pai: 'identidade', aba: 'verificacoes' },
-    quitacoes: { pai: 'operacoes', aba: 'quitacoes' },
-    agendamentos: { pai: 'operacoes', aba: 'agendamentos' },
-    sacados: { pai: 'empresas', aba: 'sacados' },
-    indicacoes: { pai: 'taxa', aba: 'indicacoes' },
-    contratos: { pai: 'juridico', aba: 'contratos' },
-    equipe: { pai: 'motor', aba: 'equipe' },
-    emails: { pai: 'motor', aba: 'emails' },
-    auditoria: { pai: 'motor', aba: 'auditoria' },
-    representantes: { pai: 'empresas', aba: null }, // fora do menu, sem aba
-    _base: { pai: null, aba: null },                // página de apoio, sem item ativo
-  };
-  const resolveRoute = (view) => {
-    if (ALIAS[view]) return ALIAS[view];
-    const own = NAV.find((n) => n.id === view);
-    return own ? { pai: own.id, aba: own.id } : { pai: 'painel', aba: 'painel' };
-  };
   // Representante de parceiro: só as cessões para aceite
   const PARTNER_GROUPS = [{ id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] }];
-  const SECTION_TITLE = Object.assign(
-    Object.fromEntries(NAV.map((n) => [n.id, n.label])),
-    Object.fromEntries(NAV.flatMap((n) => (n.tabs || []).map((t) => [t.id, t.label]))),
-    { painel: 'Início', assinar: 'Operações', representantes: 'Representantes', _base: 'Base visual' },
-  );
+  const SECTION_TITLE = Object.fromEntries(NAV.map((n) => [n.id, n.label]).concat([['assinar', 'Operações']], EXTRA_TITLES));
   const navGroups = () => (me && me.partner ? PARTNER_GROUPS : NAV_GROUPS);
 
   /** Equipe Lottus ou representante de parceiro */
@@ -452,7 +391,7 @@
     if (cs) cs.onclick = () => (window.BO.copy ? window.BO.copy(cs.dataset.copySecret) : navigator.clipboard.writeText(cs.dataset.copySecret));
     const otp = wireOtp(form, () => form.requestSubmit());
     otp.focus();
-    document.getElementById('cancel').onclick = () => signOut();
+    document.getElementById('cancel').onclick = signOut;
     let busy = false;
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -474,15 +413,7 @@
     });
   }
 
-  // Destino guardado quando a sessão expira no meio do uso (só rota interna, nada sensível)
-  const DEST_KEY = 'lottus.bo.dest';
-  const validDest = (h) => typeof h === 'string' && h.length <= 200 && /^#\/[A-Za-z0-9_\-./%]*$/.test(h) && !h.includes('..');
-  function saveDest() { try { if (validDest(location.hash)) sessionStorage.setItem(DEST_KEY, location.hash); } catch { /* sem armazenamento */ } }
-  function takeDest() {
-    try { const h = sessionStorage.getItem(DEST_KEY); sessionStorage.removeItem(DEST_KEY); return validDest(h) ? h : ''; } catch { return ''; }
-  }
-  async function signOut(keepDest) {
-    if (keepDest !== true) { try { sessionStorage.removeItem(DEST_KEY); } catch { /* ok */ } }
+  async function signOut() {
     await sb.auth.signOut();
     me = null;
     location.hash = '';
@@ -491,34 +422,14 @@
 
   /* ------------------------------------------------------------ estrutura */
   let counts = {};
-  const isAdmin = () => !!me && me.level === 'admin';
-  const visibleTabs = (n) => (n.tabs || []).filter((t) => !t.admin || isAdmin());
-  // Item pai só aparece se o nível permitir pelo menos uma aba
-  const itemVisible = (n) => (n.tabs ? visibleTabs(n).length > 0 : !n.admin || isAdmin());
-  // Contagem do pai = soma das abas visíveis (cada aba tem a sua própria fila: nada se repete)
-  const itemCount = (n) => (n.tabs ? visibleTabs(n) : [n]).reduce((t, x) => t + (x.count ? Number(counts[x.count]) || 0 : 0), 0);
-
-  // Menu: um botão por grupo; ao passar o mouse (ou focar), abre ao lado os itens do grupo.
-  // No celular o mesmo markup vira gaveta (ver styles.css).
+  // Menu: um botão por seção; ao passar o mouse (ou focar), abre ao lado as opções da seção
   function navHtml(active) {
     const badge = (c) => (c ? `<span class="nav-count">${c > 99 ? '99+' : c}</span>` : '');
     return navGroups()
-      .map((g) => ({ ...g, items: g.items.filter(itemVisible) }))
+      .map((g) => ({ ...g, items: g.items.filter((n) => !n.admin || me.level === 'admin') }))
       .filter((g) => g.items.length)
       .map((g) => {
         const on = g.items.some((n) => n.id === active);
-        const total = g.items.reduce((t, n) => t + itemCount(n), 0);
-        const single = g.items.length === 1 && !(g.soon && g.soon.length);
-        const links = g.items.map((n) => {
-          const c = itemCount(n);
-          return `<a href="#/${esc(n.id)}" class="fly-item ${active === n.id ? 'active' : ''}"${active === n.id ? ' aria-current="page"' : ''}>
-            ${icon(n.id)}<span>${esc(n.label)}</span>${badge(c)}</a>`;
-        }).join('');
-        const soon = g.soon && g.soon.length
-          ? `<details class="soon"><summary>Em breve</summary><ul class="soon-list">${g.soon.map((t) => `<li class="fly-item is-disabled" aria-disabled="true">${icon('lock')}<span>${esc(t)}</span></li>`).join('')}</ul></details>`
-          : '';
-        return `<div class="nav-sec ${on ? 'on' : ''}${single ? ' single' : ''}" data-group="${esc(g.id)}">
-          <a href="#/${esc(g.items[0].id)}" class="nav-btn ${on ? 'active' : ''}" aria-label="${esc(g.label)}${total ? ` (${total})` : ''}"${single && on ? ' aria-current="page"' : ''}>
         const total = g.items.reduce((t, n) => t + (n.count ? counts[n.count] || 0 : 0), 0);
         const single = g.items.length === 1 || !!g.tabs;
         const fly = `<div class="flyout" role="menu" aria-label="${esc(g.label)}">
@@ -532,111 +443,35 @@
         return `<div class="nav-sec ${on ? 'on' : ''}${single ? ' single' : ''}" data-group="${g.id}">
           <a href="#/${g.items[0].id}" class="nav-btn ${on ? 'active' : ''}" aria-label="${esc(g.label)}${total ? ` (${total})` : ''}" aria-haspopup="${single ? 'false' : 'true'}"${single && on ? ' aria-current="page"' : ''}>
             ${icon(g.id === 'assinar' ? 'assinar' : g.id)}${badge(total)}</a>
-          <div class="flyout" role="group" aria-label="${esc(g.label)}">
-            <div class="flyout-title">${esc(g.label)}</div>
-            ${links}${soon}
-          </div>
+          ${fly}
         </div>`;
       })
       .join('');
   }
 
-  // Toque (tablet): o primeiro toque abre os itens, o segundo segue o link. No celular (≤768 px) vale a gaveta.
-  const MOBILE = window.matchMedia('(max-width: 768px)');
+  // Toque (celular/tablet): o primeiro toque abre as opções, o segundo segue o link
   function wireNav(nav) {
     nav.querySelectorAll('.nav-sec:not(.single) > .nav-btn').forEach((b) => {
       b.addEventListener('click', (e) => {
         const sec = b.parentElement;
-        if (!MOBILE.matches && window.matchMedia('(hover: none)').matches && !sec.classList.contains('open')) {
+        if (window.matchMedia('(hover: none)').matches && !sec.classList.contains('open')) {
           e.preventDefault();
           nav.querySelectorAll('.nav-sec.open').forEach((x) => x !== sec && x.classList.remove('open'));
           sec.classList.add('open');
         }
       });
     });
-    nav.querySelectorAll('.fly-item[href]').forEach((a) => a.addEventListener('click', () => {
-      a.closest('.nav-sec').classList.remove('open');
-      closeDrawer(true);
-    }));
+    nav.querySelectorAll('.fly-item').forEach((a) => a.addEventListener('click', () => a.closest('.nav-sec').classList.remove('open')));
   }
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.nav-sec')) document.querySelectorAll('.nav-sec.open').forEach((x) => x.classList.remove('open'));
   });
-  function paintNav(active) {
+  function paintNav(view) {
     const nav = document.getElementById('nav');
     if (!nav) return;
-    nav.innerHTML = navHtml(active);
+    nav.innerHTML = navHtml(view);
     wireNav(nav);
   }
-
-  /* ---------------------------------------------- gaveta do menu (celular) */
-  const drawerOpen = () => { const sh = document.querySelector('.shell'); return !!sh && sh.classList.contains('nav-open'); };
-  function setDrawer(open, giveFocusBack) {
-    const sh = document.querySelector('.shell'); if (!sh) return;
-    const btn = document.getElementById('menu-btn'), frame = document.querySelector('.frame'), back = document.getElementById('nav-backdrop');
-    if (open === drawerOpen()) return;
-    sh.classList.toggle('nav-open', open);
-    if (btn) btn.setAttribute('aria-expanded', String(open));
-    if (back) back.hidden = !open;
-    if (frame) frame.inert = open;
-    document.documentElement.classList.toggle('nav-lock', open);
-    if (open) {
-      const first = document.querySelector('#nav .fly-item.active') || document.querySelector('#nav .fly-item[href]') || document.getElementById('nav-close');
-      if (first) first.focus();
-    } else if (giveFocusBack && btn) btn.focus();
-  }
-  const closeDrawer = (giveFocusBack) => setDrawer(false, giveFocusBack);
-  function wireDrawer() {
-    const btn = document.getElementById('menu-btn');
-    btn.onclick = () => setDrawer(!drawerOpen(), true);
-    document.getElementById('nav-close').onclick = () => closeDrawer(true);
-    document.getElementById('nav-backdrop').onclick = () => closeDrawer(true);
-    document.addEventListener('keydown', (e) => {
-      if (!drawerOpen()) return;
-      if (e.key === 'Escape') { e.preventDefault(); closeDrawer(true); return; }
-      if (e.key !== 'Tab') return;
-      const f = [...document.querySelectorAll('#drawer a[href], #drawer button, #drawer summary')].filter((x) => x.offsetParent !== null);
-      if (!f.length) return;
-      const i = f.indexOf(document.activeElement);
-      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
-      else if (!e.shiftKey && (i === f.length - 1 || i < 0)) { e.preventDefault(); f[0].focus(); }
-    });
-    // Se a janela passar de 768 px com a gaveta aberta, ela fecha
-    MOBILE.addEventListener('change', (e) => { if (!e.matches) closeDrawer(false); });
-  }
-
-  /* ------------------------------------------- barra de abas do item pai */
-  const DETAIL_ID = /^([0-9a-f]{8}-[0-9a-f]{4}-|novo$)/i;
-  function paintTabs(r, params) {
-    const box = document.getElementById('viewtabs');
-    if (!box) return;
-    const item = !me.partner && NAV.find((n) => n.id === r.pai);
-    const tabs = item && item.tabs ? visibleTabs(item) : [];
-    // Fichas de um registro (id na rota) não levam a barra; as listas, sim
-    if (tabs.length < 2 || !r.aba || (params[0] && DETAIL_ID.test(params[0]))) { box.innerHTML = ''; box.dataset.pai = ''; return; }
-    if (box.dataset.pai !== r.pai) {
-      box.dataset.pai = r.pai;
-      box.innerHTML = `<div class="vtabs-scroll">${window.BO.ui.tabs(tabs.map((t) => [t.id, t.label]), r.aba)}</div>`;
-      const bar = box.querySelector('.tabs');
-      bar.setAttribute('aria-label', item.label);
-      window.BO.ui.onTabs(box, (id) => { if (location.hash !== '#/' + id) location.hash = '#/' + id; });
-      bar.addEventListener('scroll', () => scrollHint(box), { passive: true });
-    } else {
-      // Mesma barra: só troca a aba ativa (o foco do teclado não se perde)
-      box.querySelectorAll('[data-tab]').forEach((b) => { const on = b.dataset.tab === r.aba; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
-    }
-    const act = box.querySelector('.tabs .active'), bar = box.querySelector('.tabs');
-    if (act && bar) bar.scrollLeft = Math.max(0, act.offsetLeft - 16);
-    scrollHint(box);
-  }
-  // Indica, com um esmaecido, que a barra rola para o lado (aparece só quando há o que rolar)
-  function scrollHint(box) {
-    const bar = box.querySelector('.tabs'), wrap = box.querySelector('.vtabs-scroll');
-    if (!bar || !wrap) return;
-    wrap.classList.toggle('more-l', bar.scrollLeft > 4);
-    wrap.classList.toggle('more-r', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 4);
-  }
-  window.addEventListener('resize', () => { const box = document.getElementById('viewtabs'); if (box) scrollHint(box); });
 
   function startShell() {
     window.BO.me = me;
@@ -646,12 +481,7 @@
       <div class="shell">
         <aside class="sidenav">
           <a href="#/${me.partner ? 'assinar' : 'painel'}" class="sidenav-mark" aria-label="Lottus, início"></a>
-          <button type="button" class="menu-open" id="menu-btn" aria-expanded="false" aria-controls="drawer">${icon('menu')}<span>Menu</span></button>
-          <div class="nav-backdrop" id="nav-backdrop" hidden></div>
-          <div class="drawer" id="drawer">
-            <button type="button" class="nav-close" id="nav-close" aria-label="Fechar menu">${icon('close')}<span>Fechar</span></button>
-            <nav class="sidenav-items" id="nav" aria-label="Menu"></nav>
-          </div>
+          <nav class="sidenav-items" id="nav" aria-label="Menu"></nav>
         </aside>
         <main class="frame">
           <div class="surface">
@@ -679,13 +509,10 @@
                 </div>
               </div>
             </header>
-            <div class="vtabs" id="viewtabs"></div>
             <div class="content" id="view"></div>
           </div>
         </main>
       </div>`;
-    document.getElementById('logout').onclick = () => signOut();
-    wireDrawer();
     document.getElementById('logout').onclick = signOut;
     const pop = (btnId, menuId, onOpen) => {
       const b = document.getElementById(btnId), m = document.getElementById(menuId);
@@ -733,8 +560,7 @@
     avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });
     const home = me.partner ? '#/assinar' : '#/painel';
-    if (!location.hash || location.hash === '#/') { const d = takeDest(); location.hash = d && (!me.partner || d.startsWith('#/assinar')) ? d : home; }
-    else if (me.partner && !location.hash.startsWith('#/assinar')) location.hash = home;
+    if (!location.hash || location.hash === '#/' || (me.partner && !location.hash.startsWith('#/assinar'))) location.hash = home;
     route();
     refreshCounts();
   }
@@ -743,20 +569,11 @@
     if (me && me.partner) {
       try {
         counts = { sign: (await rpc('partner_operations', { p_tab: 'pending' })).length };
-        paintNav(activeParent());
+        paintNav(currentView());
       } catch { /* a tela mostra o erro */ }
       return;
     }
     try {
-      const d = await rpc('bo_dashboard');
-      counts = {
-        identity: d.identity, documents: d.documents, credit: d.credit,
-        ops: d.operations_review + d.operations_to_pay, settlements: d.settlements,
-        billing: Number(d.overdue || 0) + Number(d.settlements || 0), legal: Number(d.documents_missing || 0) + Number(d.notices_problem || 0),
-      };
-      counts.verify = await rpc('bo_verify_count').catch(() => 0);
-      window.BO.dashboard = d;
-      paintNav(activeParent());
       const [d, n] = await Promise.all([rpc('bo_home', { p_months: 3 }), rpc('bo_notifications', { p_seen: false }).catch(() => null)]);
       const t = d.today;
       counts = { overdue: Number(t.overdue_invoices.count), payables: Number(t.payables_week.count), tasks: Number(t.tasks.count), requests: Number(t.requests), red: Number(t.red_customers) };
@@ -768,38 +585,14 @@
   window.BO.refreshCounts = refreshCounts;
 
   const currentView = () => (location.hash.replace(/^#\//, '').split('/')[0] || 'painel');
-  const activeParent = () => (me && me.partner ? 'assinar' : resolveRoute(currentView()).pai);
-
-  // Devolve o item/aba admin:true que corresponde à rota, se o nível atual não for admin
-  function adminOnlyTab(view) {
-    if (isAdmin()) return null;
-    for (const n of NAV) {
-      if (n.id === view && n.admin) return n;
-      const t = (n.tabs || []).find((x) => x.id === view);
-      if (t && (t.admin || n.admin)) return t.admin ? t : n;
-    }
-    return null;
-  }
 
   async function route() {
     if (!me) return;
     const [view, ...params] = location.hash.replace(/^#\//, '').split('/');
-    let r = me.partner ? { pai: 'assinar', aba: 'assinar' } : resolveRoute(view);
-    // Aba/item marcado admin:true: bloqueia por nível antes de chamar a tela (nenhuma RPC)
-    const blocked = me.partner ? null : adminOnlyTab(view);
-    if (blocked) r = { pai: r.pai, aba: '__bloqueada' };
-    paintNav(r.pai);
-    paintTabs(r, blocked ? [] : params);
-    closeDrawer(false);
+    paintNav(view);
     const crumb = document.getElementById('crumb');
-    if (crumb) crumb.textContent = (me.partner ? 'Lottus Partners · ' : 'Admin · ') + (me.partner ? 'Operações' : SECTION_TITLE[view] || 'Início');
+    if (crumb) crumb.textContent = (me.partner ? 'Lottus Partners · ' : 'Admin · ') + (SECTION_TITLE[view] || 'Painel');
     const el = document.getElementById('view');
-    if (blocked) {
-      el.innerHTML = `<div class="card"><div class="empty"><p>${esc(blocked.denied || 'Só administradores acessam esta página.')}</p>
-        <p><a class="btn secondary" href="#/painel">Voltar ao Início</a></p></div></div>`;
-      el.scrollTop = 0;
-      return;
-    }
     const fn = me.partner ? window.BO.views.assinar : window.BO.views[view] || window.BO.views.painel;
     el.innerHTML = '<div class="spinner" aria-label="Carregando"></div>';
     el.scrollTop = 0;
@@ -812,25 +605,19 @@
       }
     } catch (e) {
       const msg = message(e);
-      if (/mfa_required|forbidden|JWT|session/i.test(e.message || '')) { saveDest(); signOut(true); return; }
+      if (/mfa_required|forbidden|JWT|session/i.test(e.message || '')) { signOut(); return; }
       el.innerHTML = `<div class="card"><div class="error-box">${esc(msg)}</div>
         <div style="margin-top:12px"><button class="btn secondary" data-reload>Tentar de novo</button></div></div>`;
     }
   }
-  // Contagens: só buscam de novo ao trocar de item pai ou depois de 30 s (trocar de aba não recarrega)
-  let lastPai = null, lastCounts = 0;
-  window.addEventListener('hashchange', () => {
-    route();
-    const pai = activeParent();
-    if (pai !== lastPai || Date.now() - lastCounts > 30000) { lastPai = pai; lastCounts = Date.now(); refreshCounts(); }
-  });
+  window.addEventListener('hashchange', () => { route(); refreshCounts(); });
   window.BO.reload = () => { route(); refreshCounts(); };
 
   /* --------------------------------------------------- saída por inatividade */
   let idle;
   const bump = () => {
     clearTimeout(idle);
-    idle = setTimeout(() => { if (me) { saveDest(); signOut(true); window.BO.toast('Sessão encerrada por inatividade.'); } },
+    idle = setTimeout(() => { if (me) { signOut(); window.BO.toast('Sessão encerrada por inatividade.'); } },
       (window.LOTTUS_CONFIG.idleMinutes || 30) * 60000);
   };
   ['click', 'keydown', 'mousemove', 'scroll'].forEach((ev) => window.addEventListener(ev, bump, { passive: true }));

@@ -862,3 +862,24 @@ ol.timeline li::before { content: ''; position: absolute; left: -25px; top: 5px;
 .list-row.integ + .list-row.integ { border-top: 1px solid var(--line); }
 code { font-size: 12px; background: var(--soft); padding: 1px 5px; border-radius: 6px; word-break: break-all; }
 @media (max-width: 760px) { .cal-day { min-height: 70px; } .cal-chip { font-size: 10px; } .menu.notif { right: -60px; } }
+
+/* ---------- Início "Para fazer hoje" ---------- */
+.td { max-width: 880px; min-width: 0; }
+.td-group { margin-bottom: 20px; min-width: 0; }
+.td-list { list-style: none; margin: 0; padding: 0; overflow: hidden; }
+.td-row { display: grid; grid-template-columns: minmax(48px, max-content) minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 56px; padding: 12px 16px; text-decoration: none; color: inherit; border-top: 1px solid var(--line); }
+.td-list li:first-child .td-row { border-top: none; }
+.td-row:hover { background: var(--hover); }
+.td-row:focus-visible, .td .btn:focus-visible { outline: 2px solid var(--rosa); outline-offset: -2px; box-shadow: var(--focus); }
+.td-count { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--rosa); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.td-label { font-size: 14.5px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.td-more { margin-bottom: 16px; min-width: 0; }
+.td-kpis { margin-bottom: 0; }
+.td-kpis .kpi { min-width: 0; overflow-wrap: anywhere; }
+.td-ops { margin: 0 0 16px; }
+.td-ops .btn { min-height: 44px; }
+.td-recent { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.td-recent .recent-row { min-height: 44px; min-width: 0; }
+.td-recent .recent-row > .grow { min-width: 0; }
+.td-name { font-weight: 700; overflow-wrap: anywhere; }
+@media (min-width: 768px) { .td-row { padding: 14px 24px; } }

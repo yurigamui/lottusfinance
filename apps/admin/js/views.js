@@ -162,7 +162,7 @@
   views.empresas = async (el, [id, sub], me) => {
     if (id && sub === 'credito') return B.creditPage(el, id, me || await rpc('bo_me'));
     if (id) return companyDetail(el, id);
-    el.innerHTML = `${head('Cedentes', null, `<div class="row"><input class="input search" id="q" type="search" placeholder="Buscar por nome ou CNPJ" aria-label="Buscar empresa"><button class="btn secondary" id="ficha">Importar ficha de crédito</button></div>`)}
+    el.innerHTML = `${head('Empresas', null, `<div class="row"><input class="input search" id="q" type="search" placeholder="Buscar por nome ou CNPJ" aria-label="Buscar empresa"><button class="btn secondary" id="ficha">Importar ficha de crédito</button></div>`)}
       <div class="card flush"><div class="table-wrap" id="list"><div class="spinner"></div></div></div>`;
     const q = el.querySelector('#q');
     el.querySelector('#ficha').onclick = () => B.importCreditSheet();
