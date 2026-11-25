@@ -39,3 +39,5 @@
 | M-3 | Estado "link vencido": após reenviar, botão e contagem somem | Média | Desenvolvedor | Antes do G5 da Parte 1 | verificação 1.1 |
 | B-1/B-3/B-4 | Hash do Auth só no carregamento; `aria-pressed` no "Mostrar"; tema escuro forçado a claro por `theme.js` (decidir) | Baixa | Desenvolvedor | Antes do G5 | verificação 1.1 |
 | T-09 | Desempenho em rede lenta: 7 módulos em cascata; meta de 1 s não atingida (1,7 s a 1,6 Mbps/150 ms). Pré-carregar (`modulepreload`) ou agrupar | Média | Desenvolvedor | Antes do G5 | nota de construção |
+| UX-01 | Tema escuro nas 4 plataformas: `lottus.theme` com claro/escuro/sistema e seletor em Conta, para todas de uma vez (CSS escuro já existe) | Baixa | Yuri/Maestro | Pós-v1 | ux-alinhamento.md |
+| UX-02 | Folha inferior (modal no celular) só nasce no Sign; portar às outras plataformas exige reverificação delas (regra 14) | Baixa | Maestro | Pós-v1 | ux-alinhamento.md |
