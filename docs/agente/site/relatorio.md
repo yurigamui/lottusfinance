@@ -17,3 +17,6 @@ Formulário de contato real, `conectar/` dentro de um iframe de parceiro com câ
 
 ## Depende do Yuri
 CNPJ, endereço, encarregado e comarca (S-001); endereços das redes e das lojas (S-002); qual versão dos Termos é a vigente (S-003); destino do formulário (S-004); apontar a hospedagem para `apps/site` e `apps/news` (P-01).
+
+## Atualização 24/11/2026: Soluções + SEO técnico
+Veredito do verificador (contexto limpo): **Aprovada com ressalvas**, sem achado alto ou bloqueante. `check.mjs` 0 erros; `smoke.mjs` sem problemas; 0 violações de CSP em 9 páginas; 10 larguras de 320 a 2560 px e zoom de 200% sem rolagem horizontal; JSON-LD idêntico ao FAQ visível. Achado médio (contraste da pílula "Aguardando", 4,24:1) corrigido para ≥ 6:1. Pendências S-006 a S-012. Não medido: desempenho em rede real, Safari/Firefox, leitor de tela.

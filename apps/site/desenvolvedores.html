@@ -3,8 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>API para plataformas · Lottus Finance</title>
-<meta name="description" content="Documentação da API da Lottus para plataformas que querem oferecer antecipação de recebíveis.">
+<title>API de antecipação de recebíveis para plataformas | Lottus Finance</title>
+<meta name="description" content="Documentação da API da Lottus para plataformas que querem oferecer antecipação de recebíveis aos seus clientes.">
+<link rel="canonical" href="https://lottusfinance.com.br/desenvolvedores.html">
+<meta property="og:title" content="API de antecipação de recebíveis para plataformas | Lottus Finance">
+<meta property="og:description" content="Documentação da API da Lottus para plataformas que querem oferecer antecipação de recebíveis aos seus clientes.">
+<meta property="og:image" content="https://lottusfinance.com.br/img/og.png">
+<meta property="og:locale" content="pt_BR">
 <meta name="color-scheme" content="light">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -354,11 +359,6 @@ def aviso_valido(corpo_bruto: bytes, cabecalho: str, segredo: str) -&gt; bool:
   <span><a href="termos.html">Termos de Uso</a> · <a href="privacidade.html">Política de Privacidade</a></span>
 </footer>
 <script src="vendor/lenis.min.js"></script>
-<script>
-if (window.Lenis) { var l = new Lenis({ lerp: 0.09, wheelMultiplier: 0.9 }); document.documentElement.style.scrollBehavior = 'auto';
-  (function f(t) { l.raf(t); requestAnimationFrame(f); })(0);
-  document.addEventListener('click', function (e) { var a = e.target.closest('a[href^="#"]'); if (!a) return; var t = document.getElementById(a.getAttribute('href').slice(1));
-    if (t) { e.preventDefault(); l.scrollTo(t, { offset: -16, duration: 1.1 }); history.pushState(null, '', a.getAttribute('href')); } }); }
-</script>
+<script src="lenis-init.js"></script>
 </body>
 </html>

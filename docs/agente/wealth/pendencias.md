@@ -46,8 +46,8 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-040 | Modal de dados de cobrança: erros de CPF/CEP aparecem só no aviso flutuante, não ao lado do campo | Baixa | Agente | próxima rodada | verificação 23/11 (B1) |
 | W-041 | **Resolvida na v2 (pede a senha atual).** Troca de senha em Conta e plano não pede a senha atual nem a confirmação da nova: uma sessão aberta basta. Opções: pedir a senha atual e reautenticar antes de `updateUser`, ou ligar "Secure password change" no Supabase Auth | Média | Agente (front) e Yuri (configuração do Auth) | antes do lançamento | verificação 23/11 (X3) |
 | W-042 | CSV: o "Peso" sai com muitas casas decimais e o "Tipo" das transações sai como código (compra/venda) | Baixa | Agente | próxima rodada | verificação 23/11 (X2) |
-| W-043 | v2: adaptadores de pagamento (Trio Pix Automático, Asaas cartão/boleto) **não testados contra os provedores**; endereços e campos da Trio a preencher (documentação não pública) | Alta | Yuri (credenciais de sandbox e documentação da Trio) | antes de cobrar | v2 23/11 |
-| W-044 | v2: ANBIMA desligada até confirmar a licença de uso dos dados de debêntures/CRI/CRA; endpoints a conferir com a documentação da ANBIMA Data | Média | Yuri (jurídico/contrato) | a definir | v2 23/11 |
+| W-043 | v2: adaptadores de pagamento **não testados contra os provedores**. Trio reescrita conforme a documentação V2 em 24/11 (falta credencial de sandbox); Asaas escrita sem a documentação | Alta | Yuri (credenciais de sandbox e documentação da Trio) | antes de cobrar | v2 23/11 |
+| W-044 | **Licença confirmada (24/11); endpoints conferidos e corrigidos.** Falta só a credencial da ANBIMA | Baixa | Yuri (credencial) | a definir | v2 23/11 |
 | W-045 | v2: mês da assinatura é cobrado inteiro (sem proporcional) | Baixa | Yuri (regra de preço) | a definir | v2 23/11 |
 | W-046 | v2: API sem limite de chamadas por minuto e sem escrita | Média | Agente | próxima rodada | v2 23/11 |
 | W-047 | v2: `w_equity` com benchmark faz uma soma por transação por mês; medir com volume real no branch (1.000+ transações, 60 meses) | Média | Agente | no branch (D-01) | v2 23/11 |
@@ -55,3 +55,19 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-049 | v2 R1: com duas etapas ativas, código errado na troca de senha deixa a sessão no nível 1 até sair (a senha atual é conferida antes do código). Usar a reautenticação do Supabase (nonce) no lugar de `signInWithPassword` | Média | Agente | próxima rodada | verificação v2 ciclo 2 |
 | W-050 | v2 R2: `w_equity` com benchmark passa de 300 ms com 120 meses × 1.000 lançamentos (398 ms) ou 60 meses × 5.000 (670 ms); somar `tw` uma vez com janela | Média | Agente | próxima rodada | verificação v2 ciclo 2 |
 | W-051 | v2 R3/R4/R5: abas do gráfico quebram em 2 linhas em 320 px; erro de CPF/CNPJ de cobrança só no aviso e CPF/CEP sem máscara no cartão; logo Lottus some do menu até 420 px | Baixa | Agente | próxima rodada | verificação v2 ciclo 2 |
+| W-052 | v3 M6: Ativos personalizados sem paginação (106 linhas numa página com 100 ativos) | Média | Agente | próxima rodada | verificação v3 ciclo 1 |
+| W-053 | v3 M7: `wealth-pu?action=pu_at` sem limite de chamadas por usuário nem cache (agora exige editor) | Média | Agente | antes de publicar a função | verificação v3 ciclo 1 |
+| W-054 | v3 B7: `w_equity_range` 1ª chamada a frio 440 ms (mediana 177 ms); medir no branch com volume real | Baixa | Agente | no branch (D-01) | verificação v3 ciclo 1 |
+| W-055 | v3: mês sem preço na fonte (ativo sem negócio no mês) fica como "buraco" e é baixado de novo a cada execução (limitado a 3–4 arquivos por execução) | Baixa | Agente | próxima rodada | revisão própria |
+| W-056 | v3: textos do recibo e do e-mail de atraso para o jurídico | Média | Yuri (jurídico) | antes de cobrar | verificação v3 ciclo 1 |
+| W-057 | v3 B5: visualizadora vê o formulário de Nova transação por `?new=1` (o servidor nega ao salvar) | Baixa | Agente | próxima rodada | verificação v3 (pré-existente) |
+| W-058 | v3 C2-B2: ao trocar um ativo de manual para "pela curva", o cálculo pode sobrescrever valores informados à mão nas mesmas datas (sem aviso) | Baixa | Agente | próxima rodada | verificação v3 ciclo 2 |
+| W-059 | v3 C2-B6: Gastos > Cadastros em 1280 px esconde botões de uma tabela de meia coluna atrás de rolagem lateral (fora do escopo da v3) | Baixa | Agente | próxima rodada | verificação v3 ciclo 2 |
+| W-038 | **Resolvida na v3:** índice de trigramas (pg_trgm) sobre o nome sem acento; busca em 50 mil ativos ~10 ms | — | — | — | v3 ciclo 3 |
+| W-060 | v3 C3-B2: "Desde o início" com 41 anos de histórico leva ~800 ms (passo mensal); a meta de 300 ms vale para 1 ano diário, que passou | Baixa | Agente | acompanhar no branch | verificação v3 ciclo 3 |
+| W-061 | v3: linha clicável das faturas sem `tabindex`/`role` (o "Ver" continua acessível por teclado) | Baixa | Agente | próxima rodada | verificação v3 ciclo 3 |
+| W-062 | Trio TR-M3: fatura que perde a janela de agendamento do Pix Automático (2 a 10 dias antes do vencimento) fica com erro a cada rodada; falta um Pix avulso (QR dinâmico) como alternativa, com texto próprio | Média | Agente | antes de cobrar | verificação Trio 24/11 |
+| W-063 | Trio TR-B1: a Trio recusa versões antigas do cabeçalho `Trio-Version` (hoje `2026-10-19.v2`); quando sair uma nova, as chamadas falham até atualizar `TRIO_VERSION` — criar alerta | Baixa | Agente/Yuri | antes de cobrar | verificação Trio 24/11 |
+| W-064 | O mesmo CPF/CNPJ é aceito nos dados de cobrança de usuários diferentes (ex.: uma empresa pagando por várias pessoas). Confirmar se é a regra desejada | Baixa | Yuri (regra) | a definir | verificação Trio 24/11 |
+| W-065 | `w_equity` (v2) com 60 meses × 1.000 lançamentos oscila entre 270 e 304 ms, no limite da meta de 300 ms (ver W-050) | Baixa | Agente | no branch | 24/11 |
+| W-066 | Acessibilidade: ao fechar um modal (Esc ou Fechar), o foco não volta ao botão que o abriu (provavelmente em todos os modais) | Baixa | Agente | próxima rodada | verificação Trio ciclo 3 |

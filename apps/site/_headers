@@ -1,6 +1,6 @@
 # Cabeçalhos de segurança do site (Cloudflare lê este arquivo)
 /*
-  Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://rowhslnnlzfbhmzbylbz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
@@ -23,3 +23,9 @@
   Referrer-Policy: no-referrer
 /descadastrar.html
   Referrer-Policy: no-referrer
+
+# Arquivos de SEO
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+/robots.txt
+  Cache-Control: public, max-age=3600

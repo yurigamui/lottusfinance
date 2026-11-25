@@ -27,6 +27,15 @@
   /** rows: [{label, long, a, b?}]  a = série principal (área); b = série tracejada (ex.: aportes) */
   W.lineChart = (host, rows, o = {}) => {
     const { wrap, tip } = shell(host); const fmt = o.format || W.brl; const H = o.height || 260; const names = o.names || ['Valor', 'Aportes'];
+    // seleção por arraste (como no Google): o balão mostra o desempenho só do trecho escolhido
+    let sel = null, drag = null; const bubble = document.createElement('div'); bubble.className = 'chart-sel'; bubble.hidden = true; wrap.appendChild(bubble);
+    const paintBubble = () => {
+      if (!sel || !o.onRange) { bubble.hidden = true; return; }
+      const r = o.onRange(Math.min(sel.a, sel.b), Math.max(sel.a, sel.b)); if (!r) { bubble.hidden = true; return; }
+      const cls = W.cls(r.money); bubble.hidden = false;
+      bubble.innerHTML = `<span class="sel-val ${cls}">${r.money === null || r.money === undefined ? '' : W.sign(r.money, fmt)}${r.pct === null || r.pct === undefined ? '' : ` (${W.sign(r.pct, (v) => W.pct(v, 2))})`} <span aria-hidden="true">${Number(r.money) >= 0 ? '↑' : '↓'}</span></span><span class="sel-per">${W.esc(r.from)} – ${W.esc(r.to)}</span><button type="button" class="sel-x" aria-label="Limpar seleção">×</button>`;
+      bubble.querySelector('.sel-x').onclick = () => { sel = null; draw(); };
+    };
     function draw() {
       const Wd = Math.max(200, wrap.clientWidth), m = { t: 16, r: 8, b: 26, l: 56 }, pw = Wd - m.l - m.r, ph = H - m.t - m.b;
       const vals = rows.flatMap((r) => [r.a, r.b, r.c]).filter((v) => v !== undefined && v !== null).map(Number);
@@ -54,7 +63,25 @@
         hit.addEventListener('pointerenter', show); hit.addEventListener('pointermove', show); hit.addEventListener('pointerleave', hide); hit.addEventListener('focus', show); hit.addEventListener('blur', hide);
         svg.appendChild(hit);
       });
+      if (o.onRange && rows.length > 1) {
+        svg.style.touchAction = 'pan-y'; svg.classList.add('selectable');
+        const band = el('rect', { class: 'sel-band', y: m.t, height: ph, visibility: 'hidden' }); svg.insertBefore(band, svg.querySelector('.chart-hit'));
+        const d1 = el('circle', { r: 5, class: 'sel-dot', visibility: 'hidden' }), d2 = el('circle', { r: 5, class: 'sel-dot', visibility: 'hidden' }); svg.append(d1, d2);
+        const idxAt = (cx) => { const b = svg.getBoundingClientRect(); return Math.max(0, Math.min(rows.length - 1, Math.round(((cx - b.left - m.l) / pw) * (rows.length - 1)))); };
+        const paint = () => {
+          if (!sel || sel.a === sel.b) { band.setAttribute('visibility', 'hidden'); d1.setAttribute('visibility', 'hidden'); d2.setAttribute('visibility', 'hidden'); return; }
+          const lo = Math.min(sel.a, sel.b), hi = Math.max(sel.a, sel.b);
+          band.setAttribute('x', x(lo)); band.setAttribute('width', Math.max(1, x(hi) - x(lo))); band.setAttribute('visibility', 'visible');
+          d1.setAttribute('cx', x(lo)); d1.setAttribute('cy', y(Number(rows[lo].a))); d2.setAttribute('cx', x(hi)); d2.setAttribute('cy', y(Number(rows[hi].a))); d1.setAttribute('visibility', 'visible'); d2.setAttribute('visibility', 'visible');
+        };
+        svg.addEventListener('pointerdown', (e) => { if (e.button > 0) return; drag = { a: idxAt(e.clientX), moved: false }; sel = null; try { svg.setPointerCapture(e.pointerId); } catch (x) { /* sem captura */ } });
+        svg.addEventListener('pointermove', (e) => { if (!drag) return; const i = idxAt(e.clientX); if (i !== drag.a) { drag.moved = true; sel = { a: drag.a, b: i }; tip.hidden = true; paint(); paintBubble(); } });
+        const end = () => { if (drag && !drag.moved) { sel = null; paint(); paintBubble(); } drag = null; };
+        svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+        paint();
+      }
       const old = wrap.querySelector('svg'); if (old) old.replaceWith(svg); else wrap.insertBefore(svg, tip);
+      paintBubble();
     }
     draw();
     const hasC = rows.some((r) => r.c !== undefined && r.c !== null);
