@@ -32,3 +32,10 @@
 | A-027 | Arquivos do Admin antigo sem uso na nova index (operations.js, credit*.js, pricing.js, growth.js, legal.js, receipt.js, notices.js, verify.js, api-partners.js, dashboard.js, portal.js, reports.js?, base-demo.js): confirmar o que a versão nova ainda carrega e mover o restante para `_revisar/` (não apagar) | Média | Maestro | Parte 1 | replanejamento |
 | A-028 | Régua `_bill_reminders_run` só cobre faturas com `org_id` em `one_orgs` com `remind_enabled`; faturas automáticas (taxa de plataforma e Sign) têm `org_id` nulo e NÃO recebem lembrete. Decidir: régua cobrir `org_id` nulo (usando `billing_settings.remind_enabled`) ou atribuir org às faturas | Alta | Arquiteto | Parte 4 (antes de aplicar) | migração planos/preços |
 | A-029 | Migração `20261125120000` nunca rodou contra o banco real: comparar `_platform_fee_run`, `_plan_fee`, `_staff` com produção; validar `customer_email` nulo nas faturas do Sign (sign_accounts não tem e-mail); `w_billing_close` passar a usar `_w_price_for`; job pg_cron | Alta | Yuri (D-01 branch) | antes do release | migração planos/preços |
+| A-101 | (B1 A-01) Menu mobile inexistente (≤768 px) | **Bloqueante** | Dev | Pacote 1 | relatorio-b1 |
+| A-102 | (B1 A-02) Fuso UTC em faturamento/comercial/financeiro | Alta | Dev | Pacote 1 | relatorio-b1 |
+| A-103 | (B1 A-03) Hash `/new` reabre modal após salvar | Alta | Dev | Pacote 1 | relatorio-b1 |
+| A-104 | (B1 A-04) Rotas admin:true abertas por link; escrita visível sem nível; token no DOM; conferir RPCs no servidor | Alta | Dev + Auditor | Pacote 1 | relatorio-b1 |
+| A-105 | (B1 A-05) Preço personalizado/plano sem motivo, validade, alçada, confirmação | Alta | Dev | Pacote 3 (usa migração 20261125120000) | relatorio-b1 |
+| A-106 | (B1 A-06..A-19) Médios do relatório B1 (corrida, listas, alvos, modal, validações, rotas mortas) | Média | Dev | Pacotes 1 e 2 | relatorio-b1 |
+| A-107 | (B1 A-20..A-24) Baixos do relatório B1 | Baixa | Dev | Pacote 2 | relatorio-b1 |
