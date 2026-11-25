@@ -33,8 +33,8 @@ insert into public.funders (id, legal_name, trade_name, cnpj, email) values
   ('f0000000-0000-0000-0000-000000000002', 'Fundo Exemplo B', 'Exemplo B', '00000000000272', 'b@exemplo.test'),
   ('f0000000-0000-0000-0000-000000000003', 'Fundo Exemplo C', 'Exemplo C', '00000000000353', 'c@exemplo.test');
 insert into public.funder_billing (funder_id, origin, exempt, pl_declared) values
-  ('f0000000-0000-0000-0000-000000000001', 'self', false, 60000000),   -- faixa Pleno 0,40% a.a.: 60e6*0,4/100/12 = 20000,00 (mín. 2500)
-  ('f0000000-0000-0000-0000-000000000002', 'self', false, 30000000),   -- faixa Essencial 0,60%: 30e6*0,6/100/12 = 15000,00
+  ('f0000000-0000-0000-0000-000000000001', 'invite', false, 60000000),   -- contrato padrão 0,0010 a.a.: 60e6*0,001/12 = 5000,00
+  ('f0000000-0000-0000-0000-000000000002', 'self', false, 30000000),      -- tabela global, faixa com rate_aa 0,001 e mín. 390: 30e6*0,001/12 = 2500,00
   ('f0000000-0000-0000-0000-000000000003', 'self', true, 80000000);    -- isento: não gera
 insert into public.sign_accounts (id, name, doc, plan, created_at) values
   ('50000000-0000-0000-0000-000000000001', 'Conta Sign Essencial', '11111111111', 'essencial', '2026-01-10'),
@@ -51,10 +51,12 @@ insert into public.w_profiles (user_id, name, plan) values
 do $$ declare n int; begin
   n := public._platform_fee_run('2026-10-15');
   perform pg_temp.chk('R1 _platform_fee_run gera 2 fundos (isento fora)', n = 2);
-  perform pg_temp.chk('R2 fundo A = 20000,00 (faixa Pleno)', (select amount from public.platform_fees where funder_id = 'f0000000-0000-0000-0000-000000000001' and ref_month = '2026-10-01') = 20000.00);
-  perform pg_temp.chk('R3 fundo B = 15000,00 (faixa Essencial)', (select amount from public.platform_fees where funder_id = 'f0000000-0000-0000-0000-000000000002' and ref_month = '2026-10-01') = 15000.00);
-  perform pg_temp.chk('R4 taxa gravada = taxa de tabela', (select rate_aa from public.platform_fees where funder_id = 'f0000000-0000-0000-0000-000000000001') = 0.40);
-  perform pg_temp.chk('R5 rodar de novo não duplica', public._platform_fee_run('2026-10-01') = 2 and (select count(*) from public.platform_fees) = 2);
+  perform pg_temp.chk('R2 fundo A (contrato padrão) = 5000,00', (select amount from public.platform_fees where funder_id = 'f0000000-0000-0000-0000-000000000001' and ref_month = '2026-10-01') = 5000.00);
+  perform pg_temp.chk('R3 fundo B (tabela global) = 2500,00', (select amount from public.platform_fees where funder_id = 'f0000000-0000-0000-0000-000000000002' and ref_month = '2026-10-01') = 2500.00);
+  perform pg_temp.chk('R4 taxa gravada = padrão 0,0010', (select rate_aa from public.platform_fees where funder_id = 'f0000000-0000-0000-0000-000000000001') = 0.0010);
+  perform pg_temp.chk('R5 rodar de novo não duplica (on conflict do nothing)', public._platform_fee_run('2026-10-01') = 2 and (select count(*) from public.platform_fees) = 2);
+  perform pg_temp.chk('R7 _partners_fee_calc (exibição) = valor da rotina', (public._partners_fee_calc('f0000000-0000-0000-0000-000000000001', '2026-10-31')->>'amount')::numeric = 5000.00
+    and (public._partners_fee_calc('f0000000-0000-0000-0000-000000000002', '2026-10-31')->>'amount')::numeric = 2500.00);
   perform pg_temp.chk('R6 isento não gera', not exists (select 1 from public.platform_fees where funder_id = 'f0000000-0000-0000-0000-000000000003'));
 end $$;
 
@@ -62,17 +64,18 @@ end $$;
 do $$ declare r text; id1 uuid; sg uuid := '50000000-0000-0000-0000-000000000001'; begin
   perform pg_temp.act(null);
   perform pg_temp.chk('P1 sem equipe: bo_plan_catalog recusado', pg_temp.err('select public.bo_plan_catalog()', 'authenticated') = 'forbidden');
+  perform pg_temp.chk('P1b quem não é da equipe continua forbidden também no set', pg_temp.err($q$select public.bo_price_override_set('{"product":"sign","subject":"50000000-0000-0000-0000-000000000001","kind":"fixed","value":30,"reason":"motivo válido"}')$q$, 'authenticated') = 'forbidden');
   perform pg_temp.chk('P2 anon sem permissão de execução', pg_temp.err('select public.bo_plan_catalog()', 'anon') ilike 'permission denied%');
   perform pg_temp.chk('P3 anon não lê a tabela', pg_temp.err('select * from public.price_overrides', 'anon') ilike 'permission denied%');
   perform pg_temp.chk('P4 authenticated não lê a tabela (só RPC)', pg_temp.err('select * from public.price_overrides', 'authenticated') ilike 'permission denied%');
 
   perform pg_temp.act('analyst');
   perform pg_temp.chk('P5 analista lê o catálogo', pg_temp.err('select public.bo_plan_catalog()', 'authenticated') is null);
-  perform pg_temp.chk('P6 analista não grava override', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"sign","subject":"%s","kind":"discount_pct","value":5,"reason":"cortesia comercial"}')$q$, sg), 'authenticated') = 'forbidden');
-  perform pg_temp.chk('P7 analista não troca plano', pg_temp.err(format($q$select public.bo_set_plan('{"product":"sign","subject":"%s","plan":"empresa"}')$q$, sg), 'authenticated') = 'forbidden');
+  perform pg_temp.chk('P6 analista não grava override', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"sign","subject":"%s","kind":"discount_pct","value":5,"reason":"cortesia comercial"}')$q$, sg), 'authenticated') = 'insufficient_level');
+  perform pg_temp.chk('P7 analista não troca plano', pg_temp.err(format($q$select public.bo_set_plan('{"product":"sign","subject":"%s","plan":"empresa"}')$q$, sg), 'authenticated') = 'insufficient_level');
 
   perform pg_temp.act('approver');
-  perform pg_temp.chk('P8 aprovador não troca plano (admin)', pg_temp.err(format($q$select public.bo_set_plan('{"product":"sign","subject":"%s","plan":"empresa"}')$q$, sg), 'authenticated') = 'forbidden');
+  perform pg_temp.chk('P8 aprovador não troca plano (admin)', pg_temp.err(format($q$select public.bo_set_plan('{"product":"sign","subject":"%s","plan":"empresa"}')$q$, sg), 'authenticated') = 'insufficient_level');
   r := pg_temp.err(format($q$select public.bo_price_override_set('{"product":"sign","subject":"%s","kind":"discount_pct","value":20,"reason":"cortesia comercial"}')$q$, sg), 'authenticated');
   perform pg_temp.chk('P9 aprovador grava 20% (limite inclusive)', r is null);
   perform pg_temp.chk('P10 aprovador barrado acima de 20%', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"sign","subject":"%s","kind":"discount_pct","value":20.5,"reason":"cortesia comercial"}')$q$, sg), 'authenticated') = 'discount_needs_admin');
@@ -118,7 +121,7 @@ do $$ declare sg uuid := '50000000-0000-0000-0000-000000000002'; a jsonb; b json
   perform pg_temp.chk('I4 índice único: segundo ativo direto no banco falha', pg_temp.err(format($q$insert into public.price_overrides (product, subject_kind, subject_id, kind, value, reason) values ('sign','sign_account','%s','fixed',50,'motivo válido')$q$, sg)) ilike '%price_overrides_one_active%');
   perform pg_temp.chk('I5 revogar com motivo curto recusado', pg_temp.err(format($q$select public.bo_price_override_revoke('%s', 'x')$q$, c->>'id'), 'authenticated') = 'reason_required');
   perform pg_temp.act('analyst');
-  perform pg_temp.chk('I6 analista não revoga', pg_temp.err(format($q$select public.bo_price_override_revoke('%s', 'motivo válido')$q$, c->>'id'), 'authenticated') = 'forbidden');
+  perform pg_temp.chk('I6 analista não revoga', pg_temp.err(format($q$select public.bo_price_override_revoke('%s', 'motivo válido')$q$, c->>'id'), 'authenticated') = 'insufficient_level');
   perform pg_temp.act('approver');
   perform pg_temp.run(format($q$select public.bo_price_override_revoke('%s', 'fim da parceria')$q$, c->>'id'), 'authenticated');
   perform pg_temp.chk('I7 aprovador revoga', (select msg from t_last) is null and (select revoke_reason from public.price_overrides where id = (c->>'id')::uuid) = 'fim da parceria');
@@ -147,24 +150,28 @@ do $$ declare w uuid := 'a0000000-0000-0000-0000-000000000001'; begin
   perform pg_temp.chk('E10 outro produto não é afetado', public._effective_price('sign', w, 79) = 79);
 end $$;
 
--- ---- partners: override entra no _platform_fee_run ----
+-- ---- partners: override entra no _platform_fee_run (meses novos, pois a rotina real não regrava: on conflict do nothing) ----
 do $$ declare fa uuid := 'f0000000-0000-0000-0000-000000000001'; fb uuid := 'f0000000-0000-0000-0000-000000000002'; begin
   perform pg_temp.act('approver');
-  perform pg_temp.chk('F1 aprovador: taxa 0,40 -> 0,35 (12,5%) liberada', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"fee_rate","value":0.35,"valid_from":"2026-10-01","reason":"negociação anual"}')$q$, fa), 'authenticated') is null);
-  perform pg_temp.chk('F2 aprovador: taxa 0,40 -> 0,30 (25%) barrada', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"fee_rate","value":0.30,"reason":"negociação anual"}')$q$, fa), 'authenticated') = 'discount_needs_admin');
-  perform pg_temp.chk('F3 desconto sobre o valor do fundo B (10%)', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"discount_pct","value":10,"valid_from":"2026-10-01","reason":"negociação anual"}')$q$, fb), 'authenticated') is null);
-  perform public._platform_fee_run('2026-10-01');
-  perform pg_temp.chk('F4 fundo A com taxa 0,35: 60e6*0,35/100/12 = 17500,00', (select amount from public.platform_fees where funder_id = fa and ref_month = '2026-10-01') = 17500.00
-    and (select rate_aa from public.platform_fees where funder_id = fa and ref_month = '2026-10-01') = 0.35);
-  perform pg_temp.chk('F5 fundo B com desconto 10%: 15000 -> 13500,00', (select amount from public.platform_fees where funder_id = fb and ref_month = '2026-10-01') = 13500.00);
-  perform pg_temp.chk('F6 bo_customer_plan partners: tabela x efetivo', (public.bo_customer_plan('partners', fa)->>'list_price')::numeric = 20000
-    and (public.bo_customer_plan('partners', fa)->>'effective_price')::numeric = 17500);
-  perform pg_temp.chk('F7 fee_rate não altera _effective_price (taxa é aplicada na origem)', public._effective_price('partners', fa, 20000) = 20000);
-  -- volta ao normal: revoga e recalcula, resultado = regressão R2/R3
+  perform pg_temp.chk('F1 aprovador: taxa 0,0010 -> 0,0008 (20%) liberada', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"fee_rate","value":0.0008,"valid_from":"2026-01-01","reason":"negociação anual"}')$q$, fa), 'authenticated') is null);
+  perform pg_temp.chk('F2 aprovador: taxa 0,0010 -> 0,0007 (30%) barrada', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"fee_rate","value":0.0007,"reason":"negociação anual"}')$q$, fa), 'authenticated') = 'discount_needs_admin');
+  perform pg_temp.chk('F2b fee_rate em fundo de tabela global (self) é recusado', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"fee_rate","value":0.0008,"reason":"negociação anual"}')$q$, fb), 'authenticated') = 'fee_rate_needs_contract');
+  perform pg_temp.chk('F3 desconto 10% no fundo B', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"discount_pct","value":10,"valid_from":"2026-01-01","reason":"negociação anual"}')$q$, fb), 'authenticated') is null);
+  perform public._platform_fee_run('2026-09-01');
+  perform pg_temp.chk('F4 fundo A com taxa 0,0008: 60e6*0,0008/12 = 4000,00 (taxa gravada 0,0008)', (select amount from public.platform_fees where funder_id = fa and ref_month = '2026-09-01') = 4000.00
+    and (select rate_aa from public.platform_fees where funder_id = fa and ref_month = '2026-09-01') = 0.0008);
+  perform pg_temp.chk('F5 fundo B com desconto 10%: 2500 -> 2250,00', (select amount from public.platform_fees where funder_id = fb and ref_month = '2026-09-01') = 2250.00);
+  perform pg_temp.chk('F6 bo_customer_plan partners: tabela x efetivo', (public.bo_customer_plan('partners', fa)->>'list_price')::numeric = 5000
+    and (public.bo_customer_plan('partners', fa)->>'effective_price')::numeric = 4000);
+  perform pg_temp.chk('F7 fee_rate não altera _effective_price (taxa é aplicada na origem)', public._effective_price('partners', fa, 5000) = 5000);
+  perform pg_temp.act('admin');
+  perform pg_temp.chk('F7b admin: valor fixo substitui o valor (fundo B = 1000,00)', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"fixed","value":1000,"valid_from":"2026-01-01","reason":"acordo especial"}')$q$, fb), 'authenticated') is null);
+  perform public._platform_fee_run('2026-08-01');
+  perform pg_temp.chk('F7c fixed no fundo B = 1000,00', (select amount from public.platform_fees where funder_id = fb and ref_month = '2026-08-01') = 1000.00);
   perform public.bo_price_override_revoke((select id from public.price_overrides where subject_id = fa and revoked_at is null), 'volta ao normal');
   perform public.bo_price_override_revoke((select id from public.price_overrides where subject_id = fb and revoked_at is null), 'volta ao normal');
-  perform public._platform_fee_run('2026-10-01');
-  perform pg_temp.chk('F8 sem override o _platform_fee_run volta a 20000 e 15000', (select array_agg(amount order by amount) from public.platform_fees where ref_month = '2026-10-01') = array[15000.00, 20000.00]::numeric[]);
+  perform public._platform_fee_run('2026-07-01');
+  perform pg_temp.chk('F8 sem override a rotina volta a 5000 e 2500 (regressão)', (select array_agg(amount order by amount) from public.platform_fees where ref_month = '2026-07-01') = array[2500.00, 5000.00]::numeric[]);
 end $$;
 
 -- ---- bo_set_plan nos 3 produtos ----
@@ -181,13 +188,13 @@ do $$ declare sg uuid := '50000000-0000-0000-0000-000000000001'; w1 uuid := 'a00
   perform pg_temp.chk('S5 wealth: gratis -> fund com pagamento ok', (select msg from t_last) is null and (select plan from public.w_profiles where user_id = w2) = 'fund' and (select payment_ok from public.w_profiles where user_id = w2));
   perform pg_temp.chk('S6 wealth: plano inválido', pg_temp.err(format($q$select public.bo_set_plan('{"product":"wealth","subject":"%s","plan":"ouro"}')$q$, w1), 'authenticated') = 'invalid_plan');
   perform pg_temp.chk('S7 wealth: usuário inexistente', pg_temp.err($q$select public.bo_set_plan('{"product":"wealth","subject":"99999999-0000-0000-0000-000000000000","plan":"pro"}')$q$, 'authenticated') = 'subject_not_found');
-  perform pg_temp.run(format($q$select public.bo_set_plan('{"product":"partners","subject":"%s","plan":"contract","rate_aa":0.25,"min_monthly":800}')$q$, fc), 'authenticated');
-  perform pg_temp.chk('S8 partners: contrato 0,25% e mínimo 800 cria platform_fee_plans e origin invite', (select msg from t_last) is null and (select rate_aa from public.platform_fee_plans where funder_id = fc) = 0.25 and (select origin from public.funder_billing where funder_id = fc) = 'invite');
-  perform pg_temp.chk('S9 partners: contrato passa a valer no cálculo (30e6*0,25/100/12 = 6250,00)', (public._partners_fee_calc(fc)->>'list_amount')::numeric = 6250.00);
-  perform pg_temp.chk('S10 partners: contrato sem taxa recusado', pg_temp.err(format($q$select public.bo_set_plan('{"product":"partners","subject":"%s","plan":"contract"}')$q$, fc), 'authenticated') = 'invalid_value');
+  perform pg_temp.run(format($q$select public.bo_set_plan('{"product":"partners","subject":"%s","plan":"contract","rate_aa":0.0005,"min_monthly":800}')$q$, fc), 'authenticated');
+  perform pg_temp.chk('S8 partners: contrato 0,0005 a.a. e mínimo 800 cria platform_fee_plans e origin invite', (select msg from t_last) is null and (select rate_aa from public.platform_fee_plans where funder_id = fc) = 0.0005 and (select origin from public.funder_billing where funder_id = fc) = 'invite');
+  perform pg_temp.chk('S9 partners: contrato passa a valer no cálculo (30e6*0,0005/12 = 1250,00)', (public._partners_fee_calc(fc)->>'list_amount')::numeric = 1250.00);
+  perform pg_temp.chk('S10 partners: contrato sem taxa (ou taxa > 1) recusado', pg_temp.err(format($q$select public.bo_set_plan('{"product":"partners","subject":"%s","plan":"contract"}')$q$, fc), 'authenticated') = 'invalid_value');
   perform pg_temp.run(format($q$select public.bo_set_plan('{"product":"partners","subject":"%s","plan":"tier"}')$q$, fc), 'authenticated');
   perform pg_temp.chk('S11 partners: volta à faixa global', (select msg from t_last) is null and not (select active from public.platform_fee_plans where funder_id = fc) and (select origin from public.funder_billing where funder_id = fc) = 'self'
-    and (public._partners_fee_calc(fc)->>'list_amount')::numeric = 15000.00);
+    and (public._partners_fee_calc(fc)->>'list_amount')::numeric = 2500.00);
   perform pg_temp.chk('S12 partners: funder inexistente', pg_temp.err($q$select public.bo_set_plan('{"product":"partners","subject":"99999999-0000-0000-0000-000000000000","plan":"tier"}')$q$, 'authenticated') = 'subject_not_found');
   perform pg_temp.chk('S13 set_plan registrado no log', (select count(*) from public.staff_actions where action = 'set_plan') = 4);
   perform pg_temp.chk('S14 w_admin_set_plan continua sem acesso para authenticated', not has_function_privilege('authenticated', 'public.w_admin_set_plan(uuid,text,boolean)', 'execute'));
@@ -212,7 +219,7 @@ do $$ declare r1 jsonb; r2 jsonb; fa uuid := 'f0000000-0000-0000-0000-0000000000
   perform pg_temp.chk('G2 segunda rodada não duplica', (r2->>'platform_fee')::int = 0 and (r2->>'sign')::int = 0 and (select count(*) from public.bill_invoices) = 4);
   perform pg_temp.chk('G3 Sign essencial = 39,00 sem override', (select amount from public.bill_invoices where sign_account_id = s1) = 39.00);
   perform pg_temp.chk('G4 Sign profissional com 10% = 89,10 (respeita o override)', (select amount from public.bill_invoices where sign_account_id = s2) = 89.10);
-  perform pg_temp.chk('G5 taxa de plataforma = platform_fees', (select amount from public.bill_invoices where funder_id = fa) = 20000.00);
+  perform pg_temp.chk('G5 taxa de plataforma = platform_fees', (select amount from public.bill_invoices where funder_id = fa) = 5000.00);
   perform pg_temp.chk('G6 vencimento = dia 10 do mês seguinte, ref_month = 01/10', (select count(*) from public.bill_invoices where due_date = '2026-11-10' and ref_month = '2026-10-01') = 4);
   perform pg_temp.chk('G7 faturas abertas, com origem e número', (select count(*) from public.bill_invoices where status = 'open' and source is not null and number like 'F-%') = 4);
   perform pg_temp.chk('G8 sem fatura para isenta, grátis e conta criada depois', not exists (select 1 from public.bill_invoices where sign_account_id in
@@ -275,12 +282,12 @@ do $$ declare f record; n int := 0; begin
   perform pg_temp.chk('D7 as 7 RPCs foram verificadas', n = 7);
   n := 0;
   for f in select p.oid::regprocedure fn, p.proname from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in
-      ('_effective_price','_override_fee_rate','_partners_fee','_partners_list_terms','_partners_fee_calc','_w_price_for','_price_subject','_platform_fee_run','_bill_generate_auto') loop
+      ('_effective_price','_override_fee_rate','_partners_fee_calc','_w_price_for','_price_subject','_platform_fee_run','_bill_generate_auto') loop
     n := n + 1;
     perform pg_temp.chk('D8 ' || f.proname || ': só service_role', has_function_privilege('service_role', f.fn, 'execute')
       and not has_function_privilege('anon', f.fn, 'execute') and not has_function_privilege('authenticated', f.fn, 'execute'));
   end loop;
-  perform pg_temp.chk('D9 as 9 internas foram verificadas', n = 9);
+  perform pg_temp.chk('D9 as 7 internas foram verificadas', n = 7);
   perform pg_temp.chk('D10 nenhuma função nova executável por anon', not exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace
     and (p.proname like 'bo\_price\_override%' or p.proname in ('bo_plan_catalog','bo_customer_plan','bo_set_plan','bo_overdue_list') or p.proname in ('_effective_price','_bill_generate_auto','_w_price_for'))
     and has_function_privilege('anon', p.oid, 'execute')));

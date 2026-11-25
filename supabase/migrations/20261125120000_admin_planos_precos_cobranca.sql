@@ -11,20 +11,24 @@
 --      bo_plan_catalog (analista), bo_customer_plan (analista), bo_price_override_list (analista),
 --      bo_price_override_set (aprovador; desconto efetivo até 20% = D4; acima disso exige administrador),
 --      bo_price_override_revoke (aprovador), bo_set_plan (administrador; sign, wealth e partners), bo_overdue_list (analista; D3).
---   3. Internas (só service_role): _effective_price, _override_fee_rate, _partners_fee, _partners_list_terms, _partners_fee_calc,
+--   3. Internas (só service_role): _effective_price, _override_fee_rate, _partners_fee_calc,
 --      _w_price_for, _bill_generate_auto.
---      REDEFINE _platform_fee_run(date) com create or replace: mesma lógica, mais o override (taxa fee_rate, desconto, valor fixo).
+--      REDEFINE _platform_fee_run(date) com create or replace: mesma lógica, mais o override (fee_rate no ramo contrato, desconto, valor fixo).
 --      Sem override o resultado é idêntico ao anterior.
 --   4. _bill_generate_auto(mês): gera em bill_invoices as faturas do mês anterior (taxa de plataforma a partir de platform_fees e
 --      mensalidade do Sign), idempotente por (cliente, ref_month, source); job pg_cron 'lottus-billing-auto' (0 13 2 * *, 10:00 UTC-3), só se
 --      a extensão pg_cron existir. O envio continua na régua existente (lottus-bill-reminders).
 --
+-- ANTES DE APLICAR: comparar _platform_fee_run, _plan_fee e _staff com pg_get_functiondef de produção; o create or replace falha se a assinatura diferir.
+-- (Premissas conferidas em docs/agente/admin/b2-defs-producao.sql, leitura real de 25/11/2026: _plan_fee(numeric) devolve numeric; rate_aa é FRAÇÃO ao ano;
+--  PL vem de _funder_pl(funder_id, data); _staff levanta forbidden | mfa_required | insufficient_level.)
 -- ATENÇÃO antes de aplicar (ler com o Yuri)
---   * _platform_fee_run foi reescrita a partir da DESCRIÇÃO do doc B2, não do código de produção. Antes de aplicar, salvar a original:
---       select pg_get_functiondef('public._platform_fee_run'::regproc);   -- e comparar assinatura (argumentos/retorno) e a fonte do PL.
---     Se a assinatura ou a lógica de produção diferir (ex.: fonte do PL, formato de billing_settings.tiers, retorno de _plan_fee),
---     ajustar _partners_list_terms/_platform_fee_run antes. create or replace falha se o tipo de retorno for outro.
---   * Valores de customer_kind ('funder' | 'sign') e source ('platform_fee' | 'sign_subscription') em bill_invoices são hipóteses a conferir.
+--   * _platform_fee_run é o corpo REAL de produção (25/11/2026) com 3 linhas de override; sem override o resultado é idêntico. Antes de aplicar, salvar a
+--     versão que estiver em produção na hora (pode ter mudado): select pg_get_functiondef('public._platform_fee_run'::regproc);
+--   * fee_rate só vale para fundo no ramo contrato/'invite' (substitui v_rate); em fundo 'self' (tabela global) é recusado ('fee_rate_needs_contract').
+--     rate_aa e fee_rate são FRAÇÃO ao ano (0,001 = 0,1% a.a.); por isso price_overrides.value é numeric(14,6).
+--   * customer_kind 'sign' e source ('platform_fee' | 'sign_subscription') em bill_invoices são hipóteses a conferir ('funder' é o valor real de bo_inv_generate);
+--     o e-mail da fatura do Sign fica nulo (sign_accounts não tem e-mail): sem e-mail a régua não envia.
 --   * Esta migração não altera _w_price nem w_billing_close: oferece _w_price_for(user, plano) para a cobrança do Wealth passar a usar
 --     (próximo passo, fora deste escopo).
 --
@@ -33,9 +37,36 @@
 --   drop function if exists public.bo_plan_catalog(), public.bo_customer_plan(text, uuid), public.bo_price_override_list(text, uuid),
 --     public.bo_price_override_set(jsonb), public.bo_price_override_revoke(uuid, text), public.bo_set_plan(jsonb), public.bo_overdue_list(),
 --     public._bill_generate_auto(date), public._w_price_for(uuid, text), public._partners_fee_calc(uuid, date),
---     public._partners_list_terms(uuid), public._partners_fee(numeric, numeric, numeric), public._override_fee_rate(uuid, date),
+--     public._override_fee_rate(uuid, date),
 --     public._effective_price(text, uuid, numeric, date), public._price_subject(text, uuid);
---   -- restaurar _platform_fee_run com o pg_get_functiondef salvo antes de aplicar;
+--   -- restaurar _platform_fee_run (corpo real de 25/11/2026, de docs/agente/admin/b2-defs-producao.sql; confirmar com o pg_get_functiondef salvo antes de aplicar):
+--   create or replace function public._platform_fee_run(p_month date default null) returns integer
+--   language plpgsql security definer set search_path to '' as $f$
+--   declare
+--     v_m date := coalesce(date_trunc('month', p_month)::date, (date_trunc('month', public._today_br()) - interval '1 month')::date);
+--     v_end date := (v_m + interval '1 month - 1 day')::date;
+--     f record; v_pl numeric; v_rate numeric; v_min numeric; v_amt numeric; n int := 0;
+--   begin
+--     for f in select x.id, coalesce(b.origin, 'invite') origin, coalesce(b.exempt, false) exempt
+--              from public.funders x left join public.funder_billing b on b.funder_id = x.id loop
+--       if f.exempt then continue; end if;
+--       v_pl := public._funder_pl(f.id, v_end);            -- PL do fundo na data (função interna; stub: devolver pl_declared ou tabela de teste)
+--       if f.origin = 'self' then
+--         v_amt := public._plan_fee(v_pl); v_rate := 0; v_min := 0;       -- tabela global
+--       else
+--         select coalesce(p.rate_aa, 0.0010), coalesce(p.min_monthly, 0) into v_rate, v_min
+--           from (select 1) d left join public.platform_fee_plans p on p.funder_id = f.id and p.active;
+--         v_amt := round(greatest(v_pl * v_rate / 12, v_min), 2);         -- rate_aa fração/ano; padrão 0,10% a.a.
+--       end if;
+--       if v_amt > 0 then
+--         insert into public.platform_fees (funder_id, ref_month, pl, rate_aa, min_monthly, amount)
+--         values (f.id, v_m, round(v_pl, 2), v_rate, v_min, v_amt) on conflict (funder_id, ref_month) do nothing;
+--         n := n + 1;
+--       end if;
+--     end loop;
+--     return n;
+--   end $f$;
+--   -- (_plan_fee e _staff não são redefinidas por esta migração.)
 --   drop table if exists public.price_overrides;   -- só depois de arquivar os dados (tabela de prova; exige lottus.allow_purge='on').
 --   (as faturas já geradas ficam em bill_invoices; cancelar pelo fluxo normal, se for o caso.)
 
@@ -48,7 +79,7 @@ create table if not exists public.price_overrides (
   subject_kind text not null check (subject_kind in ('funder', 'sign_account', 'wealth_user')),
   subject_id uuid not null,
   kind text not null check (kind in ('fixed', 'discount_pct', 'fee_rate')),
-  value numeric(12, 4) not null check (value >= 0),
+  value numeric(14, 6) not null check (value >= 0),
   valid_from date not null default current_date,
   valid_until date,
   reason text not null check (char_length(trim(reason)) >= 5),
@@ -98,38 +129,25 @@ returns numeric language sql stable security definer set search_path = '' as $$
      and o.valid_from <= p_on and (o.valid_until is null or o.valid_until >= p_on);
 $$;
 
--- taxa de plataforma mensal: maior entre o mínimo e PL x taxa a.a. / 12 (rate_aa em % ao ano)
-create or replace function public._partners_fee(p_pl numeric, p_rate numeric, p_min numeric)
-returns numeric language sql immutable set search_path = '' as $$
-  select round(greatest(coalesce(p_min, 0), coalesce(p_pl, 0) * coalesce(p_rate, 0) / 100 / 12), 2);
-$$;
-
--- condições de tabela do fundo: contrato (platform_fee_plans ativo) ou faixa global (billing_settings.tiers via _plan_fee)
-create or replace function public._partners_list_terms(p_funder uuid)
-returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare v_pl numeric; v_free numeric; p public.platform_fee_plans; t jsonb;
-begin
-  select coalesce(pl_declared, 0) into v_pl from public.funder_billing where funder_id = p_funder;
-  select free_pl_limit into v_free from public.billing_settings where id = 1;
-  select * into p from public.platform_fee_plans where funder_id = p_funder and active;
-  if found then
-    return jsonb_build_object('pl', coalesce(v_pl, 0), 'rate_aa', p.rate_aa, 'min_monthly', p.min_monthly, 'source', 'contract', 'tier', null);
-  end if;
-  t := public._plan_fee(coalesce(v_pl, 0));
-  return jsonb_build_object('pl', coalesce(v_pl, 0), 'rate_aa', coalesce((t->>'rate_aa')::numeric, 0), 'min_monthly', coalesce((t->>'min_monthly')::numeric, 0),
-                            'source', case when coalesce(v_pl, 0) <= coalesce(v_free, 0) then 'free' else 'tier' end, 'tier', t->>'name');
-end $$;
-
+-- Condições e valor mensal do fundo na data p_on, espelhando o corpo real de _platform_fee_run (usado só para exibição e validação nas RPCs;
+-- o teste confere que dá o mesmo valor que a rotina). rate_aa é fração ao ano.
 create or replace function public._partners_fee_calc(p_funder uuid, p_on date default current_date)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare t jsonb := public._partners_list_terms(p_funder); v_ov numeric := public._override_fee_rate(p_funder, p_on);
-  v_pl numeric := (t->>'pl')::numeric; v_rate numeric := (t->>'rate_aa')::numeric; v_min numeric := (t->>'min_monthly')::numeric;
-  v_applied numeric; v_base numeric;
+declare v_origin text; v_pl numeric; v_rate numeric := 0; v_min numeric := 0; v_applied numeric; v_list numeric; v_amt numeric;
 begin
-  v_applied := coalesce(v_ov, v_rate);
-  v_base := public._partners_fee(v_pl, v_applied, v_min);
-  return t || jsonb_build_object('list_amount', public._partners_fee(v_pl, v_rate, v_min), 'rate_applied', v_applied,
-                                 'amount', public._effective_price('partners', p_funder, v_base, p_on));
+  select coalesce(b.origin, 'invite') into v_origin from public.funders x left join public.funder_billing b on b.funder_id = x.id where x.id = p_funder;
+  v_pl := public._funder_pl(p_funder, p_on);
+  if v_origin = 'self' then
+    v_list := public._plan_fee(v_pl); v_applied := null; v_rate := null; v_amt := v_list;
+  else
+    select coalesce(p.rate_aa, 0.0010), coalesce(p.min_monthly, 0) into v_rate, v_min
+      from (select 1) d left join public.platform_fee_plans p on p.funder_id = p_funder and p.active;
+    v_list := round(greatest(v_pl * v_rate / 12, v_min), 2);
+    v_applied := coalesce(public._override_fee_rate(p_funder, p_on), v_rate);
+    v_amt := round(greatest(v_pl * v_applied / 12, v_min), 2);
+  end if;
+  return jsonb_build_object('origin', v_origin, 'pl', round(v_pl, 2), 'rate_aa', v_rate, 'rate_applied', v_applied, 'min_monthly', v_min,
+                            'list_amount', v_list, 'amount', public._effective_price('partners', p_funder, v_amt, p_on));
 end $$;
 
 -- preço de tabela do Wealth para um usuário, com override (gratis = 0). Sem override devolve exatamente _w_price(plano).
@@ -157,31 +175,44 @@ begin
     select * into f from public.funders where id = p_subject;
     if not found then return null; end if;
     c := public._partners_fee_calc(p_subject, current_date);
-    return jsonb_build_object('plan', c->>'source', 'plan_name', coalesce(c->>'tier', c->>'source'), 'list_price', (c->>'list_amount')::numeric,
-                              'list_rate', (c->>'rate_aa')::numeric, 'exempt', coalesce((select exempt from public.funder_billing where funder_id = p_subject), false),
-                              'name', coalesce(f.trade_name, f.legal_name));
+    return jsonb_build_object('plan', case when c->>'origin' = 'self' then 'tier' else 'contract' end, 'plan_name', c->>'origin',
+                              'list_price', (c->>'list_amount')::numeric, 'list_rate', (c->>'rate_aa')::numeric,
+                              'exempt', coalesce((select exempt from public.funder_billing where funder_id = p_subject), false),
+                              'name', coalesce(f.trade_name, f.legal_name), 'origin', c->>'origin');
   end if;
   return null;
 end $$;
 
--- ============ 3. _platform_fee_run com override (mesma lógica; sem override o resultado não muda) ============
-create or replace function public._platform_fee_run(p_month date default null)
-returns integer language plpgsql security definer set search_path = '' as $$
-declare m date := coalesce(date_trunc('month', p_month)::date, (date_trunc('month', current_date) - interval '1 month')::date);
-  r record; c jsonb; n int := 0; v_free numeric;
+-- ============ 3. _platform_fee_run com override ============
+-- Corpo REAL de produção (docs/agente/admin/b2-defs-producao.sql); só mudam as linhas marcadas "OVERRIDE". Sem override o resultado é idêntico.
+create or replace function public._platform_fee_run(p_month date default null) returns integer
+language plpgsql security definer set search_path to '' as $f$
+declare
+  v_m date := coalesce(date_trunc('month', p_month)::date, (date_trunc('month', public._today_br()) - interval '1 month')::date);
+  v_end date := (v_m + interval '1 month - 1 day')::date;
+  f record; v_pl numeric; v_rate numeric; v_min numeric; v_amt numeric; n int := 0;
 begin
-  select free_pl_limit into v_free from public.billing_settings where id = 1;
-  for r in select fu.id from public.funders fu join public.funder_billing fb on fb.funder_id = fu.id
-            where fu.active and not fb.exempt and fb.pl_declared > v_free loop
-    c := public._partners_fee_calc(r.id, (m + interval '1 month - 1 day')::date);   -- override vigente no último dia da competência
-    insert into public.platform_fees (funder_id, ref_month, pl, rate_aa, min_monthly, amount)
-    values (r.id, m, (c->>'pl')::numeric, (c->>'rate_applied')::numeric, (c->>'min_monthly')::numeric, (c->>'amount')::numeric)
-    on conflict (funder_id, ref_month) do update set pl = excluded.pl, rate_aa = excluded.rate_aa, min_monthly = excluded.min_monthly, amount = excluded.amount
-      where public.platform_fees.status <> 'paid';
-    n := n + 1;
+  for f in select x.id, coalesce(b.origin, 'invite') origin, coalesce(b.exempt, false) exempt
+           from public.funders x left join public.funder_billing b on b.funder_id = x.id loop
+    if f.exempt then continue; end if;
+    v_pl := public._funder_pl(f.id, v_end);
+    if f.origin = 'self' then
+      v_amt := public._plan_fee(v_pl); v_rate := 0; v_min := 0;
+    else
+      select coalesce(p.rate_aa, 0.0010), coalesce(p.min_monthly, 0) into v_rate, v_min
+        from (select 1) d left join public.platform_fee_plans p on p.funder_id = f.id and p.active;
+      v_rate := coalesce(public._override_fee_rate(f.id, v_end), v_rate);                 -- OVERRIDE: fee_rate substitui a taxa (só contrato)
+      v_amt := round(greatest(v_pl * v_rate / 12, v_min), 2);
+    end if;
+    v_amt := public._effective_price('partners', f.id, v_amt, v_end);                     -- OVERRIDE: fixed substitui, discount_pct reduz
+    if v_amt > 0 then
+      insert into public.platform_fees (funder_id, ref_month, pl, rate_aa, min_monthly, amount)
+      values (f.id, v_m, round(v_pl, 2), v_rate, v_min, v_amt) on conflict (funder_id, ref_month) do nothing;
+      n := n + 1;
+    end if;
   end loop;
   return n;
-end $$;
+end $f$;
 
 -- ============ 4. Geração automática de faturas ============
 create or replace function public._bill_generate_auto(p_month date default null)
@@ -208,7 +239,7 @@ begin
   -- mensalidade do Sign: contas não isentas criadas até o fim da competência; preço = custom_price (se houver) ou do plano, com override
   for r in select sa.id, sa.name, sa.doc, sa.custom_price, sp.price_month, sp.name plan_name
              from public.sign_accounts sa join public.sign_plans sp on sp.code = sa.plan
-            where not sa.exempt and coalesce(sa.status, 'active') <> 'cancelled' and sa.created_at < (v_end + 1)
+            where not sa.exempt and sa.created_at < (v_end + 1)
               and (coalesce(sp.price_month, 0) > 0 or coalesce(sa.custom_price, 0) > 0)
               and not exists (select 1 from public.bill_invoices b where b.sign_account_id = sa.id and b.ref_month = m and b.source = 'sign_subscription' and b.status <> 'cancelled') loop
     v_amt := public._effective_price('sign', r.id, coalesce(r.custom_price, r.price_month), v_end);
@@ -289,6 +320,7 @@ begin
   if v_until is not null and (v_until < v_from or v_until < current_date) then raise exception 'invalid_period'; end if;
   sub := public._price_subject(v_product, v_subject);
   if sub is null then raise exception 'subject_not_found'; end if;
+  if v_kind = 'fee_rate' and sub->>'origin' is distinct from 'invite' then raise exception 'fee_rate_needs_contract'; end if;
 
   -- D4: redução efetiva sobre o preço (ou a taxa) de tabela; acima de 20% só administrador
   v_red := case v_kind
@@ -298,7 +330,7 @@ begin
   if v_red > 20 then
     begin s := public._staff('admin');
     exception when others then
-      if sqlerrm = 'forbidden' then raise exception 'discount_needs_admin'; end if;
+      if sqlerrm = 'insufficient_level' then raise exception 'discount_needs_admin'; end if;   -- 'forbidden' e 'mfa_required' seguem como estão
       raise;
     end;
   end if;
@@ -306,7 +338,7 @@ begin
   perform pg_advisory_xact_lock(hashtext('price_override:' || v_product || ':' || v_subject::text));
   select * into o from public.price_overrides where product = v_product and subject_id = v_subject and revoked_at is null;
   if found then
-    if o.kind = v_kind and o.value = round(v_value, 4) and o.valid_from = v_from and o.valid_until is not distinct from v_until and o.reason = v_reason then
+    if o.kind = v_kind and o.value = round(v_value, 6) and o.valid_from = v_from and o.valid_until is not distinct from v_until and o.reason = v_reason then
       return jsonb_build_object('id', o.id, 'unchanged', true, 'replaced_id', null);   -- reenvio idêntico: nada novo
     end if;
     update public.price_overrides set revoked_at = now(), revoked_by = s.user_id, revoke_reason = 'substituído por novo preço personalizado' where id = o.id;
@@ -372,14 +404,18 @@ begin
     if v_plan is null or v_plan not in ('tier', 'contract') then raise exception 'invalid_plan'; end if;
     if v_plan = 'contract' then
       begin v_rate := (p->>'rate_aa')::numeric; v_min := (p->>'min_monthly')::numeric; exception when others then raise exception 'invalid_value'; end;
-      if v_rate is null or v_min is null or v_rate < 0 or v_rate > 100 or v_min < 0 then raise exception 'invalid_value'; end if;
+      if v_rate is null or v_min is null or v_rate < 0 or v_rate > 1 or v_min < 0 then raise exception 'invalid_value'; end if;   -- rate_aa é fração ao ano (0,001 = 0,1%)
       update public.platform_fee_plans set rate_aa = v_rate, min_monthly = v_min, active = true where funder_id = v_subject;
-      if not found then insert into public.platform_fee_plans (funder_id, rate_aa, min_monthly, active) values (v_subject, v_rate, v_min, true); end if;
+      if not exists (select 1 from public.platform_fee_plans where funder_id = v_subject) then
+        insert into public.platform_fee_plans (funder_id, rate_aa, min_monthly, active) values (v_subject, v_rate, v_min, true);
+      end if;
     else
       update public.platform_fee_plans set active = false where funder_id = v_subject;
     end if;
     update public.funder_billing set origin = case v_plan when 'contract' then 'invite' else 'self' end where funder_id = v_subject;
-    if not found then insert into public.funder_billing (funder_id, origin) values (v_subject, case v_plan when 'contract' then 'invite' else 'self' end); end if;
+    if not exists (select 1 from public.funder_billing where funder_id = v_subject) then
+      insert into public.funder_billing (funder_id, origin) values (v_subject, case v_plan when 'contract' then 'invite' else 'self' end);
+    end if;
     v_old := null;
   end if;
   perform public._staff_log(s, 'set_plan', v_product, v_subject::text, null,
@@ -412,8 +448,7 @@ begin
     execute format('grant execute on function %s to authenticated', f);
   end loop;
   foreach f in array array[
-    'public._effective_price(text, uuid, numeric, date)', 'public._override_fee_rate(uuid, date)', 'public._partners_fee(numeric, numeric, numeric)',
-    'public._partners_list_terms(uuid)', 'public._partners_fee_calc(uuid, date)', 'public._w_price_for(uuid, text)', 'public._price_subject(text, uuid)',
+    'public._effective_price(text, uuid, numeric, date)', 'public._override_fee_rate(uuid, date)', 'public._partners_fee_calc(uuid, date)', 'public._w_price_for(uuid, text)', 'public._price_subject(text, uuid)',
     'public._platform_fee_run(date)', 'public._bill_generate_auto(date)'] loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
     execute format('grant execute on function %s to service_role', f);

@@ -13,7 +13,7 @@ begin
   if not found then raise exception 'forbidden'; end if;
   need := case p_min when 'analyst' then 1 when 'approver' then 2 when 'admin' then 3 else 99 end;
   have := case s.level when 'analyst' then 1 when 'approver' then 2 when 'admin' then 3 else 0 end;
-  if have < need then raise exception 'forbidden'; end if;
+  if have < need then raise exception 'insufficient_level'; end if;   -- produção também levanta mfa_required (não simulado aqui)
   return s;
 end $f$;
 
@@ -32,11 +32,11 @@ create table public.customer_events (id bigserial primary key, kind text, ref_id
   event text check (event in ('new','upgrade','downgrade','cancel','reactivate','note')),
   mrr_before numeric, mrr_after numeric, text text, created_at timestamptz not null default now());
 
-create table public.billing_settings (id int primary key check (id = 1), free_pl_limit numeric not null default 10000000, tiers jsonb not null default '[]'::jsonb,
+create table public.billing_settings (id int primary key check (id = 1), free_pl_limit numeric not null default 100000, tiers jsonb not null default '[]'::jsonb,
   terms_version text, grace_days int not null default 15, card_provider text, card_env text, pay_instructions text, remind_enabled boolean not null default true,
   due_day int not null default 10);
 insert into public.billing_settings (id, free_pl_limit, tiers, grace_days, due_day) values
-  (1, 10000000, '[{"name":"Essencial","up_to":50000000,"rate_aa":0.60,"min_monthly":500},{"name":"Pleno","up_to":null,"rate_aa":0.40,"min_monthly":2500}]'::jsonb, 15, 10);
+  (1, 100000, '[{"up_to":1000000,"monthly":149},{"up_to":5000000,"monthly":390},{"min":390,"up_to":null,"rate_aa":0.001}]'::jsonb, 15, 10);
 
 create table public.funders (id uuid primary key default gen_random_uuid(), legal_name text, trade_name text, cnpj text, email text, kind text,
   active boolean not null default true, routing jsonb);
@@ -74,31 +74,52 @@ create table public.bill_invoices (id uuid primary key default gen_random_uuid()
   items jsonb, public_token text, bank_conn_id uuid, charge_ref text, charge_status text, charge_error text, pix_payload text, pix_qr text, boleto_url text,
   boleto_line text, pay_url text, paid_amount numeric, nfse_status text, nfse_number text, nfse_url text, billing_period text);
 
--- ---- Reproduções de funções de produção, a partir da descrição do doc ----
--- _plan_fee(pl): faixa da tabela global billing_settings.tiers ({up_to, rate_aa, min_monthly}); up_to nulo = sem teto. rate_aa em % ao ano.
-create function public._plan_fee(p_pl numeric) returns jsonb language sql stable as $f$
-  select t from public.billing_settings b, jsonb_array_elements(b.tiers) t
-   where b.id = 1 and (t->>'up_to' is null or p_pl <= (t->>'up_to')::numeric)
-   order by (t->>'up_to') is null, (t->>'up_to')::numeric limit 1 $f$;
-
--- _platform_fee_run(mês): calcula platform_fees do mês anterior (cron 'lottus-platform-fee'). Fundo isento ou abaixo da faixa grátis não gera.
-create function public._platform_fee_run(p_month date default null) returns integer language plpgsql security definer set search_path = '' as $f$
-declare m date := coalesce(date_trunc('month', p_month)::date, (date_trunc('month', current_date) - interval '1 month')::date);
-  r record; v_rate numeric; v_min numeric; v_amt numeric; n int := 0; free numeric;
+-- ---- Reproduções de funções de produção ----
+-- _plan_fee, _platform_fee_run e _staff: corpo/erros REAIS lidos em 25/11/2026 (docs/agente/admin/b2-defs-producao.sql). rate_aa é FRAÇÃO ao ano.
+create function public._today_br() returns date language sql stable as $f$ select (now() at time zone 'America/Sao_Paulo')::date $f$;
+-- _funder_pl(funder, data): em produção é função interna própria; aqui devolve funder_billing.pl_declared (simples).
+create function public._funder_pl(p_funder uuid, p_on date) returns numeric language sql stable as $f$
+  select coalesce((select pl_declared from public.funder_billing where funder_id = p_funder), 0) $f$;
+create function public._plan_fee(p_pl numeric) returns numeric
+language plpgsql stable security definer set search_path to '' as $f$
+declare s public.billing_settings; t jsonb;
 begin
-  select free_pl_limit into free from public.billing_settings where id = 1;
-  for r in select fu.id, fb.pl_declared pl, p.rate_aa p_rate, p.min_monthly p_min
-             from public.funders fu join public.funder_billing fb on fb.funder_id = fu.id
-             left join public.platform_fee_plans p on p.funder_id = fu.id and p.active
-            where fu.active and not fb.exempt and fb.pl_declared > free loop
-    if r.p_rate is not null then v_rate := r.p_rate; v_min := r.p_min;
-    else v_rate := (public._plan_fee(r.pl)->>'rate_aa')::numeric; v_min := (public._plan_fee(r.pl)->>'min_monthly')::numeric; end if;
-    v_amt := round(greatest(coalesce(v_min, 0), r.pl * v_rate / 100 / 12), 2);
-    insert into public.platform_fees (funder_id, ref_month, pl, rate_aa, min_monthly, amount)
-    values (r.id, m, r.pl, v_rate, v_min, v_amt)
-    on conflict (funder_id, ref_month) do update set pl = excluded.pl, rate_aa = excluded.rate_aa, min_monthly = excluded.min_monthly, amount = excluded.amount
-      where public.platform_fees.status <> 'paid';
-    n := n + 1;
+  select * into s from public.billing_settings where id = 1;
+  if coalesce(p_pl, 0) <= s.free_pl_limit then return 0; end if;
+  for t in select x from jsonb_array_elements(s.tiers) x loop
+    if t ->> 'up_to' is null or p_pl <= (t ->> 'up_to')::numeric then
+      if t ? 'rate_aa' then
+        return round(greatest(p_pl * (t ->> 'rate_aa')::numeric / 12, coalesce((t ->> 'min')::numeric, 0)), 2);
+      end if;
+      return (t ->> 'monthly')::numeric;
+    end if;
+  end loop;
+  return 0;
+end $f$;
+
+create function public._platform_fee_run(p_month date default null) returns integer
+language plpgsql security definer set search_path to '' as $f$
+declare
+  v_m date := coalesce(date_trunc('month', p_month)::date, (date_trunc('month', public._today_br()) - interval '1 month')::date);
+  v_end date := (v_m + interval '1 month - 1 day')::date;
+  f record; v_pl numeric; v_rate numeric; v_min numeric; v_amt numeric; n int := 0;
+begin
+  for f in select x.id, coalesce(b.origin, 'invite') origin, coalesce(b.exempt, false) exempt
+           from public.funders x left join public.funder_billing b on b.funder_id = x.id loop
+    if f.exempt then continue; end if;
+    v_pl := public._funder_pl(f.id, v_end);
+    if f.origin = 'self' then
+      v_amt := public._plan_fee(v_pl); v_rate := 0; v_min := 0;
+    else
+      select coalesce(p.rate_aa, 0.0010), coalesce(p.min_monthly, 0) into v_rate, v_min
+        from (select 1) d left join public.platform_fee_plans p on p.funder_id = f.id and p.active;
+      v_amt := round(greatest(v_pl * v_rate / 12, v_min), 2);
+    end if;
+    if v_amt > 0 then
+      insert into public.platform_fees (funder_id, ref_month, pl, rate_aa, min_monthly, amount)
+      values (f.id, v_m, round(v_pl, 2), v_rate, v_min, v_amt) on conflict (funder_id, ref_month) do nothing;
+      n := n + 1;
+    end if;
   end loop;
   return n;
 end $f$;
