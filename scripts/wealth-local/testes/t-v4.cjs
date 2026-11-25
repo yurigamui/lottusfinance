@@ -8,7 +8,7 @@ const WID = 'f46c9b36-3319-4545-95fb-7d41023cbd42';
     const go = async (h) => { await P.evaluate((x) => { location.hash = x; }, h); await P.waitForTimeout(1600); };
     const txt = async () => (await P.innerText('#view')).replace(/\s+/g, ' ');
     await go(`/w/${WID}/patrimonio`); const pat = await txt(); await shot('patrimonio');
-    out.push([width, 'patrimonio', /Relatórios/.test(pat), /Liquidez/.test(pat), !/Na curva: renda/.test(pat), !/Os mesmos aportes/.test(pat)]);
+    out.push([width, 'patrimonio', /Relatórios/.test(pat), /Liquidez do patrimônio/.test(pat), !/Na curva: renda/.test(pat), !/Os mesmos aportes/.test(pat)]);
     const overflow = await P.evaluate(() => [...document.querySelectorAll('.kpi .big')].filter((e) => e.scrollWidth > e.clientWidth + 1).length); out.push([width, 'kpi-overflow', overflow, 'horiz-scroll', await P.evaluate(() => document.documentElement.scrollWidth > innerWidth)]);
     await P.click('[data-act=reports-open]'); await P.waitForTimeout(500); out.push([width, 'modal-relatorios', await P.evaluate(() => document.querySelectorAll('.modal .rpt-item').length)]); await shot('relatorios'); await P.keyboard.press('Escape'); await P.click('.modal [data-act=modal-close]').catch(() => {});
     await go(`/w/${WID}/investimentos`); await shot('invest');
@@ -22,7 +22,7 @@ const WID = 'f46c9b36-3319-4545-95fb-7d41023cbd42';
     const nav = await P.evaluate(() => [...document.querySelectorAll('.nav-sec')].map((s) => s.dataset.group + ':' + s.querySelectorAll('.fly-item').length)); out.push([width, 'nav', nav.join(' ')]);
     await go(`/w/${WID}/config`); out.push([width, 'config', /Gerenciar acessos/.test(await txt()), !/cobrança/i.test((await txt()).match(/Só o titular.{0,40}/)?.[0] || '')]);
     // arrastar no gráfico
-    await go(`/w/${WID}/patrimonio`); const box = await P.$('#d-rent svg'); if (box) { await box.scrollIntoViewIfNeeded(); const b = await box.boundingBox(); await P.mouse.move(b.x + b.width * .3, b.y + b.height / 2); await P.mouse.down(); await P.mouse.move(b.x + b.width * .7, b.y + b.height / 2, { steps: 8 }); await P.mouse.up(); await P.waitForTimeout(200); out.push([width, 'selecao', await P.evaluate(() => { const e = document.querySelector('.chart-sel'); return e && !e.hidden ? e.innerText.replace(/\s+/g, ' ') : 'sem balão'; })]); await shot('selecao'); }
+    await go(`/w/${WID}/patrimonio`); const box = await P.$('#ch-pat svg'); if (box) { await box.scrollIntoViewIfNeeded(); const b = await box.boundingBox(); await P.mouse.move(b.x + b.width * .3, b.y + b.height / 2); await P.mouse.down(); await P.mouse.move(b.x + b.width * .7, b.y + b.height / 2, { steps: 8 }); await P.mouse.up(); await P.waitForTimeout(200); out.push([width, 'selecao', await P.evaluate(() => { const e = document.querySelector('.chart-sel'); return e && !e.hidden ? e.innerText.replace(/\s+/g, ' ') : 'sem balão'; })]); await shot('selecao'); }
     out.push([width, 'erros', JSON.stringify(w.errors)]);
     await w.close();
   }

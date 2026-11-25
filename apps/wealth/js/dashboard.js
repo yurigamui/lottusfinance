@@ -1,4 +1,4 @@
-/* Lottus Wealth — Dashboard do Patrimônio: rentabilidade × CDI, alocação, evolução, resumo por período,
+/* Lottus Wealth — Dashboard de Investimentos: rentabilidade × CDI, alocação, evolução, resumo por período,
    resultado mês a mês, eventos, volatilidade, drawdown, liquidez e custodiantes. Tudo calculado da série diária. */
 (function () {
   'use strict';
@@ -52,11 +52,11 @@
     let from = ok(de) ? de : addDays(to, -29); if (from > to) from = addDays(to, -29); return { from, to, all: false };
   };
 
-  W.route('/w/:id/patrimonio', async (ctx) => {
+  W.route('/w/:id/investimentos', async (ctx) => {
     const id = ctx.w.id; const mode = W.viewMode(ctx); const per = perOf(ctx);
     const [ser, nw, pos, liq] = await Promise.all([W.rpc('w_dashboard_series', { p_wallet: id, p_from: null, p_to: per.to, p_mode: mode }), W.rpc('w_networth', { p_wallet: id, p_mode: mode }), W.rpc('w_positions', { p_wallet: id, p_mode: mode, p_from: per.from, p_to: per.to }), W.rpc('w_liquidity', { p_wallet: id, p_mode: mode })]);
-    const actions = `${W.modeBar(mode)}<button class="btn secondary" data-act="reports-open">${ico('file')} Relatórios</button>${ctx.canWrite ? `<a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`;
-    if (!ser.days.length) return `${W.pageHead('Patrimônio', '', actions)}${empty('Ainda não há investimentos para mostrar. Registre uma transação ou importe um arquivo.')}`;
+    const actions = `${W.modeBar(mode)}<button class="btn secondary" data-act="reports-open">${ico('file')} Relatórios</button>${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`;
+    if (!ser.days.length) return `${W.pageHead('Investimentos', '', actions)}${empty('Ainda não há investimentos para mostrar. Registre uma transação ou importe um arquivo.')}`;
     const c = calc(ser.days); const first = ser.first; const from = per.all ? first : per.from < first ? first : per.from;
     const i0 = c.base(from), i1 = c.at(per.to); const cur = c.win(i0, i1);
     const rows = []; for (let i = i0 + 1; i <= i1; i++) rows.push(i);
@@ -84,7 +84,7 @@
     ctx.after = () => {
       W.cur = ctx;
       const hit = (r, a, b) => ({ money: null, pct: (1 + r[b].a) / (1 + r[a].a) - 1, from: r[a].long, to: r[b].long });
-      if (rebased.length > 1) W.lineChart(document.getElementById('d-rent'), rebased, { names: ['Portfólio', 'CDI'], name: 'Rentabilidade acumulada', format: (v) => W.pct(v, 2), axisFormat: AX, onRange: (a, b) => { const r = hit(rebased, a, b); return { ...r, money: r.pct }; } }); else document.getElementById('d-rent').innerHTML = empty('Período curto demais para o gráfico.');
+      if (rebased.length > 1) W.lineChart(document.getElementById('d-rent'), rebased, { names: ['Portfólio', 'CDI'], name: 'Rentabilidade acumulada', format: (v) => W.pct(v, 2), axisFormat: AX, onRange: (a, b) => { const r = hit(rebased, a, b); return { ...r, money: r.pct, pct: null }; } }); else document.getElementById('d-rent').innerHTML = empty('Período curto demais para o gráfico.');
       const evo = rows.map((i) => ({ label: W.dt(c.d[i]).slice(0, 5), long: W.dt(c.d[i]), a: c.inv[i], b: c.cumFl[i] }));
       if (evo.length > 1) W.lineChart(document.getElementById('d-evo'), evo, { names: ['Portfólio', 'Valor investido'], name: 'Evolução patrimonial' });
       if (dd.length > 1) W.lineChart(document.getElementById('d-dd'), dd, { names: ['Drawdown'], name: 'Drawdown', format: (v) => W.pct(v, 2), axisFormat: AX });
@@ -100,7 +100,7 @@
       <div class="dash-kpi"><span class="muted small">Patrimônio em ${W.dt(per.to)}</span><b>${W.brl(nw.total)}</b></div>
       <div class="dash-kpi"><span class="muted small">Resultado (${per.all ? 'desde o início' : `${Math.round((new Date(per.to) - new Date(per.from)) / 864e5) + 1} dias`})</span><b class="${cl(cur.money)}">${sg(cur.money)} <span class="pill ${cl(cur.ret)}">${p2(cur.ret)} ${cur.ret >= 0 ? '↑' : '↓'}</span></b></div></div>`;
     const evoPer = `<div data-evo-range class="dash-range"><div class="field"><label>Período</label>${W.rangeHtml(per.all ? '' : from, per.all ? '' : per.to, [3, 6, 12, 24])}</div></div>`;
-    return `${W.pageHead('Patrimônio', '', actions)}${evoPer}${head}
+    return `${W.pageHead('Investimentos', '', actions)}${evoPer}${head}
       <div class="dash-grid">
         ${card('Rentabilidade', '<div id="d-rent"></div>', 'span-7')}
         ${card('Alocação patrimonial', `<div class="dash-alloc"><div id="d-alloc"></div>${tbl('<th>Classe de ativo</th><th class="num">Valor atualizado</th><th class="num">Rentabilidade</th>', allocRows.map((g) => `<tr><td>${esc(g.name)}</td><td class="num">${W.brl(g.value)}</td><td class="num ${cl(g.twr)}">${p2(g.twr)}</td></tr>`).join(''))}</div>`, 'span-5')}

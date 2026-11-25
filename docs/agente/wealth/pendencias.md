@@ -71,3 +71,4 @@ Origem: documentos do Projeto (lottus-wealth e vinculos-wealth). Severidade "a c
 | W-064 | O mesmo CPF/CNPJ é aceito nos dados de cobrança de usuários diferentes (ex.: uma empresa pagando por várias pessoas). Confirmar se é a regra desejada | Baixa | Yuri (regra) | a definir | verificação Trio 24/11 |
 | W-065 | `w_equity` (v2) com 60 meses × 1.000 lançamentos oscila entre 270 e 304 ms, no limite da meta de 300 ms (ver W-050) | Baixa | Agente | no branch | 24/11 |
 | W-066 | Acessibilidade: ao fechar um modal (Esc ou Fechar), o foco não volta ao botão que o abriu (provavelmente em todos os modais) | Baixa | Agente | próxima rodada | verificação Trio ciclo 3 |
+| W-067 | Ativos personalizados importados como "outro" (LCI/LCA/CDB com taxa no nome) ficam sem valorização; ler indexador/taxa/vencimento do nome ao importar ou orientar a edição em lote | Média | Agente | próxima rodada | Geraldo 25/11 |
