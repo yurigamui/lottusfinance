@@ -135,7 +135,7 @@
   W.acts['imp-open'] = () => {
     const id = curId();
     W.modal({ title: 'Importar arquivo', wide: true, body: '<p class="muted small">Arraste aqui o CSV com todas as suas posições (ativo, quantidade e preço médio) ou o extrato de negociação da corretora. Você confere as colunas antes de importar; linhas repetidas não entram duas vezes.</p><div id="imp-host" style="margin-top:14px"></div>' });
-    W.importUI(document.getElementById('imp-host'), { mode: 'invest', label: 'Arraste o CSV de posições aqui', onImport: async (rows, name) => { const r = await W.rpc('w_tx_import', { p_wallet: id, p_filename: name, p_rows: rows }); return `<p><b>${r.new}</b> lançamentos novos · ${r.duplicates} já existiam · ${r.invalid} inválidos.</p><button class="btn" data-act="imp-done">Concluir</button>`; } });
+    W.importUI(document.getElementById('imp-host'), { mode: 'invest', label: 'Arraste o CSV de posições aqui', onImport: async (rows, name) => { const r = await W.rpc('w_tx_import', { p_wallet: id, p_filename: name, p_rows: rows }); return `<p><b>${r.new}</b> lançamentos novos${r.renda_fixa ? ` (${r.renda_fixa} ${r.renda_fixa === 1 ? 'título' : 'títulos'} de renda fixa com a curva calculada)` : ''} · ${r.duplicates} já existiam · ${r.invalid} inválidos.</p><button class="btn" data-act="imp-done">Concluir</button>`; } });
   };
   W.acts['imp-done'] = () => { W.closeModal(); W.refresh(); };
   W.acts['tx-edit'] = (el) => openTx(W.cur, W.txRows.find((t) => t.id === el.dataset.id));
