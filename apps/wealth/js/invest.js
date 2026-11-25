@@ -91,7 +91,7 @@
     const id = ctx.w.id; const mode = W.viewMode(ctx); const per = periodOf(ctx, true);
     const pos = await W.rpc('w_positions', { p_wallet: id, p_mode: mode, p_from: per.from, p_to: per.to });
     ctx.after = () => {
-      W.cur = ctx; const host = document.getElementById('pos-table');
+      W.cur = ctx; const host = document.getElementById('pos-table'); if (!host) return;
       const paint = () => {
         const r = renderPos(id, pos); host.querySelector('tbody').innerHTML = r.body; host.querySelector('tfoot').innerHTML = r.foot; host.__keys = r.keys;
         host.querySelectorAll('th[data-sort]').forEach((th) => { th.setAttribute('aria-sort', th.dataset.sort === posSort.key ? (posSort.dir > 0 ? 'ascending' : 'descending') : 'none'); th.querySelector('.srt').textContent = th.dataset.sort === posSort.key ? (posSort.dir > 0 ? '▲' : '▼') : '↕'; });
@@ -106,7 +106,7 @@
     };
     return `${W.pageHead('Posição', '', `${W.modeBar(mode)}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
       <div data-evo-range>${periodBar(ctx, per)}</div>
-      <div class="card flush">${pos.length ? `<div class="table-wrap"><table class="pos" id="pos-table"><thead><tr><th class="allpos"><button type="button" class="ghost-ico" data-allpos aria-label="Expandir ou recolher tudo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l5 5 5-5M7 13l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></th>${POS_COLS.slice(1).map(([k, l, c]) => `<th class="${c}" data-sort="${k}" aria-sort="none" tabindex="0"><span>${l}</span> <span class="srt" aria-hidden="true">↕</span></th>`).join('')}<th></th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>` : empty('Nenhuma posição na data escolhida.')}</div>`;
+      <div class="card flush">${pos.length ? `<div class="table-wrap"><table class="pos" id="pos-table"><thead><tr><th class="allpos"><button type="button" class="ghost-ico" data-allpos aria-label="Expandir ou recolher tudo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l5 5 5-5M7 13l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></th>${POS_COLS.slice(1).map(([k, l, c]) => `<th class="${c}" data-sort="${k}" aria-sort="none" tabindex="0"><span>${l}</span> <span class="srt" aria-hidden="true">↕</span></th>`).join('')}<th></th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>` : empty('Nenhuma posição na data escolhida.', ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button> <a class="btn" href="#/w/${id}/transacoes?new=1">Nova transação</a>` : '')}</div>`;
   });
   document.addEventListener('click', (e) => { const r = e.target.closest('tr.link[data-href]'); if (r && !e.target.closest('a,button')) location.hash = r.dataset.href.slice(1); });
 

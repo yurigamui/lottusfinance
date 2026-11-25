@@ -14,6 +14,9 @@ begin
   select * into p from public._w_parse_rf('LCD BNDESBD DI 95,50 12/2029'); perform pg_temp.ok(p.kind = 'rf_pos' and p.rate = 0.955, 'P5 LCD DI 95,5%');
   select * into p from public._w_parse_rf('CDB PRE BANCO X 12,50 03/2028'); perform pg_temp.ok(p.kind = 'rf_pre' and p.indexer = 'PRE' and p.rate = 0.125, 'P6 CDB pré 12,5% a.a.');
   perform pg_temp.ok(not exists (select 1 from public._w_parse_rf('CFF ITAUBA FIAGRO RESPONSABILIDADE LIMITADA')) and not exists (select 1 from public._w_parse_rf('KINEA PE V FD FIP CA')) and not exists (select 1 from public._w_parse_rf('CDB ITAU SEM TAXA')) and not exists (select 1 from public._w_parse_rf('CDB CDI ITAU 92,00 13/2031') where maturity is not null), 'P7 nomes que não são título (ou sem taxa) não são convertidos; mês 13 sem vencimento');
+  perform pg_temp.ok(not exists (select 1 from public._w_parse_rf('LCI CDI BANCO 1,00 01/2030')) and not exists (select 1 from public._w_parse_rf('CDB IPCA BANCO 100,00 01/2030')) and not exists (select 1 from public._w_parse_rf('CDB DI BANCO X 1.000,50 12/2029')), 'P9 taxa fora da faixa do indexador ou com milhar não é classificada');
+  perform pg_temp.ok(not exists (select 1 from public._w_parse_rf('CDB CDI IPCA BANCO 5,00 01/2030')) and not exists (select 1 from public._w_parse_rf('CDB PRE BANCO DI 12,50 03/2028')), 'P10 mais de um indexador no nome é ambíguo: não classifica');
+  perform pg_temp.ok((select rate from public._w_parse_rf('cdb pré banco 12,5 03/2028')) = 0.125 and (select rate from public._w_parse_rf('CDB  IPCA+  BANCO  IPCA 5.77  10/2027')) = 0.0577, 'P11 minúsculas, acento e espaços duplos');
   perform pg_temp.ok(not has_function_privilege('authenticated', 'public._w_parse_rf(text)', 'execute'), 'P8 parser fechado ao navegador');
 end $$;
 -- importação: um título novo vira Renda Fixa e a curva é acrescida; um ativo comum continua "outro"
@@ -29,7 +32,7 @@ begin
 end $$;
 reset role;
 do $$
-declare a public.w_assets; n int; v numeric; wid uuid := current_setting('t.wid')::uuid;
+declare r jsonb; a public.w_assets; n int; v numeric; wid uuid := current_setting('t.wid')::uuid;
 begin
   select * into a from public.w_assets where wallet_id = wid and name = 'LCI-CDI ITAU 92,00 01/2031';
   perform pg_temp.ok(a.kind = 'rf_pos' and a.indexer = 'CDI' and a.rate = 0.92 and not a.custom and a.maturity = date '2031-01-31', 'I2 ativo criado como Renda Fixa pós (92% CDI), não personalizado');
@@ -40,6 +43,9 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', (select id from auth.users where email = 'ana.gestora@exemplo.com.br'), 'role', 'authenticated')::text, true);
   perform public.w_tx_import(wid, 'teste2.csv', jsonb_build_array(jsonb_build_object('date', (current_date - 30)::text, 'kind', 'compra', 'name', 'LCI-CDI ITAU 92,00 01/2031', 'qty', 10, 'unit_price', 1, 'asset_kind', 'outro')));
   perform pg_temp.ok((select count(*) from public.w_assets where wallet_id = wid and name = 'LCI-CDI ITAU 92,00 01/2031') = 1, 'I5 reimportar o mesmo título não duplica o ativo');
+  -- B1: linha para ativo que JÁ existe (por ticker) precisa gravar
+  r := public.w_tx_import(wid, 'teste3.csv', jsonb_build_array(jsonb_build_object('date', (current_date - 3)::text, 'kind', 'compra', 'ticker', 'PETR4', 'qty', 5, 'unit_price', 30)));
+  perform pg_temp.ok((r->>'new')::int = 1 and (r->>'invalid')::int = 0 and exists (select 1 from public.w_invest_tx t where t.wallet_id = wid and t.date = current_date - 3 and t.qty = 5 and t.source = 'arquivo'), 'I6 importar linha de ativo já existente grava a transação (sem contar como inválida)');
 end $$;
 -- conversão dos já importados (dados)
 reset role;
