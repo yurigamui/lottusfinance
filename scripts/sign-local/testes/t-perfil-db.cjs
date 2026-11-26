@@ -225,7 +225,7 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     check('AC-B11 profiles.full_name mudou', (await snap(U.U1.id)).full_name === 'Ana Nova Silva');
     const acc1 = (await q(`select name, doc from public.sign_accounts where user_id = $1`, [U.U1.id]))[0];
     check('AC-B11 sign_accounts.name/doc NÃO mudaram', JSON.stringify(acc0) === JSON.stringify(acc1), [acc0, acc1]);
-    check('AC-B11 crm_leads.name sincronizado a partir de profiles', (await q(`select name from public.crm_leads l join public.sign_accounts a on a.id = l.sign_account_id where a.user_id = $1`, [U.U1.id]))[0].name === 'Ana Nova Silva');
+    check('AC-B11 crm_leads.name sincronizado a partir de profiles', (await q(`select l.name from public.crm_leads l join public.sign_accounts a on a.id = l.sign_account_id where a.user_id = $1`, [U.U1.id]))[0].name === 'Ana Nova Silva');
     const cnpj = await rpc('sign_account_save', { p: { name: 'Ana Outra Silva', doc: '11222333000181' } }, U.U1.email);
     check('AC-B11 doc com 14 dígitos (CNPJ) é ignorado, sem erro; o nome vale', cnpj.status === 200 && cnpj.body.account.doc === U.U1.cpf && (await snap(U.U1.id)).full_name === 'Ana Outra Silva', cnpj);
     const cl = await rpc('sign_account_save', { p: { name: 'Ana Outra Silva', doc: U.U2.cpf } }, U.U1.email);

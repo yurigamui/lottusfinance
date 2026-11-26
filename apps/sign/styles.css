@@ -1579,3 +1579,10 @@ nav.tabs { display: inline-flex; flex-wrap: nowrap; overflow-x: auto; max-width:
   .toast-msg { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
   .toast-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 }
+/* CLS: a margem do spinner inicial não pode vazar para o body (o body "pulava" 64 px quando o shell entrava) */
+.sg-root { display: flow-root; }
+/* 1.4: o cartão reserva a altura do formulário enquanto carrega (evita empurrar a coluna lateral) */
+.pf-card[aria-busy='true'] { min-height: 560px; align-content: start; }
+@media (min-width: 768px) { .pf-card[aria-busy='true'] { min-height: 420px; } }
+/* 1.0 (AC13): a marca da faixa é um link; alvo de 44 px */
+.sidenav-mark { width: 44px; height: 44px; }

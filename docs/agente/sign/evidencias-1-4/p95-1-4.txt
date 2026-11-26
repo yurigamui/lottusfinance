@@ -1,0 +1,7 @@
+Medido por t-perfil-db.cjs em 2026-11-26 (Postgres 16 local, 10008 perfis):
+sign_me, 100 chamadas sequenciais, ponta a ponta (HTTP + banco): p95 3.4 ms, mediana 2.1 ms
+sign_me, 100 chamadas sequenciais, só a transação no banco: p95 2.1 ms, mediana 1.2 ms
+sign_profile_save, 100 chamadas sequenciais, ponta a ponta: p95 3.9 ms, mediana 3.1 ms
+sign_profile_save, 100 chamadas sequenciais, só a transação no banco: p95 2.8 ms, mediana 2.1 ms
+sign_me, 10 rodadas x 10 paralelas, ponta a ponta: p95 30.3 ms, mediana 10.1 ms
+sign_profile_save, 10 rodadas x 10 paralelas, ponta a ponta: p95 13.3 ms, mediana 10.4 ms

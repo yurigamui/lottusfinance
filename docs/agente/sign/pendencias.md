@@ -58,3 +58,6 @@
 | E-01 | E-mail de suporte para troca de CPF/e-mail (mailto) e texto LGPD (canal do DPO, retenção) como `[preencher]` na 1.4 | Média | Yuri/Jurídico | G7 | secao-1-4 |
 | E-02 | Etapa B de T-02: remover `sign_accounts.name/doc` e duplicidade de `sign_env_signers` (só após auditar produção por SELECT) | Média | Arquiteto | Pós-v1 | secao-1-4 |
 | E-03 | RPC `bo_` para troca de CPF com log (suporte) | Média | Arquiteto | Pós-v1 | secao-1-4 |
+| E-04 | 1.4: `cpf_locked` também vale para CPF já preenchido (condição extra d; sem ela a UI mostraria campo editável que o servidor sempre recusa). Confirmar com o Yuri | Média | Yuri | G7 | nota-construcao-1-4 |
+| E-05 | 1.4: conferir em produção (T-08) índices em `company_members(user_id)` e `funder_members(user_id)`; no local (stubs) o plano faz Seq Scan neles (tabelas pequenas) | Média | Auditor | Antes de aplicar | evidencias-1-4/explain-1-4.txt |
+| E-06 | 1.4: `supportEmail` em `config.js` vazio ([preencher], E-01); o link "fale com o suporte" abre o e-mail sem destinatário | Média | Yuri | G7 | nota-construcao-1-4 |
