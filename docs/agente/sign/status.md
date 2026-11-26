@@ -20,6 +20,7 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Conta e identidade | 1.1 Entrar e criar conta | sim | sim | sim | **Aprovada com ressalvas** (24/11) | 1 |
 | 1 | 1.0 Shell e correções da 1.1 | sim | sim | sim | **Aprovada com ressalvas** (26/11; ciclo 2 pendente) | 1 |
+| 1 | 1.4 Perfil e conta (+ pacote 1.0-C2) | sim | sim | em reverificação | **Reprovada** no ciclo 1 (V-01 Alto); correções em andamento | 1 |
 | 1 | 1.2 Recuperar senha | em curso | não | não | — | 0 |
 | 1 | 1.3 Onboarding | não | não | não | — | 0 |
 | 1 | 1.4 Perfil e conta | não | não | não | — | 0 |

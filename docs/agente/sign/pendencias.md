@@ -70,3 +70,5 @@
 | A14-B4 | `_sign_account` antiga ainda grava `sign_accounts.name` na criação (coerente com E-02, etapa B) | Baixa | Arquiteto | Pós-v1 | auditor 1.4 |
 | A14-B5 | `_headers`: `Cache-Control: no-store` também para URLs limpas `/assinar`, `/verificar`, `/index` (Cloudflare Pages) | Baixa | Desenvolvedor | Ciclo 2 da 1.4 | auditor 1.4 |
 | A14-B6 | Auxiliares `_` ainda executáveis por `anon` (= M1) e `_email_funder` por `authenticated`: migração de segurança nova inclui as 2 faltantes | Média | Arquiteto | Release | auditor 1.4 |
+| V14 | Ciclo 2 da 1.4: **V-01 (Alto)**, V-02, V-03, V-05, V-07, V-08, A14-M1, A14-B1, A14-B3, A14-B5. Reverificar 1.0 e 1.1 (o `.banner` é compartilhado) | Alta | Desenvolvedor | Agora | verificação 1.4 |
+| V14-G7 | V-04 `[preencher]` LGPD/DPO e e-mail de suporte; V-06 índices de `company_members`/`funder_members` em produção | Média | Yuri/Jurídico/Auditor | G7 | verificação 1.4 |
