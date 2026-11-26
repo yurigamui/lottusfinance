@@ -1,9 +1,9 @@
 /* Seção 1.4: Conta > Perfil (#/conta/perfil). Nome sempre editável; CPF só se preenche (nunca se troca por aqui: R5).
    Tudo por DOM e textContent: nome vindo do usuário nunca vira HTML. Nada de nome/CPF em storage (o rascunho fica só em memória). */
-import { h, icon, ICON, pageHead, abasConta, toast, focusEl } from '../lib/ui.js?v=20261126b';
-import { normName, INVISIVEL, LIMITS, onlyDigits, cpfOk, fmtCpf, maskCpf, maskPhone, isEmail } from '../lib/fmt.js?v=20261126b';
-import { classify } from '../lib/api.js?v=20261126b';
-import { levelOf, updateMe } from './shell.js?v=20261126b';
+import { h, icon, ICON, setKids, pageHead, abasConta, toast, focusEl } from '../lib/ui.js?v=20261126c';
+import { normName, INVISIVEL, LIMITS, onlyDigits, cpfOk, fmtCpf, maskCpf, maskPhone, isEmail } from '../lib/fmt.js?v=20261126c';
+import { classify } from '../lib/api.js?v=20261126c';
+import { levelOf, updateMe } from './shell.js?v=20261126c';
 
 const T = {
   sub: 'Seus dados, verificação e segurança.',
@@ -83,7 +83,7 @@ function side(ctx) {
 /* e-mail ainda não confirmado: reenvia o link de confirmação e avisa no lugar */
 async function reenviar(ctx, area) {
   const r = await ctx.api.resend(ctx.session && ctx.session.user ? ctx.session.user.email : '');
-  area.replaceChildren(h('div', { class: r.error ? 'banner danger' : 'banner info', role: 'status' }, h('div', { class: 'grow' }, r.error ? T.salvarGeral : T.reenviado)));
+  setKids(area, h('div', { class: r.error ? 'banner danger' : 'banner info', role: 'status' }, h('div', { class: 'grow' }, r.error ? T.salvarGeral : T.reenviado)));
 }
 
 /* ---------- formulário ---------- */
@@ -100,7 +100,7 @@ function drawForm(st, box) {
   const name = field('pf-nome', 'Nome completo', h('input', { class: 'input', id: 'pf-nome', name: 'name', type: 'text', autocomplete: 'name', maxlength: LIMITS.name, value: draft ? draft.name : base.name }), T.nomeAjuda);
   const cpfIn = h('input', { class: 'input', id: 'pf-cpf', name: 'cpf', type: 'text', inputmode: 'numeric', autocomplete: 'off', maxlength: 14, value: locked ? maskCpf(me.cpf) : draft ? draft.cpf : fmtCpf(savedCpf), disabled: locked });
   const cpf = field('pf-cpf', 'CPF', cpfIn, locked ? '' : T.cpfAjuda);
-  const lockHelp = () => { cpf.helpEl.replaceChildren('Para alterar o CPF, ', suporte(ctx.cfg, 'Alteração de CPF no Lottus Sign', 'fale com o suporte'), '.'); };
+  const lockHelp = () => { setKids(cpf.helpEl, 'Para alterar o CPF, ', h('span', { class: 'nw' }, suporte(ctx.cfg, 'Alteração de CPF no Lottus Sign', 'fale com o suporte'), '.')); };
   if (locked) lockHelp();
   if (dica && !draft) name.helpEl.textContent = T.nomeAjuda + ' ' + T.dica;
 
@@ -109,7 +109,7 @@ function drawForm(st, box) {
     phone ? (me.phone_verified ? tag('tag success', 'check', 'Verificado') : tag('tag muted', 'alerta', 'Não verificado')) : null,
     h('a', { class: 'pf-link', href: '#/conta/verificacao' }, 'Verificar contato'));
   const mail = readOnly('pf-mail', 'E-mail', h('span', { class: 'pf-mail' }, me.email || ''), tag('tag success', 'check', 'Confirmado'),
-    h('div', { class: 'help' }, 'Para trocar o e-mail, ', suporte(ctx.cfg, 'Troca de e-mail no Lottus Sign', 'fale com o suporte'), '.'));
+    h('div', { class: 'help' }, 'Para trocar o e-mail, ', h('span', { class: 'nw' }, suporte(ctx.cfg, 'Troca de e-mail no Lottus Sign', 'fale com o suporte'), '.')));
 
   const msg = h('div', { class: 'pf-msg', role: 'alert', tabindex: '-1' });
   const save = h('button', { class: 'btn pf-save', type: 'submit', disabled: true, 'aria-disabled': 'true' }, 'Salvar alterações');
@@ -120,16 +120,16 @@ function drawForm(st, box) {
   const changed = () => { const c = cur(); return c.name !== savedName || (!locked && c.cpf !== savedCpf); };
   const edited = () => { const c = cur(); return c.name !== normName(base.name) || (!locked && c.cpf !== base.cpf); };
   const sync = () => { const off = saving || !changed(); save.disabled = off; save.setAttribute('aria-disabled', off ? 'true' : 'false'); };
-  const banner = (text, ...extra) => { msg.replaceChildren(h('div', { class: 'banner danger' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, text), ...extra)); };
+  const banner = (text, ...extra) => { setKids(msg, h('div', { class: 'banner danger' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, text), ...extra)); };
 
-  name.input.addEventListener('input', () => { setErr(name, ''); msg.replaceChildren(); sync(); });
+  name.input.addEventListener('input', () => { setErr(name, ''); setKids(msg, ); sync(); });
   /* V-03: o maxlength corta o texto colado em silêncio; avisa depois do evento input (que limpa o erro) */
   name.input.addEventListener('paste', (ev) => {
     const el = name.input; const txt = (ev.clipboardData && ev.clipboardData.getData('text')) || '';
     const sobra = el.value.length - (el.selectionEnd - el.selectionStart) + txt.length > LIMITS.name;
     if (sobra) setTimeout(() => { setErr(name, T.nomeCortado); }, 0);
   });
-  cpfIn.addEventListener('input', () => { setErr(cpf, ''); msg.replaceChildren(); sync(); });
+  cpfIn.addEventListener('input', () => { setErr(cpf, ''); setKids(msg, ); sync(); });
   cpfIn.addEventListener('blur', () => { if (!locked) cpfIn.value = fmtCpf(cpfIn.value); });
   ctx.setGuard({ dirty: edited, keep: () => ctx.api.setDraft(st.uid, { name: name.input.value, cpf: cpfIn.value }) });
 
@@ -138,7 +138,7 @@ function drawForm(st, box) {
   }
 
   async function run() {
-    msg.replaceChildren();
+    setKids(msg, );
     const c = cur();
     const bad = [];
     const nm = nameMsg(name.input.value);
@@ -170,7 +170,7 @@ function drawForm(st, box) {
   form.addEventListener('submit', (ev) => { ev.preventDefault(); if (!saving && changed()) run(); });
 
   box.removeAttribute('aria-busy');
-  box.replaceChildren(
+  setKids(box, 
     h('div', { class: 'pf-top' }, h('h2', { id: 'pf-h' }, 'Seus dados'), h('div', { class: 'pf-level' }, h('span', { class: 'pf-label' }, 'Nível de assinatura'), nivelTag(levelOf(me)))),
     me.profile_complete ? null : h('div', { class: 'banner info' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, T.incompleto)),
     form);
@@ -181,7 +181,7 @@ function drawForm(st, box) {
 async function load(st, box, fresh) {
   const { ctx } = st;
   box.setAttribute('aria-busy', 'true');
-  box.replaceChildren(...skeleton());
+  setKids(box, ...skeleton());
   try {
     const me = await ctx.api.me({ fresh });
     if (st.dead) return;
@@ -197,12 +197,12 @@ async function load(st, box, fresh) {
       const b = h('button', { class: 'btn secondary sm', type: 'button' }, 'Reenviar e-mail');
       const area = h('div', { class: 'pf-msg' });
       b.addEventListener('click', () => reenviar(ctx, area));
-      box.replaceChildren(h('h2', { id: 'pf-h' }, 'Seus dados'), h('div', { class: 'banner info' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, T.confirme), b), area);
+      setKids(box, h('h2', { id: 'pf-h' }, 'Seus dados'), h('div', { class: 'banner info' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, T.confirme), b), area);
       return;
     }
     const retry = h('button', { class: 'btn secondary sm', type: 'button' }, 'Tentar de novo');
     retry.addEventListener('click', () => { retry.setAttribute('aria-busy', 'true'); retry.disabled = true; load(st, box, true); });
-    box.replaceChildren(h('h2', { id: 'pf-h' }, 'Seus dados'), h('div', { class: 'banner danger', role: 'alert' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, T.carregar), retry));
+    setKids(box, h('h2', { id: 'pf-h' }, 'Seus dados'), h('div', { class: 'banner danger', role: 'alert' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, T.carregar), retry));
     focusEl(retry);
   }
 }
@@ -214,7 +214,7 @@ export const perfil = {
   render(ctx) {
     const st = { ctx, dead: false, me: null, uid: ctx.session && ctx.session.user ? ctx.session.user.id : '' };
     const box = h('section', { class: 'card pf-card', 'aria-busy': 'true', 'aria-labelledby': 'pf-h' }, ...skeleton());
-    ctx.view.replaceChildren(pageHead('Conta', T.sub), abasConta(ctx.route), h('div', { class: 'pf' }, box, side(ctx)));
+    setKids(ctx.view, pageHead('Conta', T.sub), abasConta(ctx.route), h('div', { class: 'pf' }, box, side(ctx)));
     load(st, box, false);
     return () => { st.dead = true; ctx.setGuard(null); };
   },

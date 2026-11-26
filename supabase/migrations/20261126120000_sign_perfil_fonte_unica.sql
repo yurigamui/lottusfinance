@@ -81,8 +81,8 @@ begin
   if p_name is not null then
     v_name := public._sign_name_norm(p_name);
     if char_length(v_name) < 3 or char_length(v_name) > 140 or strpos(v_name, ' ') = 0 then raise exception 'invalid_name'; end if;
-    -- A14-B3: caracteres invisíveis de direção e largura zero (U+200B a U+200F, U+202A a U+202E, U+2066 a U+2069) não entram no nome
-    if v_name ~ '[\u200B-\u200F\u202A-\u202E\u2066-\u2069]' then raise exception 'invalid_name'; end if;
+    -- A14-B3: caracteres invisíveis de direção e largura zero (U+200B a U+200F, U+202A a U+202E, U+2060, U+2066 a U+2069, U+00AD, U+180E, U+FEFF) não entram no nome
+    if v_name ~ '[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\u00AD\u180E\uFEFF]' then raise exception 'invalid_name'; end if;
   end if;
   select * into v_cur from public.profiles where id = p_uid for update;
   v_has := found;

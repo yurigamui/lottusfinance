@@ -1,6 +1,6 @@
 /* Telas provisórias: destinos que ainda não existem (1.2, 1.3, Partes 2 a 5) e rota desconhecida. Sempre com saída.
    Públicas (recuperar, nova-senha, rota desconhecida sem sessão): .sg-single. Privadas: dentro do shell (1.0). */
-import { h, mount, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261126b';
+import { h, mount, setKids, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261126c';
 
 function pagina(ctx, title, text, actions) {
   mount(ctx.root, h('div', { class: 'sg-page sg-single' },
@@ -43,7 +43,7 @@ function privada(def) {
     title: def.title || def.h1,
     render(ctx) {
       const acao = def.saida ? h('a', { class: 'btn', href: def.saida[1] }, def.saida[0]) : null;
-      ctx.view.replaceChildren(...[
+      setKids(ctx.view, ...[
         pageHead(def.h1, def.sub),
         def.abas ? abasConta(ctx.route) : null,
         emptyState(def.vazio || 'Esta área está em construção.', null, acao),

@@ -1,9 +1,9 @@
 /* Lottus Sign: entrada. Cria o cliente, trata o link do e-mail (hash) ANTES do roteador e inicia as rotas. */
-import { createRouter, ONBOARDING, DEFAULT_AFTER, isAuthHash } from './lib/router.js?v=20261126b';
-import * as api from './lib/api.js?v=20261126b';
-import { entrar } from './views/entrar.js?v=20261126b';
-import { construcao, naoencontrada, privadas } from './views/construcao.js?v=20261126b';
-import { perfil } from './views/perfil.js?v=20261126b';
+import { createRouter, ONBOARDING, DEFAULT_AFTER, isAuthHash } from './lib/router.js?v=20261126c';
+import * as api from './lib/api.js?v=20261126c';
+import { entrar } from './views/entrar.js?v=20261126c';
+import { construcao, naoencontrada, privadas } from './views/construcao.js?v=20261126c';
+import { perfil } from './views/perfil.js?v=20261126c';
 
 /* R-6: o hash do link do e-mail (#access_token=... ou #error_code=...) nunca é rota. Lê uma vez e apaga. */
 function takeAuthHash() {

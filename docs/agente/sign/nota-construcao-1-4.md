@@ -77,3 +77,34 @@ Safari, Firefox (a Navigation API do V-02 tem fallback por `history.state`, que 
 - **1.0 (shell e correções)**: `.banner` agora com `flex-wrap` e `.grow` de base 160 px (aviso `.shell-notice`, estado de erro de `sign_me`), tamanho do ícone dentro de banner/toast/estado vazio, `.org-link` 44 px, `.org-name` com 2 linhas, `router.js` (navegação, `history.state`, pageshow).
 - **1.1 (Entrar e criar conta)**: `.banner` não é usado na entrada (usa `.sg-alert`, só ganhou o teto de 32 px no svg), mas `styles.css` e `router.js` mudaram: reverificar capturas de Entrar/Criar/"Confirme seu e-mail"/link vencido (t-regressao) e o retorno após login.
 - `assinar.html` e `verificar.html` carregam o mesmo `styles.css` (capturas ok no t-regressao).
+
+## Ciclo 3 (2ª reprovação: N-01 Alto, V-09, B-01 a B-05; verificacao-1-4-ciclo-2.md)
+Rodado com `SIGN_DB=sign_dev SIGN_DB_ANTES=sign_dev_antes` exportados. `?v=` 20261126c.
+
+### O que mudou
+| Item | Correção |
+| --- | --- |
+| N-01 (Alto) | Origem: `perfil.js` passava `null` ao `replaceChildren` nativo (escreve o texto "null"). **Guarda sistêmica:** novo `setKids(el, ...filhos)` em `lib/ui.js` (ignora null, undefined, false e true; achata arrays; texto vira nó de texto); `mount` usa ele; `h()` também ignora `true`; **todos** os `.replaceChildren(` de `shell.js`, `construcao.js`, `perfil.js` e `entrar.js` foram trocados por `setKids` |
+| Teste novo `t-texto.cjs` | Percorre Entrar (e erros), Criar, Confirme seu e-mail (e reenvio), link vencido, provisória pública, 404 público, shell, menu, todas as rotas privadas, 404 privado, Perfil (U1 completo/travado, U3 incompleto com sugestão, erros de campo, erro ao salvar, erro ao carregar, aviso do shell, U4, U5, U6, U7), toasts, modal "Descartar", `confirm()`; em 320, 768 e 1280; falha se algum nó de texto visível, valor de campo, title, aria-label, alt ou placeholder tiver `null`, `undefined`, `[object Object]` ou `NaN`; mais checagem estática de que não resta `.replaceChildren(` nativo fora de `ui.js`. **Rodado antes da correção contra o código com o bug: 24 FALHAS (todas "null" no cartão do Perfil)**; depois: 95 de 95 |
+| V-09 | `router.js`: o desfazer da navegação não é mais bloqueado pelo modal aberto (Voltar duplo/triplo desfaz de novo); o hashchange do desfazer só é engolido se a URL já voltou à tela; depois de "Continuar editando" a URL é conferida e corrigida; item Documentos do menu funciona |
+| B-03 | `img/logo-creme.png` e `img/mark-creme.png` copiados de `apps/wealth/img` (md5 idêntico ao de admin, partners e site: são os PNGs oficiais) |
+| B-01 | Nome também recusa U+2060, U+FEFF, U+00AD e U+180E (migração e cliente) |
+| B-02 | Iniciais do avatar com `color-mix` (como `.tag.brand`): 6,07:1 no claro e 5,36:1 no escuro (eram 4,25 e 3,86) |
+| B-04 | "fale com o suporte." sem espaço antes do ponto e o ponto preso ao link (`.nw`) |
+| B-05 | Botão dentro de banner/`sg-alert`/aviso do shell com fundo do cartão e borda de 1 px (contraste do texto >= 4,5; da borda >= 3) |
+
+### Passou
+t-perfil-db 141 de 141 (+4 de B-01) · t-perfil 245 de 245 (+16: V-09, B-02..B-05) · t-texto 95 de 95 · t-ac 96 · t-shell 183 · t-layout 99 · t-comp 63 · t-corr 45 · check.mjs 0 erros · smoke sign nenhum problema. t-regressao: 29 de 36 idênticas; as 7 diferenças: `*-4-link-vencido` nas 6 larguras (o botão "Reenviar e-mail" ganhou borda e fundo, mudança pedida em B-05, 6280 px) e a antiga 1920-3-confirme (45 px, desvio 4).
+
+### O que vi nas capturas (/tmp/sign-shots-perfil)
+- Perfil no tema escuro em 320 (`escuro-perfil-320.png`): a marca creme aparece na topbar; sem texto "null" no cartão; CPF mascarado, "fale com o suporte." com o ponto colado ao link na mesma linha; selos legíveis; iniciais "EE" legíveis.
+- Perfil em 1280 (`perfil-1280.png`, usuário com nome de 140 letras sem espaço): topo com o nome em 2 linhas e avatar inteiro; cartão e coluna lateral lado a lado; faixa "Complete seu perfil" (correta: o nome sem espaço não é nome completo); campo de nome sem estourar.
+- Banner de erro em 320 (`banner-botao-320.png`): ícone pequeno alinhado ao texto, botão "Tentar de novo" claro com borda, com cara de botão.
+
+### NÃO testado
+Safari, Firefox, leitor de tela, teclado virtual reais; Navigation API ausente (fallback por `history.state` só no Chromium); Voltar duplo foi simulado com `goBack()` do Playwright, não com cliques reais do usuário; tema escuro só por CSS (não acionável pelo usuário).
+
+### Seções a reverificar (regra 14)
+- **1.0**: `ui.js` (`setKids`, `mount`, `h`), `shell.js` (todas as trocas), `router.js` (guarda/histórico), `styles.css` (avatar, `.banner .btn`), imagens `*-creme.png` (marca no escuro).
+- **1.1**: `entrar.js` (trocas por `setKids`; todas as telas de Entrar/Criar/Confirme/link vencido); o botão "Reenviar e-mail" do link vencido mudou de aparência (B-05).
+- `assinar.html`/`verificar.html`: usam o mesmo `styles.css` (capturas idênticas).

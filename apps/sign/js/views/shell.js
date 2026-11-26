@@ -1,5 +1,5 @@
 /* Seção 1.0: esqueleto da área logada (menu, barra superior, aviso e #view). Montado por DOM; texto do usuário só por textContent. */
-import { h, mount, icon, ICON, focusH1 } from '../lib/ui.js?v=20261126b';
+import { h, mount, setKids, icon, ICON, focusH1 } from '../lib/ui.js?v=20261126c';
 
 /* Itens do menu. Só entra quem tem built:true; as seções futuras ligam o seu item sem mudar a estrutura. */
 export const NAV = [
@@ -34,7 +34,7 @@ export function initialsOf(name, email) {
 let S = null;
 
 /* Atualiza nome, e-mail, iniciais e nível do cabeçalho com um sign_me já carregado (ex.: depois de salvar o perfil). */
-export function updateMe(me) { if (S && !S.dead && me) { S.meOk = true; paintMe(S, me); S.notice.replaceChildren(); } }
+export function updateMe(me) { if (S && !S.dead && me) { S.meOk = true; paintMe(S, me); setKids(S.notice, ); } }
 
 /* A10-MA: tira o shell do ar (ex.: a sessão mudou para outro usuário). O próximo ensureShell monta um novo, sem dado do anterior. */
 export function dropShell() { releaseShell(); }
@@ -57,7 +57,7 @@ function paintNav(st, route, minimal) {
   if (st.minimal !== minimal) {
     st.minimal = minimal;
     st.items = minimal ? [] : NAV.filter((n) => n.built).map(navItem);
-    st.nav.replaceChildren(...st.items.map((i) => i.sec));
+    setKids(st.nav, ...st.items.map((i) => i.sec));
     st.side.classList.toggle('minimal', minimal);
   }
   for (const i of st.items) {
@@ -89,7 +89,7 @@ function paintMe(st, me) {
 
 function showNotice(st, retry) {
   const btn = h('button', { class: 'btn secondary sm', type: 'button', onclick: retry }, 'Tentar de novo');
-  st.notice.replaceChildren(h('div', { class: 'banner danger' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, TXT_ERRO), btn));
+  setKids(st.notice, h('div', { class: 'banner danger' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, TXT_ERRO), btn));
   return btn;
 }
 
@@ -99,7 +99,7 @@ async function loadMe(st) {
     if (st.dead) return;
     st.meOk = true;
     paintMe(st, me);
-    st.notice.replaceChildren();
+    setKids(st.notice, );
   } catch (e) {
     if (st.dead) return;
     st.meOk = false;

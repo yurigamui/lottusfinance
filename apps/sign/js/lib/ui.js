@@ -17,12 +17,24 @@ export function h(tag, attrs, ...children) {
 
 function append(el, children) {
   for (const c of children.flat()) {
-    if (c == null || c === false) continue;
+    if (c == null || c === false || c === true) continue;
     el.append(c.nodeType ? c : document.createTextNode(String(c)));
   }
 }
 
-export function mount(root, ...nodes) { root.replaceChildren(...nodes.flat().filter(Boolean)); }
+/* Troca os filhos de um elemento ignorando null, undefined e false. O replaceChildren nativo escreveria o texto "null" (achado N-01):
+   por isso nenhum código do Sign o chama direto; use setKids. Strings e números viram nós de texto; arrays são achatados. */
+export function setKids(el, ...children) {
+  const out = [];
+  for (const c of children.flat(Infinity)) {
+    if (c == null || c === false || c === true) continue;
+    out.push(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  el.replaceChildren(...out);
+  return el;
+}
+
+export function mount(root, ...nodes) { setKids(root, ...nodes); }
 
 export function spinner() { return h('div', { class: 'spinner', role: 'status', 'aria-label': 'Carregando' }); }
 

@@ -1,7 +1,7 @@
 /* Seção 1.1: Entrar e criar conta (e-mail e senha), confirmação de e-mail e reenvio. */
-import { h, mount, setTitle, focusEl, safeUrl, brandLogo, safeStore } from '../lib/ui.js?v=20261126b';
-import { normEmail, isEmail, normName, nameOk, passwordMissing, LIMITS } from '../lib/fmt.js?v=20261126b';
-import { classify } from '../lib/api.js?v=20261126b';
+import { h, mount, setKids, setTitle, focusEl, safeUrl, brandLogo, safeStore } from '../lib/ui.js?v=20261126c';
+import { normEmail, isEmail, normName, nameOk, passwordMissing, LIMITS } from '../lib/fmt.js?v=20261126c';
+import { classify } from '../lib/api.js?v=20261126c';
 
 const T = {
   login: 'E-mail ou senha incorretos.',
@@ -94,14 +94,14 @@ function makeMsgs() {
 }
 function alertBox(kind, ...kids) { return h('div', { class: 'sg-alert ' + kind }, ...kids); }
 /* B-1: só um alerta por vez (o mais recente): mostrar um limpa o outro */
-function showOk(m, text) { m.err.replaceChildren(); m.flash.replaceChildren(alertBox('ok', text)); }
+function showOk(m, text) { setKids(m.err, ); setKids(m.flash, alertBox('ok', text)); }
 function showErr(m, text, retry) {
   const kids = [h('span', null, text)];
   if (retry) kids.push(h('button', { class: 'btn secondary sg-retry', type: 'button', onclick: retry }, 'Tentar de novo'));
-  m.flash.replaceChildren();
-  m.err.replaceChildren(alertBox('err', ...kids));
+  setKids(m.flash, );
+  setKids(m.err, alertBox('err', ...kids));
 }
-function clearMsgs(m) { m.err.replaceChildren(); m.flash.replaceChildren(); }
+function clearMsgs(m) { setKids(m.err, ); setKids(m.flash, ); }
 
 function busy(btn, on, label) {
   btn.disabled = on;
@@ -116,7 +116,7 @@ function legalLink(url, text) {
 
 /* ---------- reenvio (compartilhado: tela de confirmação e link vencido) ---------- */
 async function doResend(email, m, btn, retry, onOk, onErr) {
-  m.err.replaceChildren();
+  setKids(m.err, );
   const fail = (text, again) => { if (onErr) onErr(text); else showErr(m, text, again); return false; };
   if (recentSends().length >= 3) return fail(T.limiteReenvio);
   noteSend();
@@ -144,7 +144,7 @@ function drawConfirm(card) {
   if (mode === 'cadastro') cool(btn);
   const other = h('button', { class: 'sg-link', type: 'button', onclick: () => { st.email = ''; backTo('criar'); } }, 'Usar outro e-mail');
   const toLogin = h('button', { class: 'sg-link', type: 'button', onclick: () => backTo('entrar') }, 'Entrar');
-  card.replaceChildren(h('h1', { tabindex: '-1' }, 'Confirme seu e-mail'), h('p', { class: 'sg-lead' }, ...lead), m.flash, m.err, btn, h('div', { class: 'sg-links' }, other, toLogin));
+  setKids(card, h('h1', { tabindex: '-1' }, 'Confirme seu e-mail'), h('p', { class: 'sg-lead' }, ...lead), m.flash, m.err, btn, h('div', { class: 'sg-links' }, other, toLogin));
   focusEl(card.querySelector('h1'));
 }
 function backTo(tab) {
@@ -240,7 +240,7 @@ function drawForm(card, focusFirst) {
   }
   st.flash = null;
 
-  card.replaceChildren(...[tabs(), h('h1', { tabindex: '-1' }, criar ? 'Criar conta' : 'Entrar'), criar ? null : h('p', { class: 'sg-lead' }, 'Acesse seus documentos e envios.'), form,
+  setKids(card, ...[tabs(), h('h1', { tabindex: '-1' }, criar ? 'Criar conta' : 'Entrar'), criar ? null : h('p', { class: 'sg-lead' }, 'Acesse seus documentos e envios.'), form,
     h('div', { class: 'sg-links' }, forgot, h('a', { class: 'sg-link', href: 'verificar.html' }, 'Verificar um documento'))].filter(Boolean));
   if (focusFirst) focusEl(email.input);
 }

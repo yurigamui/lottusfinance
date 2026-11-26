@@ -1600,3 +1600,11 @@ nav.tabs { display: inline-flex; flex-wrap: nowrap; overflow-x: auto; max-width:
 /* V-01: em tela estreita o botão do aviso desce para a linha de baixo; o texto nunca fica espremido numa coluna fina */
 .banner { flex-wrap: wrap; }
 .banner .grow { flex: 1 1 160px; }
+/* ---------- Ciclo 3 da 1.4 ---------- */
+/* B-04: o link de suporte e o ponto final ficam juntos (sem espaço antes do ponto e sem ponto sozinho na linha) */
+.nw { white-space: nowrap; }
+.help .pf-link { padding: 0; }
+/* B-02: iniciais do avatar com contraste mínimo de 4,5:1 nos dois temas (rosa puro dava 4,25 e 3,86) */
+.avatar { color: color-mix(in srgb, var(--rosa) 70%, var(--ink)); }
+/* B-05: botão dentro de aviso tem fundo e borda (afordância de botão) mantendo o contraste */
+.banner .btn, .sg-alert .btn, .shell-notice .btn { background: var(--card); color: var(--ink); border: 1px solid color-mix(in srgb, var(--ink) 60%, var(--card)); }

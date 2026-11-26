@@ -1,6 +1,6 @@
 /* Lottus Sign: roteador por hash. Guarda de rota, retorno à origem (lista branca) e foco/título a cada rota. */
-import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261126b';
-import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261126b';
+import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261126c';
+import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261126c';
 
 export const WHITELIST = ['#/documentos', '#/envio/novo', '#/plano', '#/conta/perfil', '#/conta/verificacao', '#/conta/seguranca'];
 export const DE_KEY = 'lottus.sign.de';
@@ -102,21 +102,25 @@ export function createRouter({ root, api, views, cfg }) {
   }
 
   async function handle() {
-    if (reverting) { reverting = false; return; }
+    if (reverting) { reverting = false; if (current && currentHash() === current.key) return; } /* o hashchange do desfazer só é engolido se a URL já voltou para a tela atual (V-09) */
     const hash = currentHash();
     if (held) return;
     if (hash === null) { if (!isAuthHash(location.hash)) go('#/entrar', true); return; } /* A10-B2: hash solto nunca deixa tela em branco */
     /* 1.4: tela com alterações não salvas. Desfaz a navegação (replaceState não dispara hashchange) e pergunta. */
     if (guard && current && hash !== current.key && dirty()) {
+      /* V-02/V-09: desfaz a navegação andando o histórico (foi para trás -> forward; empurrou ou foi para frente -> back).
+         Com o modal já aberto (Voltar duplo) só desfaz de novo; no fim a URL é conferida e corrigida se ainda estiver errada. */
+      const idx = navIdx();
+      const stt = history.state;
+      const voltou = idx >= 0 && current.idx >= 0 ? idx < current.idx : !!(stt && typeof stt.sg === 'number' && stt.sg < current.sg);
+      reverting = true;
+      setTimeout(() => { if (voltou) history.forward(); else history.back(); }, 0); /* fora do evento de hashchange, para o navegador aceitar */
+      setTimeout(() => { reverting = false; }, 600);
       if (confirming) return;
       const target = hash;
-      /* V-02: desfaz a navegação andando o histórico de volta (sem empilhar entrada nova): foi para trás -> forward; empurrou ou foi para frente -> back */
-      const stt = history.state;
-      reverting = true;
-      const idx = navIdx();
-      const voltou = idx >= 0 && current.idx >= 0 ? idx < current.idx : !!(stt && typeof stt.sg === 'number' && stt.sg < current.sg);
-      setTimeout(() => { if (voltou) history.forward(); else history.back(); }, 0); /* fora do evento de hashchange, para o navegador aceitar */
-      if (await canLeave()) go(target, true);
+      const ficou = !(await canLeave());
+      if (ficou) setTimeout(() => { if (current && currentHash() !== current.key) history.replaceState(history.state, '', location.pathname + location.search + current.key); }, 700);
+      else go(target, true);
       return;
     }
     const my = ++seq;

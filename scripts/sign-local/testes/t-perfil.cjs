@@ -437,6 +437,64 @@ const q = async (d, sql, args) => (await d.fake.query(sql, args)).rows;
     await restaurar((s, a) => q(d, s, a));
   });
 
+  // ===================== Ciclo 3 =====================
+  await t('V-09 guarda de descarte: URL sempre revertida e menu funcional (Voltar duplo, modal aberto)', open, { ...PG, width: 1280 }, async (d) => {
+    const p = d.page; await restaurar((s, a) => q(d, s, a)); await perfil(d, U.U1.email); await ready(p);
+    await p.evaluate(() => { location.hash = '#/documentos'; }); await wait(p, () => location.hash === '#/documentos');
+    await p.evaluate(() => { location.hash = '#/conta/perfil'; }); await ready(p);
+    await p.fill('#pf-nome', 'Ana Voltando Duas Vezes');
+    const tela = () => p.evaluate(() => ({ h: location.hash, h1: document.querySelector('#view h1').textContent, nome: document.querySelector('#pf-nome') && document.querySelector('#pf-nome').value, modais: document.querySelectorAll('.modal').length }));
+    await p.goBack(); await p.waitForSelector('.modal'); await p.goBack().catch(() => {}); await p.waitForTimeout(1200);
+    const a = await tela();
+    check('V-09 Voltar duplo com o modal aberto: URL e tela continuam em Perfil, 1 modal, texto mantido', a.h === '#/conta/perfil' && a.nome === 'Ana Voltando Duas Vezes' && a.modais === 1, a);
+    await p.getByRole('button', { name: 'Continuar editando' }).click(); await p.waitForTimeout(900);
+    const b = await tela();
+    check('V-09 depois de "Continuar editando": URL = tela (Perfil), sem modal', b.h === '#/conta/perfil' && b.modais === 0 && b.nome === 'Ana Voltando Duas Vezes', b);
+    await p.click('.nav-btn[aria-label=Documentos]'); await p.waitForSelector('.modal');
+    check('V-09 o item Documentos do menu funciona (pergunta de novo)', (await text(p, '.modal h2')) === 'Descartar alterações?');
+    await p.getByRole('button', { name: 'Descartar' }).click(); await wait(p, () => location.hash === '#/documentos');
+    await wait(p, () => document.querySelector('#view h1').textContent === 'Documentos'); check('V-09 Descartar leva a Documentos', (await tela()).h1 === 'Documentos');
+    // Voltar triplo rápido e depois menu
+    await p.evaluate(() => { location.hash = '#/conta/perfil'; }); await ready(p); await p.fill('#pf-nome', 'Ana Tres Voltas');
+    await p.goBack(); await p.waitForSelector('.modal'); await p.goBack().catch(() => {}); await p.goBack().catch(() => {}); await p.waitForTimeout(1200);
+    await p.keyboard.press('Escape'); await p.waitForTimeout(900);
+    const c = await tela();
+    check('V-09 Voltar triplo + Esc: URL = tela (Perfil) e sem modal', c.h === '#/conta/perfil' && c.h1 === 'Conta' && c.modais === 0, c);
+    await p.click('.nav-btn[aria-label=Documentos]'); await p.waitForSelector('.modal'); check('V-09 menu Documentos ainda funciona depois do Voltar triplo', true);
+    await p.getByRole('button', { name: 'Continuar editando' }).click();
+    await restaurar((s, a) => q(d, s, a));
+  });
+
+  await t('B-03 marca no tema escuro; B-02 iniciais do avatar; B-04 ponto do suporte; B-05 botão no banner', open, { ...PG, width: 320, theme: 'dark' }, async (d) => {
+    const p = d.page; await restaurar((s, a) => q(d, s, a)); await perfil(d, U.U5.email); await ready(p);
+    for (const f of ['logo-creme.png', 'mark-creme.png', 'logo-rosa.png', 'mark-rosa.png']) check(`B-03 img/${f} existe e carrega (200)`, (await fetch(d.origin + '/img/' + f)).status === 200);
+    await d.setTheme('dark'); await p.waitForTimeout(300);
+    const bi = await p.evaluate(() => getComputedStyle(document.querySelector('.org-mark.logo')).backgroundImage);
+    const px = await p.evaluate(async (u) => { const im = new Image(); im.src = u; await im.decode(); return [im.naturalWidth, im.naturalHeight]; }, d.origin + '/img/mark-creme.png');
+    check('B-03 no escuro a marca usa mark-creme.png e a imagem tem tamanho', /mark-creme\.png/.test(bi) && px[0] > 8, [bi, px]);
+    await p.screenshot({ path: `${SHOTS}/escuro-perfil-320.png`, animations: 'disabled' });
+    const lm = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+    const rt = (a, b) => { const x = lm(a), y = lm(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const cor = (c) => { const k = String(c).match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?/); if (k) return [k[1] * 255, k[2] * 255, k[3] * 255]; const m = String(c).match(/rgba?\(([^)]+)\)/); return m[1].split(/[ ,\/]+/).slice(0, 3).map(parseFloat); };
+    for (const tema of ['light', 'dark']) {
+      await d.setTheme(tema); await p.waitForTimeout(200);
+      const a = await p.evaluate(() => { const e = document.querySelector('#avatar'); const c = getComputedStyle(e); return [c.color, c.backgroundColor]; });
+      const q2 = rt(cor(a[0]), cor(a[1]));
+      console.info(`  medido: iniciais do avatar, tema ${tema}: ${q2.toFixed(2)}:1`);
+      check(`B-02 iniciais do avatar ${tema}: contraste >= 4,5`, q2 >= 4.5, a);
+    }
+    const r = await p.evaluate(() => { const a = document.querySelector('#pf-cpf-help a'), span = a.parentElement; const t = span.textContent; const rg = document.createRange(); rg.setStart(span.lastChild, 0); rg.setEnd(span.lastChild, 1); const dot = rg.getBoundingClientRect(), lk = a.getBoundingClientRect(); const help = document.querySelector('#pf-cpf-help'); return { txt: help.textContent, gap: dot.left - lk.right, mesmaLinha: dot.top >= lk.top - 2 && dot.bottom <= lk.bottom + 2, t }; });
+    check('B-04 texto "fale com o suporte." sem espaço antes do ponto', /fale com o suporte\.$/.test(r.txt) && !/suporte \./.test(r.txt) && r.gap <= 1, r);
+    check('B-04 ponto na mesma linha do link em 320 (sem ponto órfão)', r.mesmaLinha, r);
+    await d.setTheme('light');
+    d.fake.state.mode.rpcDrop = { sign_me: true }; await p.reload(); await p.waitForSelector('.pf-card .banner.danger', { timeout: 9000 });
+    const bt = await p.evaluate(() => { const b = document.querySelector('.pf-card .banner .btn'); const c = getComputedStyle(b); const bb = b.getBoundingClientRect(); return { bg: c.backgroundColor, bd: c.borderTopWidth + ' ' + c.borderTopColor, fg: c.color, h: bb.height, w: bb.width, banner: getComputedStyle(b.closest('.banner')).backgroundColor }; });
+    const bgc = cor(bt.bg), bdc = cor(bt.bd.split(' ').slice(1).join(' ')), bnc = cor(bt.banner);
+    check('B-05 botão do banner: tem borda de 1 px, fundo diferente do banner e texto >= 4,5:1', bt.bd.startsWith('1px') && rt(bgc, bnc) > 1.05 && rt(cor(bt.fg), bgc) >= 4.5 && rt(bdc, bnc) >= 3, bt);
+    await p.screenshot({ path: `${SHOTS}/banner-botao-320.png`, animations: 'disabled' });
+    d.fake.state.mode.rpcDrop = {};
+  });
+
   await t('Desempenho: LCP e CLS de #/conta/perfil em 4G simulado', open, { ...PG, width: 390 }, async (d) => {
     const p = d.page; await perfil(d, U.U1.email); await ready(p);
     const c = await d.ctx.newCDPSession(p); await c.send('Network.enable'); await c.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 });

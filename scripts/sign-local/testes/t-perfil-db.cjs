@@ -261,9 +261,9 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     await q(`delete from public.company_members where user_id = $1`, [U.U3.id]);
     check('A14-B1 U4 (vínculo + CPF preenchido) segue travado', (await rpc('sign_me', {}, U.U4.email)).body.cpf_locked === true);
     await restaurar(q);
-    for (const [rot, ch] of [['U+202E (inversão de texto)', '\u202E'], ['U+200B (largura zero)', '\u200B'], ['U+200F', '\u200F'], ['U+202A', '\u202A'], ['U+2066', '\u2066'], ['U+2069', '\u2069'], ['U+200D (zero-width joiner)', '\u200D']]) {
+    for (const [rot, ch] of [['U+202E (inversão de texto)', '\u202E'], ['U+200B (largura zero)', '\u200B'], ['U+200F', '\u200F'], ['U+202A', '\u202A'], ['U+2066', '\u2066'], ['U+2069', '\u2069'], ['U+200D (zero-width joiner)', '\u200D'], ['U+2060 (word joiner)', '\u2060'], ['U+FEFF (BOM)', '\uFEFF'], ['U+00AD (hífen suave)', '\u00AD'], ['U+180E (separador mongol)', '\u180E']]) {
       const x = await rpc('sign_profile_save', { p: { name: 'Ana ' + ch + 'Silva', cpf: U.U3.cpfLivre } }, U.U3.email);
-      check(`A14-B3 nome com ${rot}: invalid_name`, x.status === 400 && /invalid_name/.test(x.msg), x);
+      check(`A14-B3/B-01 nome com ${rot}: invalid_name`, x.status === 400 && /invalid_name/.test(x.msg), x);
     }
     check('A14-B3 nada gravado nas recusas', (await snap(U.U3.id)).full_name === null);
     const ok = await rpc('sign_profile_save', { p: { name: 'José Ação Müller-Silva', cpf: U.U3.cpfLivre } }, U.U3.email);
