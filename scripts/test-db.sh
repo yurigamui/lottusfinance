@@ -14,6 +14,7 @@ export PGOPTIONS="-c client_min_messages=warning"
 P=(psql -X -q -v ON_ERROR_STOP=1 -h "$WORK" -p "$PORT" -U postgres -d postgres)
 "${P[@]}" -f "$ROOT/supabase/tests/_stub_wealth.sql"
 "${P[@]}" -f "$ROOT/supabase/tests/_stub_admin_billing.sql"   # Admin: planos, preços e cobrança (reprodução mínima de produção)
+"${P[@]}" -f "$ROOT/supabase/tests/_stub_admin_sign.sql"      # Admin/Sign: assinaturas das RPCs de escrita da mensageria
 # PG_ONLY="regex" (opcional) roda só migrações e testes cujo nome casa (ex.: PG_ONLY='admin|seguranca'); o padrão roda tudo.
 sel() { if [ -n "${PG_ONLY:-}" ]; then grep -E "$PG_ONLY" || true; else cat; fi; }
 MIGS=$(ls "$ROOT"/supabase/migrations/*.sql | sel); TESTS=$(ls "$ROOT"/supabase/tests/[!_]*.sql | sel)
