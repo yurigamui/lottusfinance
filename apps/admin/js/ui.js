@@ -26,6 +26,8 @@
   /* Ao entrar numa seção sem nada em aberto, mostra direto a aba "Todas" */
   function skipEmpty(arg, list, base, allKey) {
     if (arg !== undefined || list.length) return false;
+    // resposta atrasada de outra tela não pode reescrever o endereço de quem já navegou
+    if (!(location.hash === `#/${base}` || location.hash === `#/${base}/`)) return false;
     history.replaceState(null, '', `#/${base}/${allKey}`);
     return true;
   }
@@ -193,5 +195,33 @@
     return `<div class="skel" role="status"><span class="ui-sr">Carregando…</span>${'<div class="skel-row" aria-hidden="true"><span></span><span></span></div>'.repeat(n)}</div>`;
   }
 
-  B.ui = { head, tabs, onTabs, empty, can, mergeAll, skipEmpty, pageHead, onPage, list, onList, more, skeleton };
+  /* ---------------------------------------------------- permissão, erro, campo */
+  const homeHref = () => (B.me && B.me.partner ? '#/assinar' : '#/painel');
+  /** Caixa "Sem permissão": diz qual tela, quem pode e leva ao Início. Não chama RPC. */
+  function denied(el, me, what, who) {
+    const lvl = (B.LEVEL && me && B.LEVEL[me.level]) || 'sem nível definido';
+    el.innerHTML = `<div class="card denied" role="alert"><h1 tabindex="-1">Sem permissão</h1>
+      <p>${esc(what)} é só para ${esc(who || 'administradores')}. Seu nível é ${esc(lvl)}. Se precisar desta tela, peça a um administrador.</p>
+      <a class="btn" href="${homeHref()}">Voltar ao Início</a></div>`;
+    const h = el.querySelector('h1'); if (h && el.isConnected) h.focus({ preventScroll: true });
+  }
+  /** Erro de tela: mensagem, "Tentar de novo" e "Ir ao Início" (nenhum beco sem saída). */
+  const errorCard = (msg) => `<div class="card"><div class="error-box" role="alert">${esc(msg)}</div>
+    <div class="err-actions"><button type="button" class="btn secondary" data-retry>Tentar de novo</button><a class="btn ghost" href="${homeHref()}">Ir ao Início</a></div></div>`;
+  /** Mensagem de erro ao lado do campo (aria-invalid + aria-describedby). msg vazio limpa. */
+  function fieldError(input, msg) {
+    if (!input) return;
+    const n = input.nextElementSibling;
+    if (n && n.classList.contains('field-error')) n.remove();
+    input.removeAttribute('aria-invalid'); input.removeAttribute('aria-describedby');
+    if (!msg) return;
+    const id = nextId('fe');
+    const d = document.createElement('div');
+    d.className = 'field-error'; d.id = id; d.setAttribute('role', 'alert'); d.textContent = msg;
+    input.insertAdjacentElement('afterend', d);
+    input.setAttribute('aria-invalid', 'true'); input.setAttribute('aria-describedby', id);
+  }
+  const clearFieldErrors = (root) => root.querySelectorAll('.field-error').forEach((n) => { const i = n.previousElementSibling; if (i) { i.removeAttribute('aria-invalid'); i.removeAttribute('aria-describedby'); } n.remove(); });
+
+  B.ui = { denied, errorCard, fieldError, clearFieldErrors, homeHref, head, tabs, onTabs, empty, can, mergeAll, skipEmpty, pageHead, onPage, list, onList, more, skeleton };
 })();

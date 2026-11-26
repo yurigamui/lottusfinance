@@ -6,7 +6,9 @@
   const { head } = B.ui;
   const fail = (e) => B.toast(B.message(e), true);
 
-  B.views.mensageria = async (el) => {
+  B.views.mensageria = async (el, _p, me) => {
+    // Só administrador: confere antes de qualquer chamada ao banco
+    if (!B.ui.can(me || B.me, 'admin')) return B.ui.denied(el, me || B.me, 'A tela de Mensageria (Sign)', 'administradores');
     const [c, roots] = await Promise.all([rpc('sign_messaging_get'), rpc('sign_roots_list')]);
     const sw = (name, on, label, help) => `<label class="switch-row"><input type="checkbox" name="${name}" ${on ? 'checked' : ''}><span class="switch" aria-hidden="true"></span><span><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span></label>`;
     el.innerHTML = `${head('Mensageria do Lottus Sign', 'Como o código de verificação chega ao celular e quais certificados digitais são aceitos.')}
@@ -38,7 +40,7 @@
             <div><button class="btn secondary" type="submit">Adicionar raiz</button></div>
           </form>
         </div></div>`;
-    const reload = () => B.views.mensageria(el);
+    const reload = () => B.views.mensageria(el, [], me);
     const f = el.querySelector('#mf');
     f.addEventListener('submit', async (e) => {
       e.preventDefault();

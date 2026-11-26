@@ -2,8 +2,8 @@
 (function () {
   'use strict';
   const B = window.BO;
-  const { rpc, esc, brl, date, dateTime, cnpj, toast, run, modal, closeModal } = B;
-  const { head, tabs, onTabs, empty, can } = B.ui;
+  const { rpc, esc, brl, date, dateTime, cnpj, toast, run, modal, closeModal, confirmAction } = B;
+  const { head, tabs, onTabs, empty, can, fieldError } = B.ui;
   const fail = (e) => toast(B.message(e), true);
   const KIND = { securitizadora: 'Securitizadora', fidc: 'FIDC', bancarizador: 'Bancarizador', outro: 'Outro' };
   const STATUS = {
@@ -11,7 +11,18 @@
     exempt: ['Isento', ''], contract: ['Contrato', ''],
   };
   const num = (v) => (v == null || v === '' ? '' : String(v).replace('.', ','));
-  const parse = (s) => { const t = String(s ?? '').trim().replace(/\./g, '').replace(',', '.'); return t === '' ? null : Number(t); };
+  const parse = (s) => B.parseMoney(s);
+  /** Lê um campo numérico com validação. Mostra o erro ao lado do campo e devolve undefined se inválido; null se vazio e opcional. */
+  function readNum(inp, { required = true, int = false, min = 0, max = 1e12, what = 'o valor' } = {}) {
+    const t = inp.value.trim();
+    fieldError(inp, '');
+    if (t === '') { if (required) { fieldError(inp, `Informe ${what}.`); return undefined; } return null; }
+    const n = int ? (/^\d+$/.test(t.replace(/\./g, '')) ? Number(t.replace(/\./g, '')) : NaN) : parse(t);
+    if (n == null || !Number.isFinite(n)) { fieldError(inp, int ? 'Use só números inteiros, como 50.' : 'Use só números, como 1.234,56.'); return undefined; }
+    if (n < min) { fieldError(inp, min === 0 ? 'Não pode ser negativo.' : `Precisa ser pelo menos ${min}.`); return undefined; }
+    if (n > max) { fieldError(inp, 'Valor alto demais. Confira os zeros.'); return undefined; }
+    return n;
+  }
   const mi = (n) => (n >= 1e6 ? (n / 1e6).toString().replace('.', ',') + ' mi' : n >= 1e3 ? (n / 1e3).toString().replace('.', ',') + ' mil' : String(n));
   const monthLabel = (m) => { const d = new Date(String(m).slice(0, 10) + 'T12:00:00'); const t = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); return t.charAt(0).toUpperCase() + t.slice(1); };
   const shiftMonth = (m, n) => B.addMonths(m, n);
@@ -41,7 +52,7 @@
       if (tab === 'partners') await partnersTab(host, admin);
       else if (tab === 'sign') await signTab(host, admin, /^\d{4}-\d{2}/.test(sub || '') ? sub.slice(0, 7) + '-01' : null);
       else await tablesTab(host, admin);
-    } catch (e) { host.innerHTML = `<div class="card"><div class="error-box">${esc(B.message(e))}</div></div>`; }
+    } catch (e) { host.innerHTML = B.ui.errorCard(B.message(e)); }
   };
 
   /* ------------------------------------------------------------ Lottus Partners */
@@ -72,6 +83,11 @@
           <td class="num">${admin ? `<button class="btn secondary sm" data-ex="${esc(r.funder_id)}" data-on="${r.exempt ? 0 : 1}">${r.exempt ? 'Passar a cobrar' : 'Isentar'}</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table></div>` : empty('Nenhum fundo encontrado.');
       host.querySelectorAll('[data-ex]').forEach((b) => (b.onclick = async () => {
+        const f = rows.find((x) => x.funder_id === b.dataset.ex) || {}, on = b.dataset.on === '1';
+        const ok = await confirmAction({ title: on ? 'Isentar fundo' : 'Passar a cobrar',
+          text: on ? `<b>${esc(f.name || 'Este fundo')}</b> deixa de pagar a mensalidade enquanto estiver isento. Confirma?` : `<b>${esc(f.name || 'Este fundo')}</b> volta a pagar a mensalidade da faixa. Confirma?`,
+          confirmLabel: on ? 'Isentar' : 'Passar a cobrar', danger: on });
+        if (ok == null) return;
         try { const r = await run(b, () => rpc('bo_billing_funder_set', { p_funder: b.dataset.ex, p: { exempt: b.dataset.on === '1' } }), b.dataset.on === '1' ? 'Fundo isento' : 'Cobrança retomada'); rows = r.rows; paint(); } catch (e) { /* já avisado */ }
       }));
     };
@@ -163,17 +179,43 @@
           <div class="row" style="gap:12px;align-items:center;flex-wrap:wrap"><label class="switch-row" style="margin:0"><input type="checkbox" name="active" ${p.active ? 'checked' : ''} ${ro}><span class="switch" aria-hidden="true"></span><span><b>Disponível para contratar</b></span></label>${admin ? '<button class="btn secondary sm" type="submit">Salvar</button>' : ''}</div></form>`).join('')}
         <div class="error-box" id="pe" hidden></div></div></div>`;
     const tf = host.querySelector('#tf');
+    tf.querySelectorAll('input').forEach((x) => x.addEventListener('input', () => fieldError(x, '')));
     tf.onsubmit = async (e) => {
       e.preventDefault(); const err = host.querySelector('#te'); err.hidden = true;
-      const tiers = S.tiers.map((t, i) => t.up_to == null ? { up_to: null, rate_aa: (parse(tf.rate.value) || 0) / 100, min: parse(tf.min.value) || 0 } : { up_to: parse(tf['up' + i].value), monthly: parse(tf['mo' + i].value) });
-      try { await run(tf.querySelector('[type=submit]'), () => rpc('bo_billing_settings_save', { p: { free_pl_limit: parse(tf.free.value), grace_days: parseInt(tf.grace.value, 10), tiers } }), 'Faixas salvas'); B.views.planos(host.parentNode, ['tabelas'], { level: 'admin' }); }
+      let first = null; const keep = (inp, v) => { if (v === undefined && !first) first = inp; return v; };
+      const free = keep(tf.free, readNum(tf.free, { what: 'o limite do teste grátis' }));
+      const grace = keep(tf.grace, readNum(tf.grace, { int: true, max: 365, what: 'o prazo em dias' }));
+      let prev = free;
+      const tiers = S.tiers.map((t, i) => {
+        if (t.up_to == null) {
+          const rate = keep(tf.rate, readNum(tf.rate, { max: 100, what: 'a taxa' }));
+          const min = keep(tf.min, readNum(tf.min, { what: 'a mensalidade mínima' }));
+          return { up_to: null, rate_aa: rate === undefined ? 0 : rate / 100, min: min === undefined ? 0 : min };
+        }
+        const up = keep(tf['up' + i], readNum(tf['up' + i], { what: 'o limite da faixa' }));
+        const mo = keep(tf['mo' + i], readNum(tf['mo' + i], { what: 'a mensalidade' }));
+        if (up !== undefined && prev !== undefined && up <= prev) { fieldError(tf['up' + i], 'A faixa precisa terminar acima da anterior.'); if (!first) first = tf['up' + i]; }
+        if (up !== undefined) prev = up;
+        return { up_to: up, monthly: mo };
+      });
+      if (first) { first.focus(); return; }
+      try { await run(tf.querySelector('[type=submit]'), () => rpc('bo_billing_settings_save', { p: { free_pl_limit: free, grace_days: grace, tiers } }), 'Faixas salvas'); B.views.planos(host.parentNode, ['tabelas'], { level: 'admin' }); }
       catch (x) { err.hidden = false; err.textContent = /invalid/.test(String(x.message)) ? 'Confira os valores: cada faixa precisa terminar acima da anterior.' : B.message(x); }
     };
-    host.querySelectorAll('[data-plan]').forEach((f) => (f.onsubmit = async (e) => {
-      e.preventDefault(); const err = host.querySelector('#pe'); err.hidden = true;
-      const ex = f.extra.value.trim();
-      try { await run(f.querySelector('[type=submit]'), () => rpc('bo_sign_plan_save', { p: { code: f.dataset.plan, name: f.name.value, price_month: String(parse(f.price.value) ?? 0), docs_included: String(parseInt(f.docs.value, 10)), extra_doc_price: ex === '' ? '' : String(parse(ex)), active: f.active.checked } }), 'Plano salvo'); }
-      catch (x) { err.hidden = false; err.textContent = B.message(x); }
-    }));
+    host.querySelectorAll('[data-plan]').forEach((f) => {
+      f.querySelectorAll('input').forEach((x) => x.addEventListener('input', () => fieldError(x, '')));
+      f.onsubmit = async (e) => {
+        e.preventDefault(); const err = host.querySelector('#pe'); err.hidden = true;
+        let first = null; const keep = (inp, v) => { if (v === undefined && !first) first = inp; return v; };
+        fieldError(f.name, '');
+        if (!f.name.value.trim()) { fieldError(f.name, 'Informe o nome do plano.'); first = f.name; }
+        const price = keep(f.price, readNum(f.price, { what: 'o preço por mês' }));
+        const docs = keep(f.docs, readNum(f.docs, { int: true, what: 'os documentos incluídos' }));
+        const extra = keep(f.extra, readNum(f.extra, { required: false, what: 'o preço do documento extra' }));
+        if (first) { first.focus(); return; }
+        try { await run(f.querySelector('[type=submit]'), () => rpc('bo_sign_plan_save', { p: { code: f.dataset.plan, name: f.name.value, price_month: String(price), docs_included: String(docs), extra_doc_price: extra == null ? '' : String(extra), active: f.active.checked } }), 'Plano salvo'); }
+        catch (x) { err.hidden = false; err.textContent = B.message(x); }
+      };
+    });
   }
 })();

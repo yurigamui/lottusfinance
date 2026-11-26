@@ -3,7 +3,7 @@
   'use strict';
   const B = window.BO;
   const { rpc, esc, brl, date, dateTime, ago, toast, run, modal, closeModal, confirmAction } = B;
-  const { head, tabs, onTabs, empty, can } = B.ui;
+  const { head, tabs, onTabs, empty, can, fieldError } = B.ui;
 
   const PHASE = { open: ['A vencer', 'brand'], overdue: ['Em atraso', 'danger'], paid: ['Paga', 'success'], cancelled: ['Cancelada', ''] };
   const phaseTag = (i) => { const [l, t] = PHASE[i.phase] || [i.phase, '']; return `<span class="tag ${t}">${esc(l)}</span>`; };
@@ -11,8 +11,31 @@
   const METHODS = [['pix', 'Pix'], ['boleto', 'Boleto'], ['ted', 'TED'], ['cartao', 'Cartão'], ['outro', 'Outro']];
   const today = () => B.today();
   const monthStart = () => B.monthStart();
-  const num = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
   const csvCell = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+
+  /** Confere a fatura no front (o banco confere de novo). Mostra o erro ao lado de cada campo e devolve o primeiro campo com erro. */
+  function validateInvoice(box) {
+    const f = (s) => box.querySelector(s);
+    let first = null;
+    const bad = (sel, msg) => { fieldError(f(sel), msg); if (!first) first = f(sel); };
+    ['#f-name', '#f-amt', '#f-due', '#f-mail'].forEach((s) => fieldError(f(s), ''));
+    if (!f('#f-name').value.trim()) bad('#f-name', 'Informe o cliente.');
+    const amt = B.parseMoney(f('#f-amt').value);
+    if (amt === null) bad('#f-amt', 'Informe o valor.');
+    else if (Number.isNaN(amt)) bad('#f-amt', 'Valor inválido. Use só números, como 1.234,56.');
+    else if (amt <= 0) bad('#f-amt', 'O valor precisa ser maior que zero.');
+    else if (amt > 999999999.99) bad('#f-amt', 'O valor máximo é R$ 999.999.999,99.');
+    else if (Math.abs(amt * 100 - Math.round(amt * 100)) > 1e-6) bad('#f-amt', 'Use no máximo duas casas decimais.');
+    const due = f('#f-due').value;
+    const real = /^\d{4}-\d{2}-\d{2}$/.test(due) && new Date(due + 'T12:00:00Z').toISOString().slice(0, 10) === due;
+    if (!due) bad('#f-due', 'Informe o vencimento.');
+    else if (!real) bad('#f-due', 'Vencimento inválido. Use uma data real.');
+    else if (due < '2000-01-01') bad('#f-due', 'O vencimento não pode ser anterior a 2000.');
+    else if (due > '2100-12-31') bad('#f-due', 'O vencimento não pode passar de 2100.');
+    const mail = f('#f-mail').value.trim();
+    if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) bad('#f-mail', 'E-mail inválido. Exemplo: nome@empresa.com.br');
+    return first;
+  }
 
   /* ---------------------------------------------------------------- faturas */
   B.views.faturas = async (el, [arg], me) => {
@@ -102,7 +125,8 @@
       box.querySelectorAll('[data-a]').forEach((b) => (b.onclick = async () => {
         const a = b.dataset.a;
         if (a === 'edit') { closeModal(); return editInvoice(i); }
-        if (a === 'cancel' && (await confirmAction({ title: 'Cancelar fatura', text: 'A fatura deixa de ser cobrada.', confirmLabel: 'Cancelar fatura', danger: true })) == null) return;
+        if (a === 'cancel' && (await confirmAction({ title: 'Cancelar fatura', text: 'A fatura deixa de ser cobrada.', confirmLabel: 'Cancelar fatura', danger: true })) == null) return openInvoice(i);
+        if (a === 'reopen' && (await confirmAction({ title: 'Reabrir fatura', text: `A fatura <b>${esc(i.number)}</b> volta para em aberto e pode voltar a ser cobrada por e-mail pela régua. Confirma?`, confirmLabel: 'Reabrir' })) == null) return openInvoice(i);
         run(b, () => rpc('bo_inv_status', { p_id: i.id, p_action: a }), 'Feito').then(() => { closeModal(); B.reload(); }).catch(() => {});
       }));
     }
@@ -115,18 +139,19 @@
             <div class="field"><label>E-mail para cobrança</label><input class="input" id="f-mail" type="email" value="${esc(v.customer_email || '')}"></div></div>
           <div class="field"><label>Descrição</label><input class="input" id="f-desc" value="${esc(v.description || '')}" placeholder="Ex.: Consultoria, implantação, mensalidade"></div>
           <div class="grid-2"><div class="field"><label>Valor (R$)</label><input class="input" id="f-amt" inputmode="decimal" value="${v.amount === '' ? '' : String(v.amount).replace('.', ',')}"></div>
-            <div class="field"><label>Vencimento</label><input class="input" id="f-due" type="date" value="${esc(v.due_date)}"></div></div>
+            <div class="field"><label>Vencimento</label><input class="input" id="f-due" type="date" min="2000-01-01" value="${esc(v.due_date)}"></div></div>
           <div class="field"><label>Observações</label><textarea class="input" id="f-notes">${esc(v.notes || '')}</textarea></div>
           <div class="error-box" id="f-err" hidden></div></div>`,
         foot: '<button class="btn secondary" data-close>Cancelar</button><button class="btn" data-ok>Salvar</button>' });
       box.querySelector('[data-close]').onclick = closeModal;
+      box.querySelectorAll('input, textarea').forEach((x) => x.addEventListener('input', () => fieldError(x, '')));
       box.querySelector('[data-ok]').onclick = async (e) => {
         const g = (s) => box.querySelector(s).value;
-        const err = box.querySelector('#f-err');
-        if (!g('#f-name').trim() || !num(g('#f-amt')) || !g('#f-due')) { err.hidden = false; err.textContent = 'Preencha cliente, valor e vencimento.'; return; }
+        const bad = validateInvoice(box);
+        if (bad) { bad.focus(); return; }
         try {
           await run(e.target, () => rpc('bo_inv_save', { p: { id: i && i.id, customer_kind: v.customer_kind, funder_id: v.funder_id, sign_account_id: v.sign_account_id, customer_name: g('#f-name'), customer_doc: g('#f-doc'),
-            customer_email: g('#f-mail'), description: g('#f-desc'), amount: num(g('#f-amt')), due_date: g('#f-due'), notes: g('#f-notes') } }), 'Fatura salva');
+            customer_email: g('#f-mail'), description: g('#f-desc'), amount: B.parseMoney(g('#f-amt')), due_date: g('#f-due'), notes: g('#f-notes') } }), 'Fatura salva');
           closeModal(); B.reload();
         } catch { /* aviso já mostrado */ }
       };
@@ -159,6 +184,13 @@
         ${sent.length ? `<div class="table-wrap"><table><thead><tr><th>Quando</th><th>Para</th><th>Assunto</th><th>Situação</th></tr></thead><tbody>${sent.map((m) => `<tr><td class="nowrap">${dateTime(m.created_at)}</td><td>${esc(m.recipient)}</td><td>${esc(m.subject)}</td><td>${esc(m.status || 'enviado')}${m.error ? `<div class="small muted">${esc(m.error)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>` : empty('Nenhum e-mail de cobrança enviado ainda.')}
       </div>`;
     const save = el.querySelector('#save');
-    if (save) save.onclick = () => run(save, () => rpc('bo_inv_settings', { p: { remind_enabled: el.querySelector('#on').checked, due_day: Number(el.querySelector('#dd').value) || 10, pay_instructions: el.querySelector('#pi').value } }), 'Ajustes salvos').catch(() => {});
+    const ddIn = el.querySelector('#dd');
+    if (ddIn) ddIn.addEventListener('input', () => fieldError(ddIn, ''));
+    if (save) save.onclick = () => {
+      const raw = ddIn.value.trim(), day = Number(raw);
+      if (!/^\d{1,2}$/.test(raw) || day < 1 || day > 28) { fieldError(ddIn, 'Use um dia de 1 a 28 (o dia 29 a 31 não existe em todos os meses).'); ddIn.focus(); return; }
+      fieldError(ddIn, '');
+      run(save, () => rpc('bo_inv_settings', { p: { remind_enabled: el.querySelector('#on').checked, due_day: day, pay_instructions: el.querySelector('#pi').value } }), 'Ajustes salvos').catch(() => {});
+    };
   };
 })();

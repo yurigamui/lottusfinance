@@ -32,6 +32,8 @@
   };
 
   B.views.emails = async (el, _p, me) => {
+    // Só administrador: confere antes de qualquer chamada ao banco (e o token do webhook nunca vai ao DOM de outro nível)
+    if (!B.ui.can(me, 'admin')) return B.ui.denied(el, me, 'A tela de E-mails', 'administradores');
     const [d, pv] = await Promise.all([rpc('bo_emails', { p_limit: 80 }), rpc('bo_debtor_notice_preview').catch(() => null)]);
     const admin = B.ui.can(me, 'admin');
     const hook = `${window.LOTTUS_CONFIG.supabaseUrl}/functions/v1/email-events?token=${d.webhook_token || ''}`;

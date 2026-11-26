@@ -418,9 +418,9 @@
           <div class="card stat"><span>Custo</span><b>${f.funding_monthly_rate != null ? pct(f.funding_monthly_rate) + ' a.m.' : '—'}</b><small>&nbsp;</small></div>
         </div>
         <div class="card" style="margin-top:16px"><h2>Operações recentes</h2>
-        ${f.recent.length === 0 ? '<p class="muted">Nenhuma operação ainda.</p>' : `<div class="list">${f.recent.map((o) => `<a class="list-row" href="#/operacoes/${esc(o.id)}">
+        ${f.recent.length === 0 ? '<p class="muted">Nenhuma operação ainda.</p>' : `<div class="list">${f.recent.map((o) => `<div class="list-row">
           <div class="grow"><b>${esc(o.legal_name)}</b><div class="small muted">${dateTime(o.created_at)}</div></div>
-          ${B.tag('op', o.status)} ${o.signed ? '<span class="tag success">Aceite</span>' : ''}<div class="num"><b>${brl(o.gross)}</b></div></a>`).join('')}</div>`}
+          ${B.tag('op', o.status)} ${o.signed ? '<span class="tag success">Aceite</span>' : ''}<div class="num"><b>${brl(o.gross)}</b></div></div>`).join('')}</div>`}
       </div>`;
     }
   }

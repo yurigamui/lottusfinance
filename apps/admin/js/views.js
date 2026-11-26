@@ -22,12 +22,12 @@
     ];
     const open = queues.filter((q) => q[1] > 0);
     const kpi = (label, value, href, alert) =>
-      `<a class="kpi ${alert && Number(value) > 0 ? 'alert' : ''}" href="#/${href}"><span class="kpi-label">${esc(label)}</span><span class="kpi-value">${brl(value)}</span></a>`;
+      `<${href ? 'a' : 'div'} class="kpi ${alert && Number(value) > 0 ? 'alert' : ''}"${href ? ` href="#/${href}"` : ''}><span class="kpi-label">${esc(label)}</span><span class="kpi-value">${brl(value)}</span></${href ? 'a' : 'div'}>`;
     const latest = recent.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 6);
     el.innerHTML = `
       ${head(`Visão geral, ${me.name.split(' ')[0]}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: B.TZ }))}
       <div class="kpis">
-        ${kpi('Desembolsado em 30 dias', d.volume_30d, 'operacoes/liquidadas')}
+        ${kpi('Desembolsado em 30 dias', d.volume_30d)}
         ${kpi('Limites aprovados', d.approved_limits, 'credito/aprovados')}
       </div>
       <div class="split">
@@ -41,10 +41,10 @@
         <section class="split-side">
           <h2 class="section-title">Operações recentes</h2>
           <div class="card recent">${latest.length ? latest.map((o) => `
-            <a class="recent-row" href="#/operacoes/${esc(o.id)}">
+            <div class="recent-row">
               <div class="grow"><div class="recent-name">${esc(o.legal_name)}</div>
                 <div class="small muted">${brl(o.net_amount)}, ${dateTime(o.created_at)}</div></div>
-              ${tag('op', o.status)}</a>`).join('') : empty('Nenhuma operação em andamento.')}</div>
+              ${tag('op', o.status)}</div>`).join('') : empty('Nenhuma operação em andamento.')}</div>
         </section>
       </div>`;
   };
@@ -237,7 +237,7 @@
         <div class="card flush"><div class="card-pad-head"><h2>Operações</h2></div>
           ${d.operations.length === 0 ? empty('Nenhuma operação.') : `<table>
             <thead><tr><th>Data</th><th>Situação</th><th class="num">Duplicatas</th><th class="num">Líquido</th></tr></thead>
-            <tbody>${d.operations.map((o) => `<tr class="link" data-op="${esc(o.id)}"><td>${dateTime(o.created_at)}</td><td>${tag('op', o.status)}</td>
+            <tbody>${d.operations.map((o) => `<tr data-op="${esc(o.id)}"><td>${dateTime(o.created_at)}</td><td>${tag('op', o.status)}</td>
               <td class="num">${brl(o.gross_amount)}</td><td class="num">${brl(o.net_amount)}</td></tr>`).join('')}</tbody></table>`}</div>
 
         <div class="grid-2">
@@ -248,7 +248,6 @@
         </div>
       </div>`;
     el.querySelectorAll('[data-doc]').forEach((b) => (b.onclick = () => B.openFile('company-docs', d.documents[b.dataset.doc].path)));
-    el.querySelectorAll('[data-op]').forEach((r) => (r.onclick = () => (location.hash = `#/operacoes/${r.dataset.op}`)));
   }
 
   const ACTION_LABEL = {
@@ -415,7 +414,7 @@
               <td class="nowrap">${dateTime(a.created_at)}</td><td>${esc(a.staff)}</td>
               <td>${esc(ACTION_LABEL[a.action] || a.action)}</td>
               <td>${a.company_id ? `<a href="#/empresas/${esc(a.company_id)}">${esc(a.company || '')}</a>` : '—'}</td>
-              <td class="small">${a.target_type === 'operation' ? `<a href="#/operacoes/${esc(a.target_id)}">ver operação</a> ` : ''}<span class="muted">${esc(a.details.note || a.details.reference || '')}</span></td>
+              <td class="small">${a.target_type === 'operation' ? 'Operação · ' : ''}<span class="muted">${esc(a.details.note || a.details.reference || '')}</span></td>
             </tr>`).join('')}</tbody></table>`}
         </div></div>
       </div>`;

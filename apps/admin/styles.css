@@ -883,3 +883,21 @@ code { font-size: 12px; background: var(--soft); padding: 1px 5px; border-radius
 .td-recent .recent-row > .grow { min-width: 0; }
 .td-name { font-weight: 700; overflow-wrap: anywhere; }
 @media (min-width: 768px) { .td-row { padding: 14px 24px; } }
+
+/* ---------- Pacote 1: menu com rótulo, gaveta, permissão, erro, campo ---------- */
+.view-host { min-width: 0; }
+.nav-label { display: none; }
+@media (min-width: 1024px) and (min-height: 640px) {
+  .nav-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 76px; height: 52px; border-radius: 16px; }
+  .nav-label { display: block; max-width: 72px; font-size: 10px; font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; text-align: center; overflow-wrap: anywhere; }
+  .sidenav-items { gap: 4px; }
+  .flyout { margin-left: 4px; }
+}
+.fly-item:focus-visible, .nav-btn:focus-visible, .menu-open:focus-visible, .nav-close:focus-visible { outline: 2px solid var(--rosa); outline-offset: 2px; }
+.denied { max-width: 560px; margin: 24px auto; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.denied h1 { margin: 0; outline: none; }
+.denied p { margin: 0; overflow-wrap: anywhere; }
+.err-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.err-actions .btn { min-height: 44px; }
+.field-error { margin-top: 4px; font-size: 12.5px; font-weight: 600; color: var(--danger, #b3261e); overflow-wrap: anywhere; }
+.input[aria-invalid='true'] { border-color: var(--danger, #b3261e); }

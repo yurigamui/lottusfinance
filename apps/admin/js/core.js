@@ -117,6 +117,14 @@
     const [y, m] = String(iso).slice(0, 7).split('-').map(Number);
     return new Date(Date.UTC(y, m - 1 + Number(n || 0), 1)).toISOString().slice(0, 10);
   };
+  /** Valor em reais digitado: "1.234,56", "1234,5" ou "1234.56". Vazio devolve null; texto inválido devolve NaN. */
+  const parseMoney = (v) => {
+    const t = String(v == null ? '' : v).trim().replace(/^R\$\s*/i, '');
+    if (t === '') return null;
+    if (/^-?\d+\.\d{1,2}$/.test(t)) return Number(t);
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t) || /^-?\d+(,\d+)?$/.test(t)) return Number(t.replace(/\./g, '').replace(',', '.'));
+    return NaN;
+  };
   const yearsSince = (d) => (d ? Math.floor((Date.now() - new Date(d).getTime()) / (365.25 * 86400000)) : null);
 
   const LABELS = {
@@ -276,7 +284,7 @@
 
   window.BO = {
     sb, rpc, safeUrl, message, esc, brl, pct, date, dateTime, ago, cnpj, cpf, yearsSince, tag, check,
-    TZ, isoOf, today, monthStart, addDays, addMonths,
+    TZ, isoOf, today, monthStart, addDays, addMonths, parseMoney,
     DOC_KIND, ACCESS, ROLE, LEVEL, REVENUE, toast, modal, closeModal, confirmAction, run,
     signedUrl, openFile, isImage, copy,
   };
