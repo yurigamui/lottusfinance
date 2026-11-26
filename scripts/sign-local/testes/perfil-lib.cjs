@@ -46,6 +46,8 @@ async function restaurar(q) {
   await q(`update auth.users set email_confirmed_at = now() where id = $1`, [U.U7.id]);
   await q(`delete from public.profiles where id = $1`, [U.U7.id]);
   await q(`update public.sign_identity set phone = null, phone_verified_at = null where user_id = $1`, [U.U3.id]);
+  for (const t of ['sign_env_events', 'sign_env_signers', 'sign_outbox']) { try { await q(`delete from public.${t} where envelope_id in (select id from public.sign_envelopes where owner = $1)`, [U.U3.id]); } catch { /* tabela sem essa coluna */ } }
+  await q(`delete from public.sign_envelopes where owner = $1`, [U.U3.id]);
   await q(`delete from public.sign_accounts where user_id = any($1)`, [[U.U1.id, U.U3.id]]);
 }
 

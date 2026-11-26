@@ -1,70 +1,70 @@
-EXPLAIN (ANALYZE, BUFFERS) no Postgres local (banco "sign", 10008 perfis, 5004 envelopes, 1113 vínculos de empresa e 1112 de fundo).
+EXPLAIN (ANALYZE, BUFFERS) no Postgres local (banco "sign_dev", 10008 perfis, 5002 envelopes, 1113 vínculos de empresa e 1112 de fundo).
 Gerado por t-perfil-db.cjs. As tabelas company_members/funder_members aqui são stubs do prelude.sql SEM o índice por user_id que a produção possa ter (T-08: conferir).
 
 -- profiles por id (sign_me, _sign_profile_apply)
-select * from public.profiles where id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'
-Index Scan using profiles_pkey on profiles  (cost=0.29..8.30 rows=1 width=90) (actual time=0.012..0.013 rows=1 loops=1)
-  Index Cond: (id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'::uuid)
+select * from public.profiles where id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'
+Index Scan using profiles_pkey on profiles  (cost=0.29..8.30 rows=1 width=90) (actual time=0.016..0.017 rows=1 loops=1)
+  Index Cond: (id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'::uuid)
   Buffers: shared hit=3
-Planning Time: 0.030 ms
-Execution Time: 0.019 ms
+Planning Time: 0.038 ms
+Execution Time: 0.024 ms
 
 -- sign_identity por user_id (sign_me)
-select * from public.sign_identity where user_id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'
-Index Scan using sign_identity_pkey on sign_identity  (cost=0.29..8.30 rows=1 width=161) (actual time=0.004..0.005 rows=1 loops=1)
-  Index Cond: (user_id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'::uuid)
+select * from public.sign_identity where user_id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'
+Index Scan using sign_identity_pkey on sign_identity  (cost=0.29..8.30 rows=1 width=161) (actual time=0.013..0.014 rows=1 loops=1)
+  Index Cond: (user_id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'::uuid)
   Buffers: shared hit=3
-Planning Time: 0.025 ms
-Execution Time: 0.010 ms
+Planning Time: 0.036 ms
+Execution Time: 0.022 ms
 
 -- auth.users por id (sign_me, _senv_owner_name)
-select * from auth.users where id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'
-Index Scan using users_pkey on users  (cost=0.29..8.30 rows=1 width=130) (actual time=0.004..0.005 rows=1 loops=1)
-  Index Cond: (id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'::uuid)
+select * from auth.users where id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'
+Index Scan using users_pkey on users  (cost=0.29..8.30 rows=1 width=130) (actual time=0.012..0.012 rows=1 loops=1)
+  Index Cond: (id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'::uuid)
   Buffers: shared hit=3
-Planning Time: 0.024 ms
-Execution Time: 0.009 ms
+Planning Time: 0.030 ms
+Execution Time: 0.018 ms
 
 -- _sign_cpf_locked, parte envelopes: sign_envelopes por owner
-select 1 from public.sign_envelopes e where e.owner = '53fef489-e054-4f0e-b8cf-fcb5aa894989'
-Index Only Scan using sign_envelopes_owner_idx on sign_envelopes e  (cost=0.28..8.30 rows=1 width=4) (actual time=0.014..0.014 rows=0 loops=1)
-  Index Cond: (owner = '53fef489-e054-4f0e-b8cf-fcb5aa894989'::uuid)
+select 1 from public.sign_envelopes e where e.owner = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'
+Index Only Scan using sign_envelopes_owner_idx on sign_envelopes e  (cost=0.28..8.30 rows=1 width=4) (actual time=0.018..0.019 rows=0 loops=1)
+  Index Cond: (owner = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'::uuid)
   Heap Fetches: 0
   Buffers: shared hit=2
-Planning Time: 0.020 ms
-Execution Time: 0.019 ms
+Planning Time: 0.023 ms
+Execution Time: 0.024 ms
 
 -- _sign_cpf_locked, parte certificado: sign_identity por user_id
-select 1 from public.sign_identity i where i.user_id = '53fef489-e054-4f0e-b8cf-fcb5aa894989' and i.cert_verified_at is not null and i.cert_chain_ok
+select 1 from public.sign_identity i where i.user_id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b' and i.cert_verified_at is not null and i.cert_chain_ok
 Index Scan using sign_identity_pkey on sign_identity i  (cost=0.29..8.30 rows=1 width=4) (actual time=0.006..0.006 rows=0 loops=1)
-  Index Cond: (user_id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'::uuid)
+  Index Cond: (user_id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'::uuid)
   Filter: ((cert_verified_at IS NOT NULL) AND cert_chain_ok)
   Rows Removed by Filter: 1
   Buffers: shared hit=3
-Planning Time: 0.023 ms
+Planning Time: 0.024 ms
 Execution Time: 0.010 ms
 
 -- _sign_cpf_locked, parte vínculos: company_members por user_id
-select 1 from public.company_members m where m.user_id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'
-Seq Scan on company_members m  (cost=0.00..24.91 rows=1 width=4) (actual time=0.076..0.076 rows=0 loops=1)
-  Filter: (user_id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'::uuid)
+select 1 from public.company_members m where m.user_id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'
+Seq Scan on company_members m  (cost=0.00..24.91 rows=1 width=4) (actual time=0.145..0.145 rows=0 loops=1)
+  Filter: (user_id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'::uuid)
   Rows Removed by Filter: 1113
   Buffers: shared hit=11
-Planning Time: 0.008 ms
-Execution Time: 0.079 ms
+Planning Time: 0.010 ms
+Execution Time: 0.149 ms
 
 -- _sign_cpf_locked, parte vínculos: funder_members por user_id
-select 1 from public.funder_members f where f.user_id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'
-Seq Scan on funder_members f  (cost=0.00..32.90 rows=1 width=4) (actual time=0.085..0.085 rows=0 loops=1)
-  Filter: (user_id = '53fef489-e054-4f0e-b8cf-fcb5aa894989'::uuid)
+select 1 from public.funder_members f where f.user_id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'
+Seq Scan on funder_members f  (cost=0.00..32.90 rows=1 width=4) (actual time=0.142..0.142 rows=0 loops=1)
+  Filter: (user_id = '8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b'::uuid)
   Rows Removed by Filter: 1112
   Buffers: shared hit=19
-Planning Time: 0.009 ms
-Execution Time: 0.087 ms
+Planning Time: 0.013 ms
+Execution Time: 0.145 ms
 
 -- gravação de profiles (upsert por id)
-insert into public.profiles (id, full_name, cpf, email) values ('53fef489-e054-4f0e-b8cf-fcb5aa894989', 'Pessoa Carga Alfa', null, 'x') on conflict (id) do update set full_name = excluded.full_name, updated_at = now() where public.profiles.full_name is distinct from excluded.full_name
-Insert on profiles  (cost=0.00..0.01 rows=0 width=0) (actual time=0.017..0.018 rows=0 loops=1)
+insert into public.profiles (id, full_name, cpf, email) values ('8e70c075-8d3d-477d-8ef6-0f21e4cb1f2b', 'Pessoa Carga Alfa', null, 'x') on conflict (id) do update set full_name = excluded.full_name, updated_at = now() where public.profiles.full_name is distinct from excluded.full_name
+Insert on profiles  (cost=0.00..0.01 rows=0 width=0) (actual time=0.021..0.021 rows=0 loops=1)
   Conflict Resolution: UPDATE
   Conflict Arbiter Indexes: profiles_pkey
   Conflict Filter: (profiles.full_name IS DISTINCT FROM excluded.full_name)
@@ -73,6 +73,6 @@ Insert on profiles  (cost=0.00..0.01 rows=0 width=0) (actual time=0.017..0.018 r
   Conflicting Tuples: 1
   Buffers: shared hit=4
   ->  Result  (cost=0.00..0.01 rows=1 width=152) (actual time=0.001..0.001 rows=1 loops=1)
-Planning Time: 0.011 ms
-Execution Time: 0.025 ms
+Planning Time: 0.015 ms
+Execution Time: 0.031 ms
 

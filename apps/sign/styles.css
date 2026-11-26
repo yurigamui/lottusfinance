@@ -1586,3 +1586,17 @@ nav.tabs { display: inline-flex; flex-wrap: nowrap; overflow-x: auto; max-width:
 @media (min-width: 768px) { .pf-card[aria-busy='true'] { min-height: 420px; } }
 /* 1.0 (AC13): a marca da faixa é um link; alvo de 44 px */
 .sidenav-mark { width: 44px; height: 44px; }
+/* ---------- Ciclo 2 da 1.4 ---------- */
+/* V-01: o ícone dentro de aviso, toast, estado vazio e alerta tem tamanho próprio (sem regra, o SVG ocupava o banner inteiro) */
+.banner .ico, .sg-alert .ico, .empty .ico { width: 20px; height: 20px; flex: none; align-self: center; }
+.banner svg, .sg-alert svg, .empty svg, .toast svg { max-width: 32px; max-height: 32px; }
+.btn .ico, .tag .ico { flex: none; }
+/* V-05: a marca da topbar é um link com alvo de 44 px */
+.org-link { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
+/* V-07: nome longo no cabeçalho ocupa no máximo 2 linhas (o nome inteiro fica no title e no DOM); o avatar nunca é cortado */
+.org-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; max-height: 2.5em; }
+.org { min-width: 0; }
+.avatar { flex: none; }
+/* V-01: em tela estreita o botão do aviso desce para a linha de baixo; o texto nunca fica espremido numa coluna fina */
+.banner { flex-wrap: wrap; }
+.banner .grow { flex: 1 1 160px; }

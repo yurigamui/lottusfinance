@@ -6,7 +6,7 @@ function check(label, cond, extra) {
 async function t(name, open, opts, fn) {
   res.lines.push('# ' + name);
   const d = await open(opts || {});
-  try { await fn(d); } catch (e) { res.fail++; res.lines.push('  FALHA ' + name + ' (exceção): ' + String(e.message).split('\n')[0]); } finally { await d.close(); }
+  try { await fn(d); } catch (e) { res.fail++; res.lines.push('  FALHA ' + name + ' (exceção): ' + String(e.message).split('\n')[0] + ' @' + (e.stack || '').split('\n').filter((l) => /t-[a-z-]+\.cjs:\d+/.test(l)).map((l) => (l.match(/cjs:(\d+)/) || [])[1]).join(',')); } finally { await d.close(); }
 }
 function done() {
   console.info(res.lines.join('\n'));

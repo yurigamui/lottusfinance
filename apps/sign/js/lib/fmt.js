@@ -10,9 +10,12 @@ export function isEmail(v) {
 
 export function normName(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
 
+/* A14-B3: caracteres invisíveis de direção e largura zero não entram no nome (mesma regra do servidor) */
+export const INVISIVEL = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/;
+
 export function nameOk(v) {
   const s = normName(v);
-  return s.length >= 3 && s.length <= LIMITS.name && s.split(' ').filter(Boolean).length >= 2;
+  return !INVISIVEL.test(s) && s.length >= 3 && s.length <= LIMITS.name && s.split(' ').filter(Boolean).length >= 2;
 }
 
 /* ---- CPF e celular (seção 1.4). O servidor é a autoridade; aqui só conforto de uso. ---- */

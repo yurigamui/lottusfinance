@@ -1,5 +1,5 @@
 /* Seção 1.0: esqueleto da área logada (menu, barra superior, aviso e #view). Montado por DOM; texto do usuário só por textContent. */
-import { h, mount, icon, ICON, focusH1 } from '../lib/ui.js?v=20261126a';
+import { h, mount, icon, ICON, focusH1 } from '../lib/ui.js?v=20261126b';
 
 /* Itens do menu. Só entra quem tem built:true; as seções futuras ligam o seu item sem mudar a estrutura. */
 export const NAV = [
@@ -78,6 +78,7 @@ function paintMe(st, me) {
   const name = String(me.name || '').trim();
   const email = String(me.email || st.email || '');
   st.orgName.textContent = name || email;
+  st.orgName.title = name || email; /* V-07: o nome é cortado em 2 linhas na vista; o inteiro fica no title */
   st.orgSub.textContent = levelOf(me);
   st.orgSub.hidden = false;
   st.avatar.textContent = initialsOf(name, email);

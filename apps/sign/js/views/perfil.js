@@ -1,9 +1,9 @@
 /* Seção 1.4: Conta > Perfil (#/conta/perfil). Nome sempre editável; CPF só se preenche (nunca se troca por aqui: R5).
    Tudo por DOM e textContent: nome vindo do usuário nunca vira HTML. Nada de nome/CPF em storage (o rascunho fica só em memória). */
-import { h, icon, ICON, pageHead, abasConta, toast, focusEl } from '../lib/ui.js?v=20261126a';
-import { normName, LIMITS, onlyDigits, cpfOk, fmtCpf, maskCpf, maskPhone, isEmail } from '../lib/fmt.js?v=20261126a';
-import { classify } from '../lib/api.js?v=20261126a';
-import { levelOf, updateMe } from './shell.js?v=20261126a';
+import { h, icon, ICON, pageHead, abasConta, toast, focusEl } from '../lib/ui.js?v=20261126b';
+import { normName, INVISIVEL, LIMITS, onlyDigits, cpfOk, fmtCpf, maskCpf, maskPhone, isEmail } from '../lib/fmt.js?v=20261126b';
+import { classify } from '../lib/api.js?v=20261126b';
+import { levelOf, updateMe } from './shell.js?v=20261126b';
 
 const T = {
   sub: 'Seus dados, verificação e segurança.',
@@ -11,6 +11,8 @@ const T = {
   nomeVazio: 'Informe seu nome completo.',
   nomeCurto: 'Informe nome e sobrenome.',
   nomeLongo: 'O nome pode ter até 140 caracteres.',
+  nomeCortado: 'O nome pode ter até 140 caracteres. O texto colado foi cortado.',
+  nomeInvalido: 'O nome tem caracteres que não podem ser usados. Digite só letras e espaços.',
   cpfVazio: 'Informe seu CPF.',
   cpfInvalido: 'CPF inválido. Confira os números.',
   cpfAjuda: 'Só números. Depois do primeiro envio de documento, o CPF não poderá ser alterado por aqui.',
@@ -60,6 +62,7 @@ function nameMsg(raw) {
   const n = normName(raw);
   if (!n) return T.nomeVazio;
   if (n.length > LIMITS.name) return T.nomeLongo;
+  if (INVISIVEL.test(n)) return T.nomeInvalido;
   return n.length < 3 || !n.includes(' ') ? T.nomeCurto : '';
 }
 
@@ -120,6 +123,12 @@ function drawForm(st, box) {
   const banner = (text, ...extra) => { msg.replaceChildren(h('div', { class: 'banner danger' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, text), ...extra)); };
 
   name.input.addEventListener('input', () => { setErr(name, ''); msg.replaceChildren(); sync(); });
+  /* V-03: o maxlength corta o texto colado em silêncio; avisa depois do evento input (que limpa o erro) */
+  name.input.addEventListener('paste', (ev) => {
+    const el = name.input; const txt = (ev.clipboardData && ev.clipboardData.getData('text')) || '';
+    const sobra = el.value.length - (el.selectionEnd - el.selectionStart) + txt.length > LIMITS.name;
+    if (sobra) setTimeout(() => { setErr(name, T.nomeCortado); }, 0);
+  });
   cpfIn.addEventListener('input', () => { setErr(cpf, ''); msg.replaceChildren(); sync(); });
   cpfIn.addEventListener('blur', () => { if (!locked) cpfIn.value = fmtCpf(cpfIn.value); });
   ctx.setGuard({ dirty: edited, keep: () => ctx.api.setDraft(st.uid, { name: name.input.value, cpf: cpfIn.value }) });
@@ -152,7 +161,7 @@ function drawForm(st, box) {
       if (st.dead) return;
       const k = classify(e);
       if (k === 'sessao') { ctx.sessionEnded(); return; }
-      if (k === 'nome') { setErr(name, nameMsg(name.input.value) || T.nomeCurto); focusEl(name.input); } else if (k === 'cpf') { setErr(cpf, T.cpfInvalido); focusEl(cpfIn); } else if (k === 'cpf_travado') {
+      if (k === 'nome') { setErr(name, nameMsg(name.input.value) || T.nomeInvalido); focusEl(name.input); } else if (k === 'cpf') { setErr(cpf, T.cpfInvalido); focusEl(cpfIn); } else if (k === 'cpf_travado') {
         setErr(cpf, T.cpfTravado); await lockedNow(); } else if (k === 'cpf_usado') { setErr(cpf, T.cpfUsado); focusEl(cpfIn); } else if (k === 'naoconfirmado') {
         banner(T.confirme, h('button', { class: 'btn secondary sm', type: 'button', onclick: () => reenviar(ctx, msg) }, 'Reenviar e-mail')); focusEl(msg);
       } else { banner(k === 'rede' ? T.salvarRede : T.salvarGeral); focusEl(msg); }

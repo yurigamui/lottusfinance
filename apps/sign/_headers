@@ -19,3 +19,9 @@
   Cache-Control: no-store
 /verificar.html
   Cache-Control: no-store
+/index
+  Cache-Control: no-store
+/assinar
+  Cache-Control: no-store
+/verificar
+  Cache-Control: no-store

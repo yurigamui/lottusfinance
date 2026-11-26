@@ -38,3 +38,42 @@ Produção e Supabase real (PostgREST, GoTrue); bfcache real (simulado por `Page
 7. Em formulário sujo, a navegação desfeita usa `replaceState` (pode duplicar uma entrada do histórico).
 8. `pageHead` aceita `{href,label}` também como 3º argumento (a spec escreve assim; o código usava o 4º).
 9. Criar índices em tabelas de Partners/Wealth ficou de fora (E-05).
+
+## Ciclo 2 (correções da reprovação do ciclo 1; verificacao-1-4-ciclo-1.md)
+Só os itens listados foram tocados. Testes rodados no banco isolado `sign_dev` (e `sign_dev_antes`) com `SIGN_DB=sign_dev SIGN_DB_ANTES=sign_dev_antes` (o `reset.sh` e `perfil-lib.cjs` aceitam essas variáveis). `?v=` trocado para 20261126b.
+
+### O que mudou
+| Item | Correção |
+| --- | --- |
+| V-01 (Alto) | `styles.css`: `.banner .ico, .sg-alert .ico, .empty .ico` com 20 px e `flex:none`; teto de 32 px para qualquer `svg` em `.banner/.sg-alert/.empty/.toast`; `.banner` com `flex-wrap` e `.banner .grow` com base de 160 px (o botão desce em tela estreita; o texto não vira coluna fina). Cobre faixa do Perfil, erro ao salvar, erro ao carregar, aviso do shell, estado vazio e a tela "Confirme seu e-mail" |
+| V-02 | `router.js`: a navegação recusada é desfeita andando o histórico (`back` ou `forward`, pela Navigation API ou `history.state`), sem `replaceState` que duplicava entrada. Resta, após clicar um link, a entrada "para frente" desse link (não é duplicata); Voltar continua funcionando |
+| V-03 | `perfil.js`: ao colar texto que o `maxlength` corta, aparece "O nome pode ter até 140 caracteres. O texto colado foi cortado." |
+| V-05 | `a.org-link` com 44 x 44 px |
+| V-07 | `.org-name` limitado a 2 linhas (line-clamp), `title` com o nome inteiro, avatar `flex:none` |
+| V-08 | Medido (abaixo); nenhuma correção necessária |
+| A14-M1 | Migração: `cpf_in_use` também quando outro `id` tem o mesmo CPF normalizado (dígitos); Verificação 0 ganhou `select count(*) from profiles where cpf ~ '\D'` (item d0). Custo: uma varredura de `profiles` só no momento de preencher o CPF (acontece uma vez por pessoa) |
+| A14-B1 | `_sign_cpf_locked`: vínculo com empresa/fundo só trava com CPF do perfil preenchido |
+| A14-B3 | Servidor e cliente recusam U+200B a U+200F, U+202A a U+202E e U+2066 a U+2069 no nome (`invalid_name`; mensagem "O nome tem caracteres que não podem ser usados. Digite só letras e espaços.") |
+| A14-B5 | `_headers`: `Cache-Control: no-store` também em `/index`, `/assinar`, `/verificar` (CSP e demais cabeçalhos idênticos) |
+| Infra | `reset.sh`/`perfil-lib.cjs` com `SIGN_DB`/`SIGN_DB_ANTES`; `t-perfil.cjs` com `ONLY=<regex>`; `lib.cjs` mostra as linhas do teste na exceção; `restaurar` apaga envelopes de teste de U3 |
+
+### Passou (banco `sign_dev`)
+| Suíte | Resultado |
+| --- | --- |
+| t-perfil-db.cjs | 137 de 137 (+18: M1, B1, B3) |
+| t-perfil.cjs | 229 de 229 (+80: V-01 mecânico, V-02, V-03, B3, V-05/V-07, V-08, B5) |
+| t-ac / t-shell / t-layout / t-comp / t-corr | 96 / 183 / 99 / 63 / 45, todos n de n |
+| t-regressao | 35 de 36 idênticas; a diferença é a mesma do ciclo 1 (1920-3-confirme, 45 px, desvio máx 4) |
+| check.mjs / smoke.mjs sign | 0 erros / nenhum problema |
+
+Checagem mecânica nova do V-01: em 8 larguras (320 a 2560) e em 6 estados (faixa de perfil incompleto, erro ao salvar, erro ao carregar, aviso do shell, estado vazio, toast) mais "Confirme seu e-mail": nenhum `svg` em `.banner/.toast/.empty/.sg-alert/.tag/.btn` passa de 32 px, o texto do banner tem >= 90 px e nenhum banner passa de 220 px de altura; capturas dos banners em `/tmp/sign-shots-perfil/banner-<estado>-<largura>.png` (40 arquivos) e `confirme-email-<largura>.png`.
+
+V-08, tema escuro com composição real de alfa: contrastes `.help` 6,83, `.pf-label` 6,83, `.tag` 11,45, h2 13,76, link 13,76, banner 4,54 (o mais apertado), campo 13,76, texto do cartão lateral 6,83, subtítulo 7,52, erro 6,33, botão secundário 13,76, botão principal 13,76; borda do campo em foco 6,33:1 (mínimo 3:1). O tema escuro segue sem ser acionável pelo usuário (decisão de 25/11), então é medida de CSS.
+
+### NÃO testado (ciclo 2)
+Safari, Firefox (a Navigation API do V-02 tem fallback por `history.state`, que só foi exercitado no Chromium), teclado virtual e leitor de tela reais, colar com o menu de contexto do sistema (testado Ctrl+V), A14-M1 contra dados reais de produção (só o banco local com máscara simulada), tema escuro em tela real.
+
+### Seções a reverificar (regra 14: `styles.css`, `.banner`, `router.js` são compartilhados)
+- **1.0 (shell e correções)**: `.banner` agora com `flex-wrap` e `.grow` de base 160 px (aviso `.shell-notice`, estado de erro de `sign_me`), tamanho do ícone dentro de banner/toast/estado vazio, `.org-link` 44 px, `.org-name` com 2 linhas, `router.js` (navegação, `history.state`, pageshow).
+- **1.1 (Entrar e criar conta)**: `.banner` não é usado na entrada (usa `.sg-alert`, só ganhou o teto de 32 px no svg), mas `styles.css` e `router.js` mudaram: reverificar capturas de Entrar/Criar/"Confirme seu e-mail"/link vencido (t-regressao) e o retorno após login.
+- `assinar.html` e `verificar.html` carregam o mesmo `styles.css` (capturas ok no t-regressao).

@@ -1,6 +1,6 @@
 /* Telas provisórias: destinos que ainda não existem (1.2, 1.3, Partes 2 a 5) e rota desconhecida. Sempre com saída.
    Públicas (recuperar, nova-senha, rota desconhecida sem sessão): .sg-single. Privadas: dentro do shell (1.0). */
-import { h, mount, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261126a';
+import { h, mount, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261126b';
 
 function pagina(ctx, title, text, actions) {
   mount(ctx.root, h('div', { class: 'sg-page sg-single' },

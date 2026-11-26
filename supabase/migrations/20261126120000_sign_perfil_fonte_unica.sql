@@ -26,6 +26,8 @@
 --   -- (c) divergência de nome entre profiles e sign_accounts (só contagem; não listar nomes):
 --   select count(*) from public.sign_accounts a join public.profiles p on p.id = a.user_id
 --    where lower(trim(coalesce(a.name, ''))) is distinct from lower(trim(coalesce(p.full_name, '')));
+--   -- (d0) CPF gravado com máscara/não-dígitos (A14-M1; a unicidade do índice não os pega; esperado: 0, senão listar mascarado e decidir com o Yuri):
+--   select count(*) from public.profiles where cpf ~ '\D';
 --   -- (d) as colunas profiles.full_name, cpf, email, phone, updated_at existem e cpf aceita null (a migração grava cpf só quando há valor):
 --   select column_name, is_nullable from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name in ('full_name','cpf','email','phone','updated_at');
 --
@@ -61,8 +63,10 @@ as $$
     exists (select 1 from public.profiles pr where pr.id = p_uid and nullif(pr.cpf, '') is not null)
     or exists (select 1 from public.sign_envelopes e where e.owner = p_uid)
     or exists (select 1 from public.sign_identity i where i.user_id = p_uid and i.cert_verified_at is not null and i.cert_chain_ok)
-    or exists (select 1 from public.company_members m where m.user_id = p_uid)
-    or exists (select 1 from public.funder_members f where f.user_id = p_uid)
+    -- vínculo com empresa (Partners) ou fundo (Wealth) só trava quando o CPF do perfil está preenchido (A14-B1)
+    or (exists (select 1 from public.profiles pr where pr.id = p_uid and nullif(pr.cpf, '') is not null)
+        and (exists (select 1 from public.company_members m where m.user_id = p_uid)
+             or exists (select 1 from public.funder_members f where f.user_id = p_uid)))
   )
 $$;
 
@@ -77,6 +81,8 @@ begin
   if p_name is not null then
     v_name := public._sign_name_norm(p_name);
     if char_length(v_name) < 3 or char_length(v_name) > 140 or strpos(v_name, ' ') = 0 then raise exception 'invalid_name'; end if;
+    -- A14-B3: caracteres invisíveis de direção e largura zero (U+200B a U+200F, U+202A a U+202E, U+2066 a U+2069) não entram no nome
+    if v_name ~ '[\u200B-\u200F\u202A-\u202E\u2066-\u2069]' then raise exception 'invalid_name'; end if;
   end if;
   select * into v_cur from public.profiles where id = p_uid for update;
   v_has := found;
@@ -97,6 +103,8 @@ begin
     end if;
   end if;
   if v_name is null and v_cpf is null then return; end if;
+  -- A14-M1: o CPF vale pelos dígitos; outro perfil com o mesmo CPF gravado com máscara (Partners/Wealth) também é duplicado
+  if v_cpf is not null and exists (select 1 from public.profiles o where o.id <> p_uid and regexp_replace(coalesce(o.cpf, ''), '\D', '', 'g') = v_cpf) then raise exception 'cpf_in_use'; end if;
   if not v_has and v_cpf is null then raise exception 'invalid_cpf'; end if;  -- sem linha em profiles não dá para criar só com o nome
   insert into public.profiles (id, full_name, cpf, email) values (p_uid, v_name, v_cpf, p_email)
     on conflict (id) do update set

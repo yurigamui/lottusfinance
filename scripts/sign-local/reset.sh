@@ -9,6 +9,8 @@ set -e
 cd "$(dirname "$0")"
 : "${SIGN_SCHEMA:?defina SIGN_SCHEMA com o caminho do esquema exportado (ver README)}"
 MODO="${1:-ambos}"
+BD_DEPOIS="${SIGN_DB:-sign}"          # SIGN_DB=sign_dev: banco isolado de quem testa (não mexe no "sign" de outros)
+BD_ANTES="${SIGN_DB_ANTES:-sign_antes}"
 MIG="../../supabase/migrations/20261126120000_sign_perfil_fonte_unica.sql"
 export PGOPTIONS="-c check_function_bodies=off -c client_min_messages=warning"
 PS="psql -X -q -h 127.0.0.1 -p ${PGPORT:-54350} -U postgres -v ON_ERROR_STOP=1"
@@ -21,8 +23,8 @@ build() { # $1 = nome do banco, $2 = com migração (1) ou sem (0)
   $PS -d "$1" -tAc "select '$1 pronto: ' || (select count(*) from public.sign_envelopes) || ' envelope(s), ' || (select count(*) from public.sign_env_signers) || ' signatário(s), ' || (select count(*) from public.profiles) || ' perfil(is)'"
 }
 case "$MODO" in
-  antes)  build sign_antes 0 ;;
-  depois) build sign 1 ;;
-  ambos)  build sign_antes 0; build sign 1 ;;
+  antes)  build "$BD_ANTES" 0 ;;
+  depois) build "$BD_DEPOIS" 1 ;;
+  ambos)  build "$BD_ANTES" 0; build "$BD_DEPOIS" 1 ;;
   *) echo "uso: reset.sh [antes|depois|ambos]" >&2; exit 2 ;;
 esac

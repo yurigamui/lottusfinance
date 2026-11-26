@@ -1,14 +1,16 @@
 // Seção 1.4 (Perfil e conta), TELA: AC1 a AC16 e AC-R1 a AC-R9, em Playwright contra o Supabase falso em modo repasse (Postgres local, banco "sign").
 // Uso: [SHOTS=<pasta>] node t-perfil.cjs   (recria o banco no início e no fim; AC-R10 = rodar t-ac, t-layout, t-shell, t-comp, t-corr, t-regressao)
 const { open } = require('./drv.cjs');
-const { check, t, done, hash, text, logged, VER, PW } = require('./lib.cjs');
-const { U, restaurar, reset } = require('./perfil-lib.cjs');
+const { check, t: t0, done, hash, text, logged, VER, PW } = require('./lib.cjs');
+const ONLY = process.env.ONLY; // ONLY=<regex do nome do teste> roda só os testes que casam (depuração)
+const t = (name, ...r) => (ONLY && !new RegExp(ONLY).test(name) ? Promise.resolve() : t0(name, ...r));
+const { U, restaurar, reset, DB } = require('./perfil-lib.cjs');
 const { rpcCount } = require('./fake-sign.cjs');
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const SHOTS = process.env.SHOTS || '/tmp/sign-shots-perfil';
 fs.mkdirSync(SHOTS, { recursive: true });
 const wait = (p, fn, arg, ms) => p.waitForFunction(fn, arg, { timeout: ms || 8000 });
-const PG = { pg: 'sign' };
+const PG = { pg: DB }; // SIGN_DB=sign_dev para usar um banco isolado
 const perfil = (d, email) => logged(d, { email, hash: '#/conta/perfil' });
 const ready = (p) => wait(p, () => document.querySelector('#pf-nome') || document.querySelector('.pf-card .banner'));
 const salvas = (d) => rpcCount(d.fake.state, 'sign_profile_save');
@@ -183,9 +185,9 @@ const q = async (d, sql, args) => (await d.fake.query(sql, args)).rows;
     await wait(p, () => location.hash === '#/documentos');
     check('AC10 Descartar navega (menu lateral)', (await hash(p)) === '#/documentos');
     await p.evaluate(() => { location.hash = '#/conta/perfil'; }); await ready(p); await p.fill('#pf-nome', 'Ana Voltando Agora'); await p.goBack();
-    await p.waitForSelector('.modal'); check('AC10 voltar do navegador pergunta e mantém a tela', (await hash(p)) === '#/conta/perfil' && (await p.inputValue('#pf-nome')) === 'Ana Voltando Agora');
+    await p.waitForSelector('.modal'); await wait(p, () => location.hash === '#/conta/perfil'); check('AC10 voltar do navegador pergunta e mantém a tela', (await hash(p)) === '#/conta/perfil' && (await p.inputValue('#pf-nome')) === 'Ana Voltando Agora');
     await p.getByRole('button', { name: 'Continuar editando' }).click();
-    await p.click('#avatar'); await p.getByRole('button', { name: 'Sair' }).click(); await p.waitForSelector('.modal');
+    await p.click('#avatar'); await p.getByRole('button', { name: 'Sair' }).click(); await p.waitForSelector('.modal'); await p.waitForTimeout(300);
     check('AC10 Sair também pergunta', (await text(p, '.modal h2')) === 'Descartar alterações?' && (await hash(p)) === '#/conta/perfil');
     await p.getByRole('button', { name: 'Continuar editando' }).click();
     await p.fill('#pf-nome', U.U1.name); await p.click('nav.tabs >> text=Verificação'); await wait(p, () => location.hash === '#/conta/verificacao');
@@ -263,7 +265,7 @@ const q = async (d, sql, args) => (await d.fake.query(sql, args)).rows;
     check('AC-R2 HTML com Cache-Control: no-store (index, assinar, verificar)', (await h('/index.html')) === 'no-store' && (await h('/')) === 'no-store' && (await h('/assinar.html')) === 'no-store' && (await h('/verificar.html')) === 'no-store');
     check('AC-R2 JS e CSS sem no-store (têm ?v=)', (await h('/js/app.js')) === null && (await h('/styles.css')) === null);
     const hd = fs.readFileSync(path.resolve(__dirname, '../../../apps/sign/_headers'), 'utf8');
-    check('AC-R2 _headers declara no-store e a CSP continua restrita', /Cache-Control: no-store/.test(hd) && /script-src 'self';/.test(hd) && !/script-src[^;]*unsafe/.test(hd));
+    check('AC-R2 A14-B5 _headers: no-store em /, /index, /assinar, /verificar (com e sem .html) e a CSP continua restrita', ['/', '/index.html', '/assinar.html', '/verificar.html', '/index', '/assinar', '/verificar'].every((r) => new RegExp('^' + r.replace(/\./g, '\\.') + '\\n  Cache-Control: no-store', 'm').test(hd)) && /script-src 'self';/.test(hd) && !/script-src[^;]*unsafe/.test(hd));
     console.info('  NÃO testado: bfcache real do navegador (o Chromium do teste não o ativa); simulado por PageTransitionEvent persisted=true');
   });
 
@@ -329,6 +331,110 @@ const q = async (d, sql, args) => (await d.fake.query(sql, args)).rows;
     await logged(d, { email: U.U1.email }); await p.evaluate(() => { location.hash = '#/recuperar'; }); await p.waitForSelector('#sign .sg-single');
     const h2 = await p.evaluate(() => history.length); await p.getByRole('button', { name: 'Sair' }).click(); await wait(p, () => location.hash === '#/entrar');
     check('AC-R9 "Sair" usa replace', (await p.evaluate(() => history.length)) === h2, h2);
+  });
+
+
+  // ===================== Ciclo 2 =====================
+  const varre = (p) => p.evaluate(() => {
+    const big = [...document.querySelectorAll('.banner svg, .toast svg, .empty svg, .sg-alert svg, .tag svg, .btn svg')].map((e) => { const b = e.getBoundingClientRect(); return { e: (e.closest('[class]') || e).className + ' ' + Math.round(b.width) + 'x' + Math.round(b.height), w: b.width, h: b.height }; }).filter((x) => x.w > 32 || x.h > 32);
+    const estreito = [...document.querySelectorAll('.banner .grow')].filter((e) => e.getClientRects().length).map((e) => e.getBoundingClientRect().width).filter((w) => w < 90);
+    const alto = [...document.querySelectorAll('.banner')].filter((e) => e.getClientRects().length).map((e) => e.getBoundingClientRect().height).filter((h) => h > 220);
+    return { big, estreito, alto, n: document.querySelectorAll('.banner svg, .toast svg, .empty svg, .sg-alert svg').length };
+  });
+  await t('V-01 ícones em banner, toast e estado vazio: tamanho (todas as larguras, com capturas)', open, { ...PG, width: 390, cfg: { timeoutMs: 2000 } }, async (d) => {
+    const p = d.page; await restaurar((s, a) => q(d, s, a));
+    const nome = (w, e) => `${SHOTS}/banner-${e}-${w}.png`;
+    const rodada = async (estado, sel) => {
+      for (const w of L) {
+        await p.setViewportSize({ width: w, height: 800 }); await p.waitForTimeout(150);
+        const r = await varre(p);
+        check(`V-01 ${estado} ${w}: nenhum svg > 32 px e texto do banner com >= 90 px`, r.big.length === 0 && r.estreito.length === 0 && r.alto.length === 0 && r.n > 0, r);
+        const el = p.locator(sel).first(); if (await el.count()) await el.screenshot({ path: nome(w, estado), animations: 'disabled' });
+      }
+    };
+    await logged(d, { email: U.U3.email, hash: '#/conta/perfil' }); await ready(p);
+    await p.evaluate(async (v) => { const u = await import('/js/lib/ui.js?v=' + v); u.toast('Aviso', 'Mensagem de teste do toast', 'ok'); u.toast('Erro', 'Mensagem de erro do toast', 'error'); }, VER);
+    await rodada('faixa-perfil-incompleto', '.pf-card .banner.info');
+    const al = (await p.evaluate(() => getComputedStyle(document.querySelector('.pf-card .banner .ico')).width));
+    check('V-01 o ícone do banner tem 20 px', al === '20px', al);
+    await p.fill('#pf-nome', 'Ana Erro Rede'); await p.fill('#pf-cpf', U.U3.cpfLivre); d.fake.state.mode.rpcDrop = { sign_profile_save: true }; await p.click('.pf-save'); await p.waitForSelector('.pf-msg .banner', { timeout: 9000 });
+    await rodada('erro-ao-salvar', '.pf-msg .banner');
+    d.fake.state.mode.rpcDrop = { sign_me: true }; await p.reload(); // recarregar também descarta o formulário sujo e o cache de sign_me
+    await p.waitForSelector('.pf-card .banner.danger', { timeout: 9000 }); await rodada('erro-ao-carregar', '.pf-card .banner.danger');
+    await p.evaluate(() => { location.hash = '#/plano'; }); await p.waitForSelector('.shell-notice .banner', { timeout: 9000 }); await rodada('aviso-do-shell', '.shell-notice .banner');
+    d.fake.state.mode.rpcDrop = {}; await p.evaluate(() => { location.hash = '#/plano'; }); await p.waitForSelector('#view .empty'); await rodada('estado-vazio', '#view .empty');
+    await restaurar((s, a) => q(d, s, a));
+  });
+  await t('V-01 "Confirme seu e-mail" e alertas da entrada em todas as larguras', open, { width: 390, cfg: { resendCooldownMs: 900 } }, async (d) => {
+    const p = d.page; await d.go('#/criar');
+    await p.fill('#email', 'novo2@teste.example'); await p.fill('#nome', 'Nova Pessoa Teste'); await p.fill('#senha', 'uma-senha-longa'); await p.check('#aceite'); await p.click('form button[type=submit]');
+    await p.waitForSelector('text=Confirme seu e-mail');
+    for (const w of L) { await p.setViewportSize({ width: w, height: 800 }); await p.waitForTimeout(100); const r = await varre(p); check(`V-01 Confirme seu e-mail ${w}: sem svg > 32 px`, r.big.length === 0, r); await p.screenshot({ path: `${SHOTS}/confirme-email-${w}.png`, animations: 'disabled' }); }
+  });
+
+  await t('V-02 guarda de descarte sem entrada de histórico duplicada', open, { ...PG, width: 1280 }, async (d) => {
+    const p = d.page; await restaurar((s, a) => q(d, s, a)); await perfil(d, U.U1.email); await ready(p);
+    const n0 = await p.evaluate(() => history.length);
+    await p.fill('#pf-nome', 'Ana Editando Agora'); await p.click('nav.tabs >> text=Verificação'); await p.waitForSelector('.modal');
+    await p.getByRole('button', { name: 'Continuar editando' }).click(); await p.waitForTimeout(400);
+    check('V-02 "Continuar editando" (clique em link): mesma rota e no máximo a entrada "para frente" do link (nenhuma duplicada)', (await p.evaluate(() => history.length)) <= n0 + 1 && (await hash(p)) === '#/conta/perfil', [n0, await p.evaluate(() => history.length)]);
+    const entradas = await p.evaluate(() => history.length);
+    await p.goBack(); await p.waitForSelector('.modal'); await p.getByRole('button', { name: 'Continuar editando' }).click(); await p.waitForTimeout(400);
+    check('V-02 voltar do navegador + Continuar editando: nenhuma entrada nova, tela e texto mantidos', (await p.evaluate(() => history.length)) === entradas && (await hash(p)) === '#/conta/perfil' && (await p.inputValue('#pf-nome')) === 'Ana Editando Agora');
+    await p.goBack(); await p.waitForSelector('.modal'); check('V-02 Voltar não fica "morto": pergunta de novo', true);
+    await p.getByRole('button', { name: 'Descartar' }).click(); await wait(p, () => location.hash === '#/documentos');
+    check('V-02 Descartar leva à rota anterior', (await hash(p)) === '#/documentos');
+  });
+
+  await t('V-03 colar nome longo avisa o corte; A14-B3 caracteres invisíveis (tela)', open, { ...PG, width: 1280 }, async (d) => {
+    const p = d.page; await d.ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+    await restaurar((s, a) => q(d, s, a)); await perfil(d, U.U3.email); await ready(p);
+    await p.evaluate(() => navigator.clipboard.writeText('N'.repeat(100) + ' ' + 'M'.repeat(100)));
+    await p.fill('#pf-nome', ''); await p.focus('#pf-nome'); await p.keyboard.press('Control+V'); await p.waitForTimeout(300);
+    check('V-03 o campo corta em 140', (await p.inputValue('#pf-nome')).length === 140);
+    check('V-03 aparece o aviso de que o texto colado foi cortado', /foi cortado/.test(await text(p, '#pf-nome-err')), await text(p, '#pf-nome-err'));
+    await p.fill('#pf-nome', 'Ana ‮silva'); await p.fill('#pf-cpf', U.U3.cpfLivre); await p.click('.pf-save');
+    check('A14-B3 tela: nome com U+202E recusado no cliente, sem envio', /caracteres que não podem ser usados/.test(await text(p, '#pf-nome-err')) && salvas(d) === 0, await text(p, '#pf-nome-err'));
+    await p.fill('#pf-nome', 'Ana ​silva'); await p.click('.pf-save');
+    check('A14-B3 tela: U+200B também', /caracteres que não podem ser usados/.test(await text(p, '#pf-nome-err')) && salvas(d) === 0);
+    await restaurar((s, a) => q(d, s, a));
+  });
+
+  await t('V-05 org-link e V-07 nome de 140 no cabeçalho (altura e avatar)', open, { ...PG, width: 320, height: 640 }, async (d) => {
+    const p = d.page; await q(d, `update public.profiles set full_name = $2 where id = $1`, [U.U5.id, 'N'.repeat(140)]); await perfil(d, U.U5.email); await ready(p);
+    for (const w of [320, 360, 390, 768, 1280]) {
+      await p.setViewportSize({ width: w, height: 640 }); await p.waitForTimeout(150);
+      const r = await p.evaluate(() => { const b = (s) => document.querySelector(s).getBoundingClientRect(); const o = b('.org-link'), a = b('#avatar'), tb = b('.topbar'), n = document.querySelector('.org-name'); return { orgw: o.width, orgh: o.height, av: [a.left, a.right, a.width, a.height], vw: innerWidth, tbh: tb.height, title: n.title.length, txt: n.textContent.length, clamp: getComputedStyle(n).webkitLineClamp }; });
+      check(`V-05 ${w}: a.org-link >= 44 x 44`, r.orgw >= 44 && r.orgh >= 44, r);
+      check(`V-07 ${w}: topo <= 120 px, avatar inteiro dentro da janela, nome inteiro no title`, r.tbh <= 120 && r.av[0] >= 0 && r.av[1] <= r.vw && r.av[2] >= 40 && r.title === 140 && r.txt === 140 && r.clamp === '2', r);
+    }
+    await restaurar((s, a) => q(d, s, a));
+  });
+
+  await t('V-08 contraste no tema escuro (alfa composto) e anel de foco >= 3:1', open, { ...PG, width: 1280, theme: 'dark' }, async (d) => {
+    const p = d.page; await restaurar((s, a) => q(d, s, a)); await perfil(d, U.U3.email); await ready(p); await d.setTheme('dark'); await p.waitForTimeout(200);
+    const alvo = ['.help', '.pf-label', '.tag', '.pf-card h2', '.pf-link', '.pf-card .banner', '#pf-nome', '.pf-side p', '.page-sub', '.ferr', '.btn.secondary', '.pf-save'];
+    await p.fill('#pf-nome', 'Ana'); await p.click('.pf-save').catch(() => {});
+    const it = await p.evaluate((sels) => {
+      const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (m) { const v = m[1].split(/[ ,\/]+/).map(parseFloat); return [v[0], v[1], v[2], v[3] === undefined ? 1 : v[3]]; } const k = c.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?/); return k ? [k[1] * 255, k[2] * 255, k[3] * 255, k[4] === undefined ? 1 : +k[4]] : [0, 0, 0, 0]; };
+      const over = (f, b) => [0, 1, 2].map((i) => f[i] * f[3] + b[i] * (1 - f[3])).concat([1]);
+      const fundo = (e) => { const cam = []; for (let x = e; x; x = x.parentElement) cam.push(parse(getComputedStyle(x).backgroundColor)); let base = [20, 20, 20, 1]; const cs = getComputedStyle(document.documentElement).backgroundColor; if (cs) base = parse(cs); if (base[3] < 1) base = [255, 255, 255, 1]; for (const c of cam.reverse()) base = c[3] > 0 ? over(c, base) : base; return base; };
+      return sels.map((s) => { const e = [...document.querySelectorAll(s)].find((x) => x.getClientRects().length); if (!e) return null; const bg = fundo(e); const fg = parse(getComputedStyle(e).color); return { s, fg: over(fg, bg), bg }; }).filter(Boolean);
+    }, alvo);
+    const lm = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+    const rt = (a, b) => { const x = lm(a), y = lm(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const nums = [];
+    for (const i of it) { const q2 = rt(i.fg, i.bg); nums.push(`${i.s}=${q2.toFixed(2)}`); check(`V-08 escuro: contraste ${i.s} = ${q2.toFixed(2)} >= 4,5`, q2 >= 4.5, i); }
+    console.info('  medido (tema escuro, alfa composto): ' + nums.join(' '));
+    await p.focus('#pf-nome');
+    const foco = await p.evaluate(() => { const e = document.activeElement; const c = getComputedStyle(e); return { shadow: c.boxShadow, border: c.borderTopColor, outline: c.outlineColor + ' ' + c.outlineStyle + ' ' + c.outlineWidth }; });
+    const bgPag = await p.evaluate(() => getComputedStyle(document.querySelector('.pf-card')).backgroundColor);
+    const parse2 = (c) => { const k = String(c).match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?/); if (k) return [k[1] * 255, k[2] * 255, k[3] * 255, k[4] === undefined ? 1 : +k[4]]; const m = String(c).match(/rgba?\(([^)]+)\)/); const v = m[1].split(/[ ,\/]+/).map(parseFloat); return [v[0], v[1], v[2], v[3] === undefined ? 1 : v[3]]; };
+    const bgc = parse2(bgPag); const bord = parse2(foco.border);
+    const q3 = rt([0, 1, 2].map((i) => bord[i] * bord[3] + bgc[i] * (1 - bord[3])), bgc);
+    console.info(`  medido (tema escuro): borda do campo em foco ${foco.border} (anel de sombra ${foco.shadow}) sobre ${bgPag}: ${q3.toFixed(2)}:1`);
+    check('V-08 escuro: borda de foco >= 3:1 sobre o fundo', q3 >= 3, foco);
+    await restaurar((s, a) => q(d, s, a));
   });
 
   await t('Desempenho: LCP e CLS de #/conta/perfil em 4G simulado', open, { ...PG, width: 390 }, async (d) => {

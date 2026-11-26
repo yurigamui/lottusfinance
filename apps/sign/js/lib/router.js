@@ -1,6 +1,6 @@
 /* Lottus Sign: roteador por hash. Guarda de rota, retorno à origem (lista branca) e foco/título a cada rota. */
-import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261126a';
-import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261126a';
+import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261126b';
+import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261126b';
 
 export const WHITELIST = ['#/documentos', '#/envio/novo', '#/plano', '#/conta/perfil', '#/conta/verificacao', '#/conta/seguranca'];
 export const DE_KEY = 'lottus.sign.de';
@@ -41,6 +41,10 @@ export function createRouter({ root, api, views, cfg }) {
   let held = false; // B-1: enquanto o hash do Auth é processado, o roteador espera
   let guard = null; // { dirty(): boolean, keep(): void } da tela com alterações não salvas (1.4)
   let confirming = false;
+  let reverting = false; // V-02: o hashchange causado por desfazer a navegação é ignorado
+  let sgN = 0; // número da visita, gravado em history.state para saber se o usuário foi para trás ou para frente
+  const navIdx = () => (window.navigation && window.navigation.currentEntry ? window.navigation.currentEntry.index : -1); // Navigation API quando existe
+  const stamp = () => { if (!current) return; current.sg = ++sgN; current.idx = navIdx(); try { history.replaceState({ sg: current.sg }, '', location.href); } catch (e) { /* sem history.state */ } };
 
   /* B-1: hash que não começa com #/ (ex.: o do Auth) nunca é rota; devolve null */
   function currentHash() {
@@ -98,6 +102,7 @@ export function createRouter({ root, api, views, cfg }) {
   }
 
   async function handle() {
+    if (reverting) { reverting = false; return; }
     const hash = currentHash();
     if (held) return;
     if (hash === null) { if (!isAuthHash(location.hash)) go('#/entrar', true); return; } /* A10-B2: hash solto nunca deixa tela em branco */
@@ -105,7 +110,12 @@ export function createRouter({ root, api, views, cfg }) {
     if (guard && current && hash !== current.key && dirty()) {
       if (confirming) return;
       const target = hash;
-      history.replaceState(null, '', location.pathname + location.search + current.key);
+      /* V-02: desfaz a navegação andando o histórico de volta (sem empilhar entrada nova): foi para trás -> forward; empurrou ou foi para frente -> back */
+      const stt = history.state;
+      reverting = true;
+      const idx = navIdx();
+      const voltou = idx >= 0 && current.idx >= 0 ? idx < current.idx : !!(stt && typeof stt.sg === 'number' && stt.sg < current.sg);
+      setTimeout(() => { if (voltou) history.forward(); else history.back(); }, 0); /* fora do evento de hashchange, para o navegador aceitar */
       if (await canLeave()) go(target, true);
       return;
     }
@@ -151,6 +161,7 @@ export function createRouter({ root, api, views, cfg }) {
       guard = null;
       cleanup = view.render(ctx) || null;
       current = { view, key: hash, uid };
+      stamp();
       if (!first) focusH1(ctx.view); /* no 1º carregamento o foco fica livre: o Tab começa em "Ir para o conteúdo" */
       return;
     }
@@ -166,6 +177,7 @@ export function createRouter({ root, api, views, cfg }) {
     guard = null;
     cleanup = view.render(ctx) || null;
     current = { view, key: hash, uid };
+    stamp();
     if (!view.ownFocus) focusH1(root);
   }
 

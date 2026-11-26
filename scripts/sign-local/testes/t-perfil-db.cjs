@@ -240,6 +240,39 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     await restaurar(q);
   }
 
+
+  sec('Ciclo 2: A14-M1 duplicidade normalizada, A14-B1 vínculo só com CPF preenchido, A14-B3 caracteres invisíveis');
+  {
+    await restaurar(q);
+    await q(`update public.profiles set cpf = $2 where id = $1`, [U.U2.id, '982.636.303-04']); // Partners/Wealth gravando com máscara
+    const r = await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: U.U2.cpf } }, U.U3.email);
+    check('A14-M1 CPF de outro perfil gravado COM máscara: cpf_in_use (comparação por dígitos)', r.status === 400 && /cpf_in_use/.test(r.msg), r);
+    check('A14-M1 profiles de U3 intacto', (await snap(U.U3.id)).cpf === null);
+    const r2 = await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: '982.636.303-04' } }, U.U3.email);
+    check('A14-M1 também com máscara no envio: cpf_in_use', r2.status === 400 && /cpf_in_use/.test(r2.msg), r2);
+    check('A14-M1 CPF livre continua gravando', (await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: U.U3.cpfLivre } }, U.U3.email)).status === 200);
+    check('A14-M1 a consulta de Verificação 0 (cpf ~ \'\\D\') acha o perfil com máscara', (await q(`select count(*)::int n from public.profiles where cpf ~ '\\D'`))[0].n === 1);
+    await restaurar(q);
+    await q(`insert into public.company_members (company_id, user_id, access, role) values ('c0000000-0000-4000-8000-000000000001', $1, 'viewer', 'm')`, [U.U3.id]);
+    const s3 = (await rpc('sign_me', {}, U.U3.email)).body;
+    check('A14-B1 membro de Partners com CPF VAZIO no perfil: cpf_locked = false', s3.cpf_locked === false, s3);
+    const f3 = await rpc('sign_profile_save', { p: { name: 'Carla Membro Teste', cpf: U.U3.cpfLivre } }, U.U3.email);
+    check('A14-B1 e consegue preencher o CPF; depois fica travado', f3.status === 200 && f3.body.cpf_locked === true, f3);
+    await q(`delete from public.company_members where user_id = $1`, [U.U3.id]);
+    check('A14-B1 U4 (vínculo + CPF preenchido) segue travado', (await rpc('sign_me', {}, U.U4.email)).body.cpf_locked === true);
+    await restaurar(q);
+    for (const [rot, ch] of [['U+202E (inversão de texto)', '\u202E'], ['U+200B (largura zero)', '\u200B'], ['U+200F', '\u200F'], ['U+202A', '\u202A'], ['U+2066', '\u2066'], ['U+2069', '\u2069'], ['U+200D (zero-width joiner)', '\u200D']]) {
+      const x = await rpc('sign_profile_save', { p: { name: 'Ana ' + ch + 'Silva', cpf: U.U3.cpfLivre } }, U.U3.email);
+      check(`A14-B3 nome com ${rot}: invalid_name`, x.status === 400 && /invalid_name/.test(x.msg), x);
+    }
+    check('A14-B3 nada gravado nas recusas', (await snap(U.U3.id)).full_name === null);
+    const ok = await rpc('sign_profile_save', { p: { name: 'José Ação Müller-Silva', cpf: U.U3.cpfLivre } }, U.U3.email);
+    check('A14-B3 acentos e hífen continuam aceitos', ok.status === 200 && ok.body.name === 'José Ação Müller-Silva', ok);
+    const ac = await rpc('sign_account_save', { p: { name: 'Ana \u202Esilva' } }, U.U3.email);
+    check('A14-B3 sign_account_save recusa igual', ac.status === 400 && /invalid_name/.test(ac.msg), ac);
+    await restaurar(q);
+  }
+
   sec('AC-B14 grants (catálogo)');
   {
     const pub = ['sign_me()', 'sign_profile_save(jsonb)', 'sign_account_save(jsonb)', 'sign_plan_state()'];
