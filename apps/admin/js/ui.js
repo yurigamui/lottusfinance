@@ -1,4 +1,32 @@
-/* Lottus — peças de tela compartilhadas (títulos, abas, vazio, níveis) */
+/* Lottus — peças de tela compartilhadas (títulos, abas, vazio, níveis)
+
+   API de tabela/lista (B.ui.list, com o apelido B.ui.table; ligar com B.ui.onList / B.ui.onTable):
+     const html = B.ui.table({
+       columns: [{ key, label, num?, render?(row), card?, searchText?(row), text?, clip? }],
+       rows: [...],            // objetos; a ordem é a que você passar
+       pageSize: 25,           // paginação no cliente (padrão 25)
+       search: true,           // false esconde a busca (padrão: aparece quando há linhas)
+       searchLabel: 'Buscar',  // rótulo acessível do campo de busca
+       q: '',                  // busca inicial
+       cardTitle: 'name',      // coluna que vira o título do cartão no celular (padrão: a 1ª)
+       rowHref: (row) => '#/clientes/sign/' + row.id,   // linha leva a um endereço (#/… ou https://…): o título vira link de verdade
+       onRow: (row, ev) => { … },                       // OU ação ao clicar na linha (o título vira botão); rowHref vence onRow
+       emptyText: 'Nada nesta fila.',
+     });
+     el.innerHTML = html; B.ui.onTable(el);   // depois de pôr o HTML na página
+   Colunas
+     key        nome do campo; label = cabeçalho e rótulo do cartão (data-label).
+     render     devolve HTML JÁ ESCAPADO (use B.esc); sem render, o valor é escapado aqui.
+     num        valor monetário/numérico: alinhado à direita, algarismos de largura fixa.
+     card:false a coluna some no cartão do celular (continua na tabela).
+     clip       texto cortado com reticências na tabela (≥641 px) e o texto inteiro no atributo title; no cartão quebra a linha.
+     searchText texto usado na busca (padrão: valor bruto; text:true usa o texto exibido).
+   Estados: vazio (emptyText), busca sem resultado (com "Limpar busca") e paginação com foco no contador.
+   Texto do usuário: sempre quebra com overflow-wrap:anywhere. Celular (≤640 px): lista de cartões; ≥641 px: tabela.
+   Para tabelas feitas à mão, use o utilitário CSS table.stack-m (veja o topo de styles.css).
+
+   Abas (B.ui.tabs): role=tablist/tab, aria-selected, setas ←/→, Home e End (um só tratador no documento);
+   em ≤768 px a barra rola na horizontal dentro dela, com esmaecido nas bordas e a aba ativa visível. */
 (function () {
   'use strict';
   const B = window.BO;
@@ -11,7 +39,7 @@
   }
   function tabs(options, value) {
     return `<div class="tabs" role="tablist">${options
-      .map(([v, l]) => `<button role="tab" data-tab="${esc(v)}" class="${v === value ? 'active' : ''}" aria-selected="${v === value}">${esc(l)}</button>`)
+      .map(([v, l]) => `<button type="button" role="tab" data-tab="${esc(v)}" class="${v === value ? 'active' : ''}" aria-selected="${v === value}" tabindex="${v === value ? 0 : -1}">${esc(l)}</button>`)
       .join('')}</div>`;
   }
   function onTabs(el, fn) {
@@ -104,13 +132,13 @@
   const registry = new Map();
   const norm = (v) => String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   function list(opts) {
-    const o = Object.assign({ columns: [], rows: [], pageSize: 25, q: '', cardTitle: null, emptyText: 'Nada nesta fila.', searchLabel: 'Buscar' }, opts || {});
+    const o = Object.assign({ columns: [], rows: [], pageSize: 25, q: '', cardTitle: null, emptyText: 'Nada nesta fila.', searchLabel: 'Buscar', search: true, rowHref: null, onRow: null }, opts || {});
     for (const [k, v] of registry) if (!document.getElementById(k) && v.built < Date.now() - 5000) registry.delete(k);
     const id = nextId('lt');
     const st = { o, page: 0, q: String(o.q || ''), timer: null, built: Date.now() };
     st.titleKey = o.cardTitle || (o.columns[0] && o.columns[0].key);
     registry.set(id, st);
-    const search = o.rows.length
+    const search = o.rows.length && o.search !== false
       ? `<div class="field lt-search"><label for="${id}-q">${esc(o.searchLabel)}</label><input id="${id}-q" class="input" type="search" autocomplete="off" value="${esc(st.q)}" /></div>`
       : '';
     return `<div class="lt" id="${id}" data-list="${id}">${search}<div class="lt-body" data-list-body>${body(st)}</div></div>`;
@@ -146,11 +174,24 @@
     const from = st.page * size;
     const slice = rows.slice(from, from + size);
     const cell = (c, r) => (c.render ? c.render(r) : esc(r[c.key]));
+    const clickable = !!(o.rowHref || o.onRow);
+    if (clickable && !st.idx) st.idx = new Map(o.rows.map((r, i) => [r, i]));
+    // título da linha: link (rowHref) ou botão (onRow), para o teclado e o leitor de tela
+    const titled = (c, r, inner) => {
+      if (!clickable || c.key !== st.titleKey) return inner;
+      const h = o.rowHref ? o.rowHref(r) : null;
+      if (o.rowHref) return h ? `<a class="lt-link" href="${esc(B.safeUrl(h))}">${inner}</a>` : inner;
+      return `<button type="button" class="lt-link" data-lt-row>${inner}</button>`;
+    };
+    const tdOf = (c, r) => {
+      const inner = cell(c, r);
+      const cls = [c.num ? 'num' : '', c.key === st.titleKey ? 'lt-title' : '', c.card === false ? 'lt-nocard' : '', c.clip ? 'lt-clip' : ''].filter(Boolean).join(' ');
+      const ttl = c.clip ? ` title="${esc(plain(inner).trim())}"` : '';
+      return `<td data-label="${esc(c.label)}" class="${cls}"${ttl}>${titled(c, r, inner)}</td>`;
+    };
     const th = o.columns.map((c) => `<th scope="col"${c.num ? ' class="num"' : ''}>${esc(c.label)}</th>`).join('');
     const tr = slice
-      .map((r) => `<tr>${o.columns
-        .map((c) => `<td data-label="${esc(c.label)}" class="${[c.num ? 'num' : '', c.key === st.titleKey ? 'lt-title' : '', c.card === false ? 'lt-nocard' : ''].filter(Boolean).join(' ')}">${cell(c, r)}</td>`)
-        .join('')}</tr>`)
+      .map((r) => `<tr${clickable ? ` class="lt-row-click" data-ri="${st.idx.get(r)}"` : ''}>${o.columns.map((c) => tdOf(c, r)).join('')}</tr>`)
       .join('');
     const pager = pages > 1
       ? `<div class="lt-pager"><button type="button" class="btn secondary lt-btn" data-lt-prev${st.page === 0 ? ' disabled' : ''}>Anterior</button><button type="button" class="btn secondary lt-btn" data-lt-next${st.page >= pages - 1 ? ' disabled' : ''}>Próxima</button></div>`
@@ -174,8 +215,21 @@
         input.addEventListener('keydown', (e) => { if (e.key === 'Escape' && input.value) { input.value = ''; st.q = ''; st.page = 0; clearTimeout(st.timer); paint(); } });
       }
       root.addEventListener('click', (e) => {
+        // clique em qualquer ponto da linha (menos em links, botões e campos) faz o mesmo que o título
+        const tr = e.target.closest('tr[data-ri]');
+        if (tr && root.contains(tr) && (st.o.rowHref || st.o.onRow)) {
+          const inner = e.target.closest('a, input, select, textarea, label, summary, button:not([data-lt-row])');
+          if (!inner || !tr.contains(inner)) {
+            const r = st.o.rows[Number(tr.dataset.ri)];
+            if (st.o.rowHref) {
+              const h = r && st.o.rowHref(r);
+              if (h && !e.target.closest('a')) { const u = B.safeUrl(h); if (/^#/.test(u)) location.hash = u; else window.open(u, '_blank', 'noopener'); }
+            } else if (r) st.o.onRow(r, e);
+            return;
+          }
+        }
         const b = e.target.closest('button');
-        if (!b || !root.contains(b)) return;
+        if (!b || !root.contains(b) || b.hasAttribute('data-lt-row')) return;
         if (b.hasAttribute('data-lt-clear')) { st.q = ''; st.page = 0; if (input) { input.value = ''; input.focus(); } paint(); return; }
         const dir = b.hasAttribute('data-lt-next') ? 1 : b.hasAttribute('data-lt-prev') ? -1 : 0;
         if (!dir) return;
@@ -223,5 +277,53 @@
   }
   const clearFieldErrors = (root) => root.querySelectorAll('.field-error').forEach((n) => { const i = n.previousElementSibling; if (i) { i.removeAttribute('aria-invalid'); i.removeAttribute('aria-describedby'); } n.remove(); });
 
-  B.ui = { denied, errorCard, fieldError, clearFieldErrors, homeHref, head, tabs, onTabs, empty, can, mergeAll, skipEmpty, pageHead, onPage, list, onList, more, skeleton };
+  /* ------------------------------------------------------------ abas (teclado, rolagem) */
+  const TAB_SEL = '.tabs, .settings-nav, [role=tablist]';
+  const tabsOf = (list) => [...list.querySelectorAll('[role=tab]')].filter((t) => t.offsetParent !== null || t === document.activeElement);
+  function tabFade(list) {
+    const max = list.scrollWidth - list.clientWidth;
+    list.classList.toggle('tabs-fade-l', max > 2 && list.scrollLeft > 2);
+    list.classList.toggle('tabs-fade-r', max > 2 && list.scrollLeft < max - 2);
+  }
+  /** Garante papéis, tabindex e esmaecido nas barras de abas de root e deixa a aba ativa visível. */
+  function tabsReady(root) {
+    (root || document).querySelectorAll(TAB_SEL).forEach((list) => {
+      if (!list.hasAttribute('role')) list.setAttribute('role', 'tablist');
+      const items = [...list.querySelectorAll('button, a')];
+      items.forEach((t) => { if (!t.hasAttribute('role')) t.setAttribute('role', 'tab'); });
+      items.forEach((t) => {
+        const on = t.classList.contains('active') || t.getAttribute('aria-current') === 'page';
+        if (!t.hasAttribute('aria-selected')) t.setAttribute('aria-selected', String(on));
+      });
+      const sel = items.find((t) => t.getAttribute('aria-selected') === 'true') || items[0];
+      items.forEach((t) => t.setAttribute('tabindex', t === sel ? '0' : '-1'));
+      if (list.scrollWidth > list.clientWidth + 2 && sel && !list.dataset.tabsCentered) {
+        list.dataset.tabsCentered = '1';
+        list.scrollLeft = Math.max(0, sel.offsetLeft - (list.clientWidth - sel.offsetWidth) / 2);
+      }
+      tabFade(list);
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    const t = e.target && e.target.closest ? e.target.closest('[role=tab]') : null;
+    if (!t) return;
+    const list = t.closest('[role=tablist]');
+    if (!list) return;
+    if ((e.key === ' ' || e.key === 'Spacebar') && t.tagName === 'A') { e.preventDefault(); t.click(); return; }
+    const k = e.key;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(k)) return;
+    const all = tabsOf(list);
+    const i = all.indexOf(t);
+    if (i < 0) return;
+    const to = k === 'Home' ? all[0] : k === 'End' ? all[all.length - 1] : all[(i + (k === 'ArrowRight' ? 1 : -1) + all.length) % all.length];
+    e.preventDefault();
+    all.forEach((x) => x.setAttribute('tabindex', x === to ? '0' : '-1'));
+    to.focus();
+    tabFade(list);
+  });
+  // rolagem dentro da barra atualiza o esmaecido (scroll não borbulha: captura)
+  document.addEventListener('scroll', (e) => { const l = e.target; if (l && l.matches && l.matches(TAB_SEL)) tabFade(l); }, true);
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => document.querySelectorAll(TAB_SEL).forEach(tabFade), 120); });
+
+  B.ui = { tabsReady, table: list, onTable: onList, denied, errorCard, fieldError, clearFieldErrors, homeHref, head, tabs, onTabs, empty, can, mergeAll, skipEmpty, pageHead, onPage, list, onList, more, skeleton };
 })();

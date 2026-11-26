@@ -181,32 +181,95 @@
     root.prepend(el);
   }
 
-  function closeModal() {
-    document.getElementById('modal-root').innerHTML = '';
-    document.removeEventListener('keydown', onEsc);
+  /* Modal: folha inferior no celular, centrado no desktop; foco preso, Esc fecha, foco volta a quem abriu */
+  let modalOpener = null;
+  let modalOnClose = null;
+  let modalUid = 0;
+  const visible = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const modalFocusables = (m) => [...m.querySelectorAll('a[href], button, input:not([type=hidden]), select, textarea, summary, [tabindex]')]
+    .filter((e) => !e.disabled && e.tabIndex >= 0 && visible(e));
+  const currentModal = () => { const r = document.getElementById('modal-root'); return r ? r.querySelector('.modal') : null; };
+  function syncViewport() {
+    const root = document.getElementById('modal-root'), vv = window.visualViewport, m = currentModal();
+    if (!root || !vv || !m) return;
+    // teclado virtual: a folha acompanha a área realmente visível
+    root.style.setProperty('--vvh', `${Math.round(vv.height)}px`);
+    root.style.setProperty('--vvt', `${Math.round(vv.offsetTop)}px`);
+    const a = document.activeElement;
+    if (a && m.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) a.scrollIntoView({ block: 'nearest' });
   }
-  function onEsc(e) { if (e.key === 'Escape') closeModal(); }
-
-  /** Abre um modal; devolve o elemento para ligar os eventos. */
-  function modal({ title, subtitle, body, foot, wide }) {
+  function onModalKey(e) {
+    const m = currentModal();
+    if (!m) return;
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeModal(); return; }
+    if (e.key !== 'Tab') return;
+    const f = modalFocusables(m);
+    if (!f.length) { e.preventDefault(); m.focus(); return; }
+    const first = f[0], last = f[f.length - 1], act = document.activeElement;
+    if (!m.contains(act) || act === m) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+    else if (e.shiftKey && act === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && act === last) { e.preventDefault(); first.focus(); }
+  }
+  function onModalFocusIn(e) {
+    const m = currentModal();
+    if (!m) return;
+    if (!m.contains(e.target) && !e.target.closest('#toast-root')) { const f = modalFocusables(m); (f[0] || m).focus(); return; }
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) setTimeout(() => { if (e.target.isConnected && m.contains(e.target)) e.target.scrollIntoView({ block: 'center' }); }, 120);
+  }
+  function closeModal() {
     const root = document.getElementById('modal-root');
+    const had = !!(root && root.firstElementChild);
+    if (root) { root.innerHTML = ''; root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt'); }
+    document.removeEventListener('keydown', onModalKey, true);
+    document.removeEventListener('focusin', onModalFocusIn);
+    if (window.visualViewport) { window.visualViewport.removeEventListener('resize', syncViewport); window.visualViewport.removeEventListener('scroll', syncViewport); }
+    document.documentElement.classList.remove('modal-open');
+    const op = modalOpener, cb = modalOnClose;
+    modalOpener = null; modalOnClose = null;
+    if (had && op && op !== document.body && op.isConnected && typeof op.focus === 'function') op.focus({ preventScroll: true });
+    if (had && cb) cb();
+  }
+
+  /** Abre um modal; devolve o elemento para ligar os eventos. onClose roda se ele for fechado por Esc, ✕, fundo ou troca de tela. */
+  function modal({ title, subtitle, body, foot, wide, onClose }) {
+    const root = document.getElementById('modal-root');
+    const replacing = !!currentModal();
+    if (replacing) {
+      // um modal no lugar de outro: o foco volta ao elemento que abriu o primeiro
+      const cb = modalOnClose; modalOnClose = null; root.innerHTML = '';
+      if (cb) cb();
+    } else modalOpener = document.activeElement;
+    modalOnClose = onClose || null;
+    const uid = ++modalUid;
     root.innerHTML = `
       <div class="modal-backdrop" data-close>
-        <div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+        <div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="modal-t-${uid}"${subtitle ? ` aria-describedby="modal-s-${uid}"` : ''} tabindex="-1">
           <div class="modal-head">
-            <div><h2>${esc(title)}</h2>${subtitle ? `<div class="muted">${subtitle}</div>` : ''}</div>
-            <button class="btn ghost sm" data-close aria-label="Fechar">✕</button>
+            <div><h2 id="modal-t-${uid}" tabindex="-1">${esc(title)}</h2>${subtitle ? `<div class="muted" id="modal-s-${uid}">${subtitle}</div>` : ''}</div>
+            <button type="button" class="btn ghost sm modal-x" data-close aria-label="Fechar">✕</button>
           </div>
           <div class="modal-body">${body || ''}</div>
           ${foot ? `<div class="modal-foot">${foot}</div>` : ''}
         </div>
       </div>`;
     const el = root.querySelector('.modal');
-    root.querySelector('.modal-backdrop').addEventListener('click', (e) => {
-      if (e.target.hasAttribute('data-close')) closeModal();
-    });
+    const bd = root.querySelector('.modal-backdrop');
+    // só fecha pelo fundo se o clique começou e terminou nele (selecionar texto e soltar fora não fecha)
+    let downOnBackdrop = null;
+    bd.addEventListener('mousedown', (e) => { downOnBackdrop = e.target === bd; });
+    bd.addEventListener('click', (e) => { if (e.target === bd && downOnBackdrop !== false) closeModal(); downOnBackdrop = null; });
     el.querySelector('.modal-head [data-close]').addEventListener('click', closeModal);
-    document.addEventListener('keydown', onEsc);
+    document.documentElement.classList.add('modal-open');
+    if (!replacing) {
+      document.addEventListener('keydown', onModalKey, true);
+      document.addEventListener('focusin', onModalFocusIn);
+      if (window.visualViewport) { window.visualViewport.addEventListener('resize', syncViewport); window.visualViewport.addEventListener('scroll', syncViewport); }
+    }
+    syncViewport();
+    // foco: primeiro campo (no celular, o título, para o teclado não abrir sozinho e cobrir a folha)
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const field = coarse ? null : el.querySelector('.modal-body input:not([type=hidden]):not([disabled]), .modal-body select:not([disabled]), .modal-body textarea:not([disabled])');
+    (field || el.querySelector('h2')).focus({ preventScroll: true });
     return el;
   }
 
@@ -216,8 +279,11 @@
    */
   function confirmAction({ title, text, confirmLabel, danger, note, noteLabel, noteRequired, notePlaceholder, extra }) {
     return new Promise((resolve) => {
+      let done = false;
+      const finish = (v) => { if (done) return; done = true; resolve(v); };
       const el = modal({
         title,
+        onClose: () => finish(null),
         body: `<div class="stack">
           ${text ? `<p style="margin:0">${text}</p>` : ''}
           ${extra || ''}
@@ -229,7 +295,7 @@
         foot: `<button class="btn secondary" data-act="cancel">Cancelar</button>
                <button class="btn ${danger ? 'danger' : ''}" data-act="ok">${esc(confirmLabel || 'Confirmar')}</button>`,
       });
-      el.querySelector('[data-act=cancel]').onclick = () => { closeModal(); resolve(null); };
+      el.querySelector('[data-act=cancel]').onclick = () => { finish(null); closeModal(); };
       el.querySelector('[data-act=ok]').onclick = () => {
         const v = note ? el.querySelector('#m-note').value.trim() : '';
         if (note && noteRequired && !v) {
@@ -237,11 +303,11 @@
         }
         const values = {};
         el.querySelectorAll('[data-field]').forEach((i) => (values[i.dataset.field] = i.value));
+        finish(extra ? { note: v, values } : v);
         closeModal();
-        resolve(extra ? { note: v, values } : v);
       };
       const first = el.querySelector('textarea, input');
-      if (first) first.focus();
+      if (first && !(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) first.focus();
     });
   }
 

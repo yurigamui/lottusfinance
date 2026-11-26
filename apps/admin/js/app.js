@@ -48,6 +48,7 @@
     produtos: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
     bell: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
     plus: 'M12 5v14M5 12h14',
+    search: 'M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z',
     menu: 'M4 7h16M4 12h16M4 17h16',
     close: 'M6 18L18 6M6 6l12 12',
     juridico: 'M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 006 0zm12 0l-3 7a3 3 0 006 0z',
@@ -101,8 +102,10 @@
     ] },
   ];
   const groupOf = (v) => NAV_GROUPS.find((g) => g.tabs && g.items.some((x) => x.id === v));
-  // Páginas que continuam abrindo por link, fora do menu
-  const EXTRA_TITLES = [['representantes', 'Representantes']];
+  // Título de toda rota carregada que não está no menu (rota de apoio #/_base, só administrador)
+  const EXTRA_TITLES = [['_base', 'Base visual (exemplo)']];
+  // Módulos antigos que continuam no repositório, mas não fazem parte do produto novo: abrem "Página não encontrada"
+  const LEGACY = new Set(['empresas', 'credito', 'identidade', 'documentos', 'sacados', 'contratos', 'representantes', 'crm']);
   const NAV = NAV_GROUPS.flatMap((g) => g.items);
   // Representante de parceiro: só as cessões para aceite
   const PARTNER_GROUPS = [{ id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] }];
@@ -429,6 +432,8 @@
   async function signOut(expired) {
     if (expired === true) saveReturn(); else clearReturn();
     setDrawer(false, false);
+    window.BO.closeModal();
+    gsReset();
     await sb.auth.signOut();
     me = null;
     location.hash = '';
@@ -535,6 +540,132 @@
   const onNarrow = () => { if (!narrow.matches && drawerOpen) setDrawer(false, false); };
   if (narrow.addEventListener) narrow.addEventListener('change', onNarrow); else if (narrow.addListener) narrow.addListener(onNarrow);
 
+  /* ------------------------------------------- popups do topo e busca global */
+  // Os ouvintes de document abaixo são registrados uma única vez (não a cada login): olham os elementos pelo id na hora do evento
+  const POPS = [['newbtn', 'newmenu'], ['bell', 'notif'], ['avatar', 'profile-menu']];
+  function closePops(focusBack) {
+    POPS.forEach(([bid, mid]) => {
+      const b = document.getElementById(bid), m = document.getElementById(mid);
+      if (!b || !m || m.hidden) return;
+      m.hidden = true; b.setAttribute('aria-expanded', 'false');
+      if (focusBack) b.focus();
+    });
+  }
+  let shellBound = false;
+  function bindShellGlobals() {
+    if (shellBound) return;
+    shellBound = true;
+    document.addEventListener('click', (e) => {
+      POPS.forEach(([bid, mid]) => {
+        const b = document.getElementById(bid), m = document.getElementById(mid);
+        if (b && m && !m.hidden && !m.contains(e.target) && !b.contains(e.target)) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); }
+      });
+      const gs = document.getElementById('gs'), gl = document.getElementById('gl');
+      if (gs && gl && !gs.contains(e.target)) gl.hidden = true;
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || drawerOpen) return;
+      if (POPS.some(([, mid]) => { const m = document.getElementById(mid); return m && !m.hidden; })) { e.preventDefault(); closePops(true); }
+    });
+  }
+
+  // Busca global: espera 250 ms, mínimo de 2 letras, descarta resposta fora de ordem e guarda por 30 s o que já baixou
+  const GS = { seq: 0, timer: 0, cache: new Map(), TTL: 30000 };
+  function gsReset() { GS.seq++; clearTimeout(GS.timer); GS.cache.clear(); }
+  function gsCached(key, fn) {
+    const now = Date.now(), c = GS.cache.get(key);
+    if (c && now - c.t < GS.TTL) return c.p;
+    const e = { t: now, p: fn() };
+    GS.cache.set(key, e);
+    e.p.catch(() => { if (GS.cache.get(key) === e) GS.cache.delete(key); });
+    if (GS.cache.size > 40) GS.cache.delete(GS.cache.keys().next().value);
+    return e.p;
+  }
+  const gsMobile = () => window.matchMedia('(max-width: 700px)').matches;
+  // Fatura e contato não têm ficha: a lista abre já filtrada pelo que foi achado
+  function applyGlobalQuery(view) {
+    const p = window.BO._gq;
+    if (!p || p.v !== view || Date.now() - p.t > 10000) return;
+    const input = document.querySelector('#view #q');
+    if (!input) return;
+    window.BO._gq = null;
+    input.value = p.q;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function wireSearch() {
+    const gs = document.getElementById('gs');
+    if (!gs) return;
+    const gq = document.getElementById('gq'), gl = document.getElementById('gl'), btn = document.getElementById('gsbtn');
+    const setOpen = (open, focusBtn) => {
+      gs.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) gq.focus();
+      else { GS.seq++; clearTimeout(GS.timer); gl.hidden = true; if (focusBtn) btn.focus(); }
+    };
+    btn.onclick = () => setOpen(!gs.classList.contains('open'));
+    document.getElementById('gsclose').onclick = () => setOpen(false, true);
+    gs.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault(); e.stopPropagation();
+      if (gsMobile()) setOpen(false, true);
+      else { gq.value = ''; gl.hidden = true; GS.seq++; clearTimeout(GS.timer); }
+    });
+    gl.addEventListener('click', (e) => {
+      const a = e.target.closest('a');
+      if (!a) return;
+      if (a.dataset.gq) {
+        window.BO._gq = { v: a.dataset.gv, q: a.dataset.gq, t: Date.now() };
+        if (a.getAttribute('href') === location.hash) applyGlobalQuery(a.dataset.gv);
+      }
+      gq.value = '';
+      if (gsMobile()) setOpen(false, false); else { gl.hidden = true; GS.seq++; }
+    });
+    const msg = (t) => { gl.innerHTML = `<div class="small muted gs-msg">${esc(t)}</div>`; gl.hidden = false; };
+    async function run(v, mine) {
+      msg('Buscando…');
+      const lv = v.toLowerCase(), digits = v.replace(/\D/g, '');
+      const get = (key, fn) => gsCached(key, fn).then((x) => x, () => null);
+      const [cusAll, inv, con, leadsAll] = await Promise.all([
+        get('cus', () => rpc('bo_customers').then((r) => r.rows)),
+        get(`inv:${lv}`, () => rpc('bo_inv_list', { p_status: 'all', p_search: v })),
+        get(`con:${lv}`, () => rpc('bo_mkt_contacts', { p_search: v, p_tag: null, p_status: null }).then((r) => r.rows)),
+        get('leads', () => rpc('bo_crm_list')),
+      ]);
+      if (mine !== GS.seq) return; // chegou depois de a pessoa digitar de novo: descarta
+      if ([cusAll, inv, con, leadsAll].every((x) => x === null)) { msg('Não foi possível buscar agora. Tente de novo em instantes.'); return; }
+      const cus = (cusAll || []).filter((c) => `${c.name} ${c.legal_name || ''} ${c.doc || ''} ${c.email || ''}`.toLowerCase().includes(lv) || (digits.length > 3 && String(c.doc || '').includes(digits)));
+      const leads = (leadsAll || []).filter((l) => `${l.name} ${l.email || ''} ${l.doc || ''}`.toLowerCase().includes(lv));
+      const enc = encodeURIComponent;
+      const items = [].concat(
+        cus.slice(0, 3).map((c) => ({ h: `clientes/${enc(c.kind)}/${enc(c.id)}`, t: c.name, k: `Cliente · ${c.product}` })),
+        (inv || []).slice(0, 3).map((i) => ({ h: 'faturas/all', t: `${i.number} · ${i.customer_name}`, k: 'Fatura', q: String(i.number || ''), v: 'faturas' })),
+        leads.slice(0, 3).map((l) => ({ h: `funil/${enc(l.id)}`, t: l.name, k: 'Lead' })),
+        (con || []).slice(0, 3).map((c) => ({ h: 'contatos', t: c.name || c.email, k: 'Contato', q: String(c.email || c.name || ''), v: 'contatos' })));
+      gl.innerHTML = items.length
+        ? items.map((x) => `<a href="#/${esc(x.h)}"${x.q ? ` data-gq="${esc(x.q)}" data-gv="${esc(x.v)}"` : ''}><b>${esc(x.t)}</b><span class="small muted">${esc(x.k)}</span></a>`).join('')
+        : `<div class="small muted gs-msg">Nada encontrado para “${esc(v)}”.</div>`;
+      gl.hidden = false;
+    }
+    gq.oninput = () => {
+      clearTimeout(GS.timer);
+      const mine = ++GS.seq; // invalida qualquer busca em andamento
+      const v = gq.value.trim();
+      if (v.length < 2) { gl.hidden = true; return; }
+      GS.timer = setTimeout(() => run(v, mine), 250);
+    };
+  }
+
+  // Foco no título da tela nova depois de navegar pela gaveta (B-02)
+  let focusAfterNav = false;
+  function focusHeading() {
+    focusAfterNav = false;
+    const h = document.querySelector('#view h1');
+    window.scrollTo(0, 0);
+    if (!h) return;
+    h.setAttribute('tabindex', '-1');
+    h.focus({ preventScroll: true });
+  }
+
   // "Novo" do topo: só o que o nível da pessoa pode criar (as telas conferem de novo)
   const NEW_ITEMS = [['faturas', 'Fatura', 'approver'], ['pagar', 'Conta a pagar', 'approver'], ['funil', 'Lead', 'analyst'], ['tarefas', 'Tarefa', 'analyst'],
     ['contatos', 'Contato', 'approver'], ['campanhas', 'Campanha', 'approver'], ['calendario', 'Peça de conteúdo', 'analyst']];
@@ -561,11 +692,17 @@
             <header class="topbar">
               <div class="org">
                 ${me.partner ? `<div class="org-mark">${esc((me.funder.trade_name || me.funder.legal_name || 'P').trim()[0].toUpperCase())}</div>` : '<div class="org-mark logo"></div>'}
-                <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
+                <div class="org-txt"><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
               </div>
               <div class="topbar-right">
-                ${me.partner ? '' : `<div class="gsearch"><input class="input search" id="gq" type="search" placeholder="Buscar contato, lead ou fatura" aria-label="Busca" autocomplete="off"><div class="gs-list" id="gl" hidden></div></div>`}
-                ${me.partner || !newItems.length ? '' : `<div class="tb-pop"><button class="btn sm" id="newbtn" aria-haspopup="true" aria-expanded="false">${icon('plus', 'ico sm')} Novo</button>
+                ${me.partner ? '' : `<div class="gsearch" id="gs">
+                  <button type="button" class="icon-btn gs-open" id="gsbtn" aria-label="Buscar" aria-expanded="false" aria-controls="gs-panel">${icon('search')}</button>
+                  <div class="gs-panel" id="gs-panel">
+                    <input class="input search" id="gq" type="search" placeholder="Buscar contato, lead ou fatura" aria-label="Busca" autocomplete="off">
+                    <button type="button" class="icon-btn gs-close" id="gsclose" aria-label="Fechar busca">${icon('close')}</button>
+                    <div class="gs-list" id="gl" hidden aria-live="polite"></div>
+                  </div></div>`}
+                ${me.partner || !newItems.length ? '' : `<div class="tb-pop"><button class="btn sm" id="newbtn" aria-haspopup="true" aria-expanded="false" aria-label="Novo">${icon('plus', 'ico sm')}<span class="tb-lbl">Novo</span></button>
                   <div class="menu" id="newmenu" hidden>${newItems.map(([v, l]) => `<a class="menu-item" href="#/${v}/new">${esc(l)}</a>`).join('')}</div></div>`}
                 ${me.partner ? '' : `                <div class="tb-pop"><button class="icon-btn" id="bell" aria-haspopup="true" aria-expanded="false" aria-label="Notificações">${icon('bell')}<span class="nav-count" id="bellc" hidden></span></button>
                   <div class="menu notif" id="notif" hidden></div></div>`}
@@ -588,13 +725,18 @@
     document.getElementById('menu-open').onclick = () => setDrawer(!drawerOpen);
     document.getElementById('nav-close').onclick = () => setDrawer(false);
     document.getElementById('nav-backdrop').onclick = () => setDrawer(false);
-    document.getElementById('drawer').addEventListener('click', (e) => { if (e.target.closest('a[href]')) setDrawer(false); });
+    document.getElementById('drawer').addEventListener('click', (e) => {
+      const a = e.target.closest('a[href]');
+      if (!a) return;
+      // o foco vai ao título da tela nova (não volta ao botão "Menu")
+      setDrawer(false, false);
+      if (a.getAttribute('href') === location.hash) focusHeading(); else focusAfterNav = true;
+    });
     const pop = (btnId, menuId, onOpen) => {
       const b = document.getElementById(btnId), m = document.getElementById(menuId);
       if (!b) return;
-      b.onclick = (e) => { e.stopPropagation(); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); if (!m.hidden && onOpen) onOpen(m); };
-      m.addEventListener('click', (e) => { if (e.target.closest('a')) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } });
-      document.addEventListener('click', (e) => { if (!m.hidden && !m.contains(e.target) && e.target !== b) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } });
+      b.onclick = (e) => { e.stopPropagation(); const open = m.hidden; closePops(); m.hidden = !open; b.setAttribute('aria-expanded', String(open)); if (open && onOpen) onOpen(m); };
+      m.addEventListener('click', (e) => { if (e.target.closest('a')) closePops(); });
     };
     pop('newbtn', 'newmenu');
     pop('bell', 'notif', async (m) => {
@@ -605,35 +747,13 @@
         m.innerHTML = `<div class="menu-head"><div class="menu-name">Notificações</div></div>${n.rows.length ? n.rows.map((x) => `<a class="menu-item notif-row ${x.new ? 'new' : ''}" href="${esc(safeUrl(x.link || '#/painel'))}"><b>${esc(x.title)}</b><span class="small muted">${esc(x.body || '')}</span><span class="small muted">${window.BO.ago(x.at)}</span></a>`).join('') : '<div class="small muted" style="padding:12px 14px">Nada por aqui ainda.</div>'}`;
       } catch { m.innerHTML = '<div class="small muted" style="padding:12px 14px">Não consegui carregar.</div>'; }
     });
-    const gq = document.getElementById('gq'), gl = document.getElementById('gl');
-    if (gq) {
-      let t;
-      gq.oninput = () => {
-        clearTimeout(t);
-        const v = gq.value.trim();
-        if (v.length < 2) { gl.hidden = true; return; }
-        t = setTimeout(async () => {
-          const [cus, inv, con, leads] = await Promise.all([
-            rpc('bo_customers').then((r) => r.rows.filter((c) => `${c.name} ${c.legal_name || ''} ${c.doc || ''} ${c.email || ''}`.toLowerCase().includes(v.toLowerCase()) || (v.replace(/\D/g, '').length > 3 && String(c.doc || '').includes(v.replace(/\D/g, ''))))).catch(() => []),
-            rpc('bo_inv_list', { p_status: 'all', p_search: v }).catch(() => []),
-            rpc('bo_mkt_contacts', { p_search: v, p_tag: null, p_status: null }).then((r) => r.rows).catch(() => []),
-            rpc('bo_crm_list').then((r) => r.filter((l) => `${l.name} ${l.email || ''} ${l.doc || ''}`.toLowerCase().includes(v.toLowerCase()))).catch(() => []),
-          ]);
-          const rows = [].concat(
-            cus.slice(0, 3).map((c) => [`clientes/${c.kind}/${c.id}`, c.name, `Cliente · ${c.product}`]),
-            inv.slice(0, 3).map((i) => ['faturas', `${i.number} · ${i.customer_name}`, 'Fatura']),
-            leads.slice(0, 3).map((l) => [`funil/${l.id}`, l.name, 'Lead']),
-            con.slice(0, 3).map((c) => ['contatos', c.name || c.email, 'Contato']));
-          gl.innerHTML = rows.length ? rows.map(([h, t, k]) => `<a href="#/${h}"><b>${esc(t)}</b><span class="small muted">${k}</span></a>`).join('') : '<div class="small muted" style="padding:10px 14px">Nada encontrado.</div>';
-          gl.hidden = false;
-        }, 250);
-      };
-      gl.addEventListener('click', () => { gl.hidden = true; gq.value = ''; });
-      document.addEventListener('click', (e) => { if (!e.target.closest('.gsearch')) gl.hidden = true; });
-    }
-    const avatar = document.getElementById('avatar'), menu = document.getElementById('profile-menu');
-    avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
-    document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });
+    pop('avatar', 'profile-menu');
+    wireSearch();
+    bindShellGlobals();
+    // abas: papéis, setas, esmaecido e aba ativa visível também quando a própria tela redesenha a barra
+    const viewEl = document.getElementById('view');
+    let tabRaf = 0;
+    new MutationObserver(() => { if (tabRaf) return; tabRaf = requestAnimationFrame(() => { tabRaf = 0; window.BO.ui.tabsReady(viewEl); }); }).observe(viewEl, { childList: true, subtree: true });
     const home = me.partner ? '#/assinar' : '#/painel';
     // Voltou depois de a sessão cair: abre a tela em que estava (representante de parceiro: só Operações)
     let back = takeReturn();
@@ -670,6 +790,17 @@
   const homeHash = () => (me && me.partner ? '#/assinar' : '#/painel');
   const NAV_ITEM = Object.fromEntries(NAV.map((n) => [n.id, n]));
 
+  /** Carrega js/base-demo.js (rota #/_base) sob demanda; se o arquivo não existir, a rota fica "não encontrada". */
+  function loadDemo() {
+    return new Promise((ok) => {
+      const s = document.createElement('script');
+      s.src = 'js/base-demo.js?v=20261126a';
+      s.onload = () => ok(true);
+      s.onerror = () => { s.remove(); ok(false); };
+      document.head.appendChild(s);
+    });
+  }
+
   async function route() {
     if (!me) return;
     const mine = ++navSeq;
@@ -683,7 +814,11 @@
     try { params = rest.map(decodeURIComponent); } catch { params = rest; }
     paintNav(view);
     const crumb = document.getElementById('crumb');
-    const known = me.partner ? true : own(window.BO.views, view);
+    // rota de apoio #/_base: só administrador; o arquivo é carregado na hora e, se não existir, vale "não encontrada"
+    if (!me.partner && view === '_base' && me.level === 'admin' && !own(window.BO.views, '_base')) await loadDemo();
+    if (mine !== navSeq) return;
+    const hasView = me.partner ? own(window.BO.views, 'assinar') : own(window.BO.views, view) && !LEGACY.has(view) && (view !== '_base' || me.level === 'admin');
+    const known = hasView;
     if (crumb) crumb.textContent = (me.partner ? 'Lottus Partners · ' : 'Admin · ') + (known ? SECTION_TITLE[view] || 'Painel' : 'Página não encontrada');
     const slot = document.getElementById('view');
     const el = document.createElement('div'); // um contêiner por navegação: o que chegar atrasado cai num contêiner solto
@@ -693,12 +828,14 @@
     if (!known) {
       el.innerHTML = `<div class="card denied"><h1 tabindex="-1">Página não encontrada</h1>
         <p>O endereço <code>${esc(`#/${raw}`.slice(0, 120))}</code> não existe ou foi removido.</p><a class="btn" href="${homeHash()}">Voltar ao Início</a></div>`;
+      if (focusAfterNav) focusHeading();
       return;
     }
     // Telas só de administrador: bloqueio no roteador, antes de montar a tela ou chamar o banco
     const item = me.partner ? null : NAV_ITEM[view];
     if (item && item.admin && me.level !== 'admin') {
       window.BO.ui.denied(el, me, `A tela “${item.label}”`, 'administradores');
+      if (focusAfterNav) focusHeading();
       return;
     }
     const fn = me.partner ? window.BO.views.assinar : window.BO.views[view];
@@ -708,11 +845,17 @@
       if (mine !== navSeq) return;
       const grp = me.partner ? null : groupOf(view);
       if (grp) {
-        const tab = (x) => { const c = x.count ? counts[x.count] : 0; return `<a href="#/${x.id}" class="${x.id === view ? 'active' : ''}"${x.id === view ? ' aria-current="page"' : ''}>${esc(x.label)}${c ? `<span class="nav-count">${c > 99 ? '99+' : c}</span>` : ''}</a>`; };
-        el.insertAdjacentHTML('afterbegin', `<nav class="settings-nav" aria-label="${esc(grp.label)}">${grp.items.filter((x) => !x.admin || me.level === 'admin').map(tab).join('')}</nav>`);
+        const tab = (x) => { const c = x.count ? counts[x.count] : 0; return `<a href="#/${x.id}" role="tab" aria-selected="${x.id === view}" class="${x.id === view ? 'active' : ''}"${x.id === view ? ' aria-current="page"' : ''}>${esc(x.label)}${c ? `<span class="nav-count">${c > 99 ? '99+' : c}</span>` : ''}</a>`; };
+        el.insertAdjacentHTML('afterbegin', `<nav class="settings-nav" role="tablist" aria-label="${esc(grp.label)}">${grp.items.filter((x) => !x.admin || me.level === 'admin').map(tab).join('')}</nav>`);
       }
+      // toda tela tem um h1 (as que não desenham o próprio ganham o do menu, visível só para leitor de tela)
+      if (!el.querySelector('h1')) el.insertAdjacentHTML('afterbegin', `<h1 class="ui-sr">${esc(SECTION_TITLE[view] || 'Painel')}</h1>`);
+      window.BO.ui.tabsReady(el);
+      applyGlobalQuery(view);
+      if (focusAfterNav) focusHeading();
     } catch (e) {
       if (mine !== navSeq) return;
+      focusAfterNav = false;
       if (/mfa_required|forbidden|JWT|session|not_authenticated/i.test(e.message || '')) { signOut(true); return; }
       el.innerHTML = window.BO.ui.errorCard(message(e));
     }
