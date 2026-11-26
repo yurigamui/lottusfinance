@@ -72,3 +72,5 @@
 | A14-B6 | Auxiliares `_` ainda executáveis por `anon` (= M1) e `_email_funder` por `authenticated`: migração de segurança nova inclui as 2 faltantes | Média | Arquiteto | Release | auditor 1.4 |
 | V14 | Ciclo 2 da 1.4: **V-01 (Alto)**, V-02, V-03, V-05, V-07, V-08, A14-M1, A14-B1, A14-B3, A14-B5. Reverificar 1.0 e 1.1 (o `.banner` é compartilhado) | Alta | Desenvolvedor | Agora | verificação 1.4 |
 | V14-G7 | V-04 `[preencher]` LGPD/DPO e e-mail de suporte; V-06 índices de `company_members`/`funder_members` em produção | Média | Yuri/Jurídico/Auditor | G7 | verificação 1.4 |
+| V14-C3 | Ciclo 3 da 1.4: N-01 (Alto), V-09, B-01, B-02, B-03, B-04, B-05 + guarda sistêmica contra texto "null"/"undefined"/"[object Object]" em todas as telas | Alta | Desenvolvedor | Agora | verificação 1.4 ciclo 2 |
+| M-CHK | **Sugestão de item novo do checklist do manual (seção 8, bloco 3):** varrer todos os nós de texto de cada tela em cada estado por `null`, `undefined`, `[object Object]`, `NaN`; e inspecionar capturas visualmente, porque medições mecânicas não pegaram V-01 nem N-01 | Média | Yuri (versão do manual) | — | verificação 1.4 |
