@@ -194,29 +194,33 @@
     shownRef = shown;
     const cell = (v, neg) => `<td class="num ${neg && v < 0 ? 'neg' : ''}">${v ? brl(v) : '<span class="muted">—</span>'}</td>`;
     const rev = (m) => Number(m.rev_partners) + Number(m.rev_sign) + Number(m.rev_other);
+    // tabela do resultado: recebe os meses a mostrar; o Total é sempre o do período inteiro
+    const dre = (cols) => `<div class="table-wrap dre"><table>
+        <thead><tr><th></th>${cols.map((m) => `<th class="num">${MONTH[Number(m.month.slice(5)) - 1]}</th>`).join('')}<th class="num">Total</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td>Receita</td>${cols.map((m) => cell(rev(m))).join('')}${cell(shown.reduce((t, m) => t + rev(m), 0))}</tr>
+          <tr><td class="sub">Lottus Partners</td>${cols.map((m) => cell(Number(m.rev_partners))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_partners), 0))}</tr>
+          <tr><td class="sub">Lottus Sign</td>${cols.map((m) => cell(Number(m.rev_sign))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_sign), 0))}</tr>
+          <tr><td class="sub">Outras</td>${cols.map((m) => cell(Number(m.rev_other))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_other), 0))}</tr>
+          <tr class="grp"><td>Despesas</td>${cols.map((m) => cell(-Number(m.exp_total), true)).join('')}${cell(-shown.reduce((t, m) => t + Number(m.exp_total), 0), true)}</tr>
+          ${cats.map((c) => `<tr><td class="sub">${esc(CAT[c] || c)}</td>${cols.map((m) => cell(-Number((m.expenses || {})[c] || 0), true)).join('')}${cell(-shown.reduce((t, m) => t + Number((m.expenses || {})[c] || 0), 0), true)}</tr>`).join('')}
+          <tr class="grp total"><td>Resultado</td>${cols.map((m) => cell(rev(m) - Number(m.exp_total), true)).join('')}${cell(shown.reduce((t, m) => t + rev(m) - Number(m.exp_total), 0), true)}</tr>
+          <tr><td class="sub">MRR no fim do mês</td>${cols.map((m) => `<td class="num small muted">${m.mrr != null ? brl(m.mrr) : '—'}</td>`).join('')}<td></td></tr>
+        </tbody></table></div>`;
     el.innerHTML = `
-      ${head('Resultado', 'Receita, despesas e o que sobrou, mês a mês (regime de caixa: quando o dinheiro entrou ou saiu).',
-        `<div class="row" style="gap:8px">${tabs([[String(year - 1), String(year - 1)], [String(year), String(year)]], String(year))}<button class="btn ghost" id="csv">Exportar para o contador</button></div>`)}
-      <div class="kpi4">
+      ${B.ui.pageHead({ title: 'Resultado', sub: 'Receita, despesas e o que sobrou, mês a mês (regime de caixa: quando o dinheiro entrou ou saiu).', more: [{ id: 'csv', label: 'Exportar para o contador' }] })}
+      <div class="u-mb16" id="ytabs">${tabs([[String(year - 1), String(year - 1)], [String(year), String(year)]], String(year))}</div>
+      <div class="kpi4 kpi4-c">
         <div class="tile main"><span class="kpi-label">Resultado no ano</span><span class="tile-value ${tot('exp_total') > rev({ rev_partners: tot('rev_partners'), rev_sign: tot('rev_sign'), rev_other: tot('rev_other') }) ? 'neg' : ''}">${brl(tot('rev_partners') + tot('rev_sign') + tot('rev_other') - tot('exp_total'))}</span><span class="small muted">receita ${brl(tot('rev_partners') + tot('rev_sign') + tot('rev_other'))} · despesas ${brl(tot('exp_total'))}</span></div>
         <div class="tile"><span class="kpi-label">Receita média por cliente</span><span class="tile-value">${brl(mt.arpa)}</span><span class="small muted">MRR ${brl(mt.mrr)} · ${mt.customers} cliente(s)</span></div>
         <div class="tile"><span class="kpi-label">Churn mensal</span><span class="tile-value">${String(mt.churn_rate).replace('.', ',')}%</span><span class="small muted">${mt.ltv ? 'LTV ' + brl(mt.ltv) : 'LTV aparece com o primeiro cancelamento'}</span></div>
         <div class="tile"><span class="kpi-label">Custo por cliente (CAC)</span><span class="tile-value">${mt.cac == null ? '—' : brl(mt.cac)}</span><span class="small muted">${mt.new_90d} novo(s) em 90 dias · ${brl(mt.spend_90d)} em marketing</span></div>
       </div>
-      <div class="card flush"><div class="table-wrap dre"><table>
-        <thead><tr><th></th>${shown.map((m) => `<th class="num">${MONTH[Number(m.month.slice(5)) - 1]}</th>`).join('')}<th class="num">Total</th></tr></thead>
-        <tbody>
-          <tr class="grp"><td>Receita</td>${shown.map((m) => cell(rev(m))).join('')}${cell(shown.reduce((t, m) => t + rev(m), 0))}</tr>
-          <tr><td class="sub">Lottus Partners</td>${shown.map((m) => cell(Number(m.rev_partners))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_partners), 0))}</tr>
-          <tr><td class="sub">Lottus Sign</td>${shown.map((m) => cell(Number(m.rev_sign))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_sign), 0))}</tr>
-          <tr><td class="sub">Outras</td>${shown.map((m) => cell(Number(m.rev_other))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_other), 0))}</tr>
-          <tr class="grp"><td>Despesas</td>${shown.map((m) => cell(-Number(m.exp_total), true)).join('')}${cell(-shown.reduce((t, m) => t + Number(m.exp_total), 0), true)}</tr>
-          ${cats.map((c) => `<tr><td class="sub">${esc(CAT[c] || c)}</td>${shown.map((m) => cell(-Number((m.expenses || {})[c] || 0), true)).join('')}${cell(-shown.reduce((t, m) => t + Number((m.expenses || {})[c] || 0), 0), true)}</tr>`).join('')}
-          <tr class="grp total"><td>Resultado</td>${shown.map((m) => cell(rev(m) - Number(m.exp_total), true)).join('')}${cell(shown.reduce((t, m) => t + rev(m) - Number(m.exp_total), 0), true)}</tr>
-          <tr><td class="sub">MRR no fim do mês</td>${shown.map((m) => `<td class="num small muted">${m.mrr != null ? brl(m.mrr) : '—'}</td>`).join('')}<td></td></tr>
-        </tbody></table></div></div>`;
-    onTabs(el.querySelector('.page-head'), (k) => (location.hash = `#/resultado/${k}`));
-    el.querySelector('#csv').onclick = () => B.downloadCsv(`resultado-${year}`, [['Mês', 'Receita Partners', 'Receita Sign', 'Outras receitas', 'Despesas'].concat(cats.map((c) => CAT[c] || c), ['Resultado'])].concat(
+      <div class="card flush">${dre(shown.slice(-3))}</div>
+      ${shown.length > 3 ? `<div class="u-m16t">${B.ui.more('Ver todos os meses', `<div class="card flush">${dre(shown)}</div>`)}</div>` : ''}`;
+    onTabs(el.querySelector('#ytabs'), (k) => (location.hash = `#/resultado/${k}`));
+    const exportCsv = () => B.downloadCsv(`resultado-${year}`, [['Mês', 'Receita Partners', 'Receita Sign', 'Outras receitas', 'Despesas'].concat(cats.map((c) => CAT[c] || c), ['Resultado'])].concat(
       ms.map((m) => [m.month, m.rev_partners, m.rev_sign, m.rev_other, m.exp_total].concat(cats.map((c) => (m.expenses || {})[c] || 0), [rev(m) - Number(m.exp_total)]).map((v) => String(v).replace('.', ',')))));
+    B.ui.onPage(el, { csv: exportCsv });
   };
 })();

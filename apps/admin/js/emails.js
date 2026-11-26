@@ -54,7 +54,8 @@
           <div class="row" style="margin-top:14px"><button class="btn secondary" id="test" ${d.configured ? '' : 'disabled'}>Enviar e-mail de teste para mim</button></div>
         </div>
 
-        <div class="card"><h2>Remetentes</h2>
+        <div id="et">${B.ui.tabs([['rem', 'Remetentes'], ['ent', 'Entrega'], ['ces', 'Cessão'], ['env', 'Envios']], 'rem')}</div>
+        <div class="card" id="ep-rem" role="tabpanel"><h2>Remetentes</h2>
           <p class="muted small">Os endereços precisam ser do domínio verificado no Postmark (lottusfinance.com.br).</p>
           <form class="stack" id="f" style="margin-top:12px">
             <div class="grid-3">
@@ -66,29 +67,36 @@
           </form>
         </div>
 
-        <div class="card"><div class="card-head"><div><h2>Notificação de cessão aos sacados</h2>
+        <div class="card" id="ep-ces" role="tabpanel" hidden><div class="card-head"><div><h2>Notificação de cessão aos sacados</h2>
             <div class="small muted">Sai sozinha quando a operação é paga, com lembrete depois de 3 dias sem ciência.</div></div>
             ${pv ? '<button class="btn secondary sm" id="npv">Ver exemplo</button>' : ''}</div>
           <label class="switch-row" style="margin-top:8px"><input type="checkbox" id="nmkt" ${!pv || pv.marketing ? 'checked' : ''} ${admin ? '' : 'disabled'}><span class="switch" aria-hidden="true"></span>
             <span><b>Apresentação da Lottus no fim do e-mail</b><small>"Sua empresa também vende a prazo? Saiba como funciona", com link para o site.</small></span></label>
         </div>
 
-        <div class="card"><h2>Situação da entrega</h2>
+        <div class="card" id="ep-ent" role="tabpanel" hidden><h2>Situação da entrega</h2>
           <p class="muted small">Para saber se cada e-mail chegou, cadastre esta URL no Postmark (seu servidor → Webhooks) marcando <b>Delivery</b>, <b>Bounce</b> e <b>Spam complaint</b>.</p>
           <div class="copy-row" style="margin-top:10px"><span>URL</span><code>${esc(hook)}</code><button class="btn ghost sm" type="button" data-copy="${esc(hook)}">Copiar</button></div>
         </div>
 
-        <div><h2 class="section-title">Últimos envios</h2>
-          <div class="card flush"><div class="table-wrap">${d.items.length ? `<table>
-            <thead><tr><th>Quando</th><th>Para</th><th>Tipo</th><th>Situação</th></tr></thead>
-            <tbody>${d.items.map((m) => `<tr>
-              <td class="nowrap">${dateTime(m.created_at)}</td>
-              <td>${esc(m.recipient)}${m.subject ? `<div class="small muted">${esc(m.subject)}</div>` : ''}</td>
-              <td>${esc(KIND[m.kind] || m.kind)}</td>
-              <td>${stTag(m.status)}${m.error ? `<div class="small" style="color:var(--danger)">${esc(m.error)}</div>` : ''}</td>
-            </tr>`).join('')}</tbody></table>` : empty('Nenhum e-mail enviado ainda.')}</div></div>
-        </div>
+        <div id="ep-env" role="tabpanel" hidden><h2 class="section-title">Últimos envios</h2><div id="elist"></div></div>
       </div>`;
+
+    const ELOG = d.items;
+    el.querySelector('#elist').innerHTML = B.ui.table({
+      rows: ELOG, pageSize: 25, cardTitle: 'recipient', searchLabel: 'Buscar por destinatário ou assunto', emptyText: 'Nenhum e-mail enviado ainda.',
+      columns: [
+        { key: 'created_at', label: 'Quando', searchText: () => '', render: (m) => `<span class="nowrap">${dateTime(m.created_at)}</span>` },
+        { key: 'recipient', label: 'Para', searchText: (m) => `${m.recipient} ${m.subject || ''}`, render: (m) => `${esc(m.recipient)}${m.subject ? `<div class="small muted">${esc(m.subject)}</div>` : ''}` },
+        { key: 'kind', label: 'Tipo', searchText: (m) => KIND[m.kind] || m.kind, render: (m) => esc(KIND[m.kind] || m.kind) },
+        { key: 'status', label: 'Situação', searchText: (m) => (STATUS[m.status] || [m.status])[0], render: (m) => `${stTag(m.status)}${m.error ? `<div class="small late">${esc(m.error)}</div>` : ''}` },
+      ],
+    });
+    B.ui.onTable(el.querySelector('#elist'));
+    B.ui.onTabs(el.querySelector('#et'), (k) => {
+      el.querySelectorAll('#et [data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === k); b.setAttribute('aria-selected', String(b.dataset.tab === k)); b.tabIndex = b.dataset.tab === k ? 0 : -1; });
+      ['rem', 'ent', 'ces', 'env'].forEach((x) => { el.querySelector('#ep-' + x).hidden = x !== k; });
+    });
 
     el.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = () => B.copy(b.dataset.copy)));
     const nm = el.querySelector('#nmkt');

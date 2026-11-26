@@ -66,7 +66,7 @@
               <td><div style="font-weight:600">${esc(v.name || '—')}</div>
                 <div class="small muted">CPF ${esc(cpf(v.cpf))} · ${esc(v.email || '')}</div>
                 ${v.previous ? `<div class="small muted">${v.previous} envio(s) anterior(es)</div>` : ''}</td>
-              <td>${v.companies.map((c) => `<div><a href="#/empresas/${esc(c.id)}">${esc(c.legal_name)}</a>
+              <td>${v.companies.map((c) => `<div><b>${esc(c.legal_name)}</b>
                 <span class="small muted">· ${esc(B.ACCESS[c.access] || c.access)} · ${esc(B.ROLE[c.role] || c.role)}</span>
                 ${c.partner_verified ? '<span class="small check ok">✓ no QSA</span>' : ''}</div>`).join('') || '—'}</td>
               <td>${esc((v.document_type || '').toUpperCase())}<div class="small muted">${tag('identity', v.status)}</div>
@@ -132,7 +132,7 @@
           <thead><tr><th>Empresa</th><th>Documento</th><th>Enviado por</th><th>Quando</th><th></th></tr></thead>
           <tbody>${list.map((d, i) => `
             <tr>
-              <td><a href="#/empresas/${esc(d.company_id)}" style="font-weight:600">${esc(d.legal_name)}</a>
+              <td><b>${esc(d.legal_name)}</b>
                 <div class="small muted">${esc(cnpj(d.cnpj))} · ${esc(d.company_status || '')}</div></td>
               <td>${esc(B.DOC_KIND[d.kind] || d.kind)}<div class="small muted">${esc(d.file_name || '')}</div>
                 ${d.review_notes ? `<div class="small muted">${esc(d.review_notes)}</div>` : ''}</td>
@@ -177,7 +177,6 @@
           <td>${c.credit_status ? tag('credit', c.credit_status) : '—'}${c.credit_status === 'approved' ? `<div class="small muted">${brl(c.limit_amount)}</div>` : ''}</td>
           <td class="num">${esc(c.members)}</td><td class="num">${esc(c.operations)}</td>
           <td class="nowrap">${date(c.created_at)}</td></tr>`).join('')}</tbody></table>`;
-      el.querySelectorAll('[data-id]').forEach((r) => (r.onclick = () => (location.hash = `#/empresas/${r.dataset.id}`)));
     };
     let t; q.oninput = () => { clearTimeout(t); t = setTimeout(load, 300); };
     await load();
@@ -188,7 +187,7 @@
     const c = d.company, cr = d.credit || {}, inv = d.invoices || {};
     const partners = Array.isArray(c.partners) ? c.partners : [];
     el.innerHTML = `
-      ${head(c.trade_name || c.legal_name, cnpj(c.cnpj), `<a class="btn secondary" href="#/empresas">Voltar</a>`)}
+      ${head(c.trade_name || c.legal_name, cnpj(c.cnpj), `<a class="btn secondary" href="${B.ui.homeHref()}">Voltar ao Início</a>`)}
       <div class="stack">
         <div class="grid-2">
           <div class="card"><div class="card-head"><h2>Receita Federal</h2>${tag('', c.status)}</div>
@@ -209,7 +208,7 @@
               <dt>Rating</dt><dd>${esc(cr.rating || '—')}</dd>
               <dt>Notas no app</dt><dd>${esc(inv.count || 0)} · ${esc(inv.eligible || 0)} disponíveis (${brl(inv.eligible_amount)}) · ${esc(inv.debtors || 0)} clientes</dd>
             </dl>
-            <div class="row" style="margin-top:12px;gap:8px;justify-content:flex-start"><a class="btn sm" href="#/empresas/${esc(c.id)}/credito">Motor de crédito</a><a class="btn secondary sm" href="#/credito/${cr.status === 'approved' ? 'aprovados' : cr.status === 'rejected' ? 'recusados' : 'analise'}">Ver em Crédito</a></div></div>
+            </div>
         </div>
 
         <div class="card flush"><div class="card-pad-head"><h2>Pessoas</h2></div><div class="table-wrap"><table>
@@ -289,7 +288,7 @@
       <div class="stack">${list.length === 0 ? `<div class="card">${empty('Nada nesta fila.')}</div>` : list.map((x, i) => `
         <div class="card">
           <div class="card-head">
-            <div><h2><a href="#/empresas/${esc(x.company_id)}">${esc(x.legal_name)}</a></h2>
+            <div><h2>${esc(x.legal_name)}</h2>
               <div class="muted small">${esc(cnpj(x.cnpj))} · ${esc(x.company_status || '')} · aberta em ${date(x.opened_at)}${x.opened_at ? ` (${B.yearsSince(x.opened_at)} anos)` : ''} · ${esc([x.city, x.uf].filter(Boolean).join('/'))}</div></div>
             ${tag('credit', x.status)}
           </div>
@@ -303,8 +302,7 @@
                 <dt>Atividade</dt><dd>${esc(x.activity || '—')}</dd>
                 <dt>Notas disponíveis</dt><dd>${brl(x.eligible_amount)}</dd>
                 <dt>Motor de crédito</dt><dd>${B.tierTag ? B.tierTag(x.suggested_rating) : esc(x.suggested_rating || '—')} ${brl(x.suggested_limit)} a ${pct(x.suggested_rate)} a.m.
-                  ${x.engine_score != null ? `<span class="small muted">· nota ${Math.round(x.engine_score)} · dados ${Math.round(Number(x.engine_coverage || 0) * 100)}%</span>` : ''}
-                  <a class="small" href="#/empresas/${esc(x.company_id)}/credito">ver análise</a></dd>
+                  ${x.engine_score != null ? `<span class="small muted">· nota ${Math.round(x.engine_score)} · dados ${Math.round(Number(x.engine_coverage || 0) * 100)}%</span>` : ''}</dd>
                 ${x.status !== 'in_review' ? `<dt>Decidido</dt><dd>${dateTime(x.decided_at)} · ${brl(x.limit_amount)} a ${pct(x.monthly_rate)}${x.notes ? ' · ' + esc(x.notes) : ''}</dd>` : ''}
               </dl>
             </div>
@@ -413,7 +411,7 @@
             <tbody>${list.map((a) => `<tr>
               <td class="nowrap">${dateTime(a.created_at)}</td><td>${esc(a.staff)}</td>
               <td>${esc(ACTION_LABEL[a.action] || a.action)}</td>
-              <td>${a.company_id ? `<a href="#/empresas/${esc(a.company_id)}">${esc(a.company || '')}</a>` : '—'}</td>
+              <td>${a.company_id ? esc(a.company || '—') : '—'}</td>
               <td class="small">${a.target_type === 'operation' ? 'Operação · ' : ''}<span class="muted">${esc(a.details.note || a.details.reference || '')}</span></td>
             </tr>`).join('')}</tbody></table>`}
         </div></div>

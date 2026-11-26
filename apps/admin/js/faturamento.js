@@ -46,16 +46,20 @@
     const all = await rpc('bo_inv_list', { p_status: 'all', p_search: null });
     const cnt = (k) => all.filter((i) => (k === 'all' ? true : i.phase === k)).length;
     if (!arg && !cnt('overdue')) status = cnt('open') ? 'open' : 'all';
-    let q = '';
+    let kind = 'all', dFrom = '', dTo = '';
+    const moreActs = [];
+    if (mayWrite) moreActs.push({ id: 'gen', label: 'Gerar faturas do mês' });
+    moreActs.push({ id: 'csv', label: 'Exportar CSV' });
     el.innerHTML = `
-      ${head('A receber', 'Quem está devendo para a Lottus: mensalidades do Partners, planos do Sign e cobranças avulsas.',
-        `<div class="row" style="gap:8px;flex-wrap:wrap">${mayWrite ? '<button class="btn secondary" id="gen">Gerar faturas do mês</button><button class="btn" id="new">Nova fatura</button>' : ''}<button class="btn ghost" id="csv">Exportar CSV</button></div>`)}
-      <div class="kpi4" id="sum"></div>
-      <div class="row u-mb16" style="gap:12px;flex-wrap:wrap;justify-content:space-between">
-        ${tabs(FILTERS.map(([k, l]) => [k, `${l}${cnt(k) ? ` (${cnt(k)})` : ''}`]), status)}
-        <input class="input search" id="q" type="search" placeholder="Buscar cliente, CNPJ ou número" aria-label="Buscar fatura">
-      </div>
-      <div class="card flush"><div class="table-wrap" id="list"></div></div>`;
+      ${B.ui.pageHead({ title: 'A receber', sub: 'Quem está devendo para a Lottus: mensalidades do Partners, planos do Sign e cobranças avulsas.', primary: mayWrite ? { id: 'new', label: 'Nova fatura' } : null, more: moreActs })}
+      <div class="kpi4 kpi4-c" id="sum"></div>
+      <div class="u-mb16">${tabs(FILTERS.map(([k, l]) => [k, `${l}${cnt(k) ? ` (${cnt(k)})` : ''}`]), status)}</div>
+      <div class="u-mb16" id="mf-box">${B.ui.more('Mais filtros', `<div class="grid-2">
+          <div class="field"><label for="mf-kind">Tipo de cliente</label><select class="input" id="mf-kind"><option value="all">Todos</option>${Object.entries(KIND).map(([k, l]) => `<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select></div>
+          <div class="grid-2"><div class="field"><label for="mf-from">Vence a partir de</label><input class="input" type="date" id="mf-from"></div>
+            <div class="field"><label for="mf-to">Vence até</label><input class="input" type="date" id="mf-to"></div></div></div>
+          <button type="button" class="btn secondary u-m4t" id="mf-clear">Limpar filtros</button>`)}</div>
+      <div id="list"></div>`;
     const sum = (f) => all.filter(f).reduce((t, i) => t + Number(i.amount), 0);
     el.querySelector('#sum').innerHTML = [
       ['Em atraso', brl(sum((i) => i.phase === 'overdue')), `${cnt('overdue')} fatura${cnt('overdue') === 1 ? '' : 's'}`, cnt('overdue') ? 'danger' : ''],
@@ -64,42 +68,63 @@
       ['Faturado no mês', brl(sum((i) => i.phase !== 'cancelled' && String(i.ref_month || i.created_at || '').slice(0, 7) === today().slice(0, 7))), 'competência do mês', ''],
     ].map(([l, v, s, c]) => `<div class="tile ${c}"><span class="kpi-label">${esc(l)}</span><span class="tile-value">${v}</span><span class="small muted">${esc(s)}</span></div>`).join('');
 
+    // ação principal da linha: Cobrar (atrasada, com e-mail) ou Receber; o resto fica no modal da fatura
+    const mainAct = (i) => {
+      if (!mayWrite || i.status !== 'open') return '';
+      return i.phase === 'overdue' && i.customer_email
+        ? `<button type="button" class="btn secondary sm" data-send="${esc(i.id)}" aria-label="Cobrar ${esc(i.number)} por e-mail">Cobrar</button>`
+        : `<button type="button" class="btn secondary sm" data-pay="${esc(i.id)}" aria-label="Registrar recebimento de ${esc(i.number)}">Receber</button>`;
+    };
+    const keepQ = () => { const inp = el.querySelector('#list .lt-search input'); return inp ? inp.value : ''; };
     const paint = () => {
-      const t = q.toLowerCase();
-      const list = all.filter((i) => (status === 'all' || i.phase === status) && (!t || `${i.customer_name} ${i.number} ${i.customer_doc || ''}`.toLowerCase().includes(t)));
-      el.querySelector('#list').innerHTML = !list.length ? empty(status === 'overdue' ? 'Nenhuma fatura em atraso. Tudo em dia.' : 'Nenhuma fatura aqui.') : `<table>
-        <thead><tr><th>Cliente</th><th>Fatura</th><th>Vencimento</th><th class="num">Valor</th><th>Cobranças</th><th></th></tr></thead>
-        <tbody>${list.map((i) => `<tr class="link" data-id="${esc(i.id)}">
-          <td><b>${esc(i.customer_name)}</b><div class="small muted">${esc(KIND[i.customer_kind] || '')}${i.customer_email ? ' · ' + esc(i.customer_email) : ' · sem e-mail'}</div></td>
-          <td>${esc(i.number)}<div class="small muted">${esc(i.description)}</div></td>
-          <td class="nowrap">${date(i.due_date)}<div>${phaseTag(i)}${i.days_overdue ? ` <span class="small muted">${i.days_overdue} d</span>` : ''}</div></td>
-          <td class="num"><b>${brl(i.amount)}</b></td>
-          <td class="small muted">${i.reminders ? `${i.reminders} e-mail${i.reminders === 1 ? '' : 's'}<br>${ago(i.last_reminder)}` : '—'}${i.reminders_paused ? '<br>pausada' : ''}</td>
-          <td class="num nowrap">${mayWrite && i.status === 'open' ? `<button class="btn secondary sm" data-pay="${esc(i.id)}">Receber</button> ${i.customer_email ? `<button class="btn sm" data-send="${esc(i.id)}">Cobrar</button>` : ''}` : ''}</td></tr>`).join('')}</tbody></table>`;
-      el.querySelectorAll('#list tr[data-id]').forEach((r) => (r.onclick = (e) => { if (!e.target.closest('button')) openInvoice(all.find((x) => x.id === r.dataset.id)); }));
-      el.querySelectorAll('[data-pay]').forEach((b) => (b.onclick = () => payDialog(all.find((x) => x.id === b.dataset.pay))));
-      el.querySelectorAll('[data-send]').forEach((b) => (b.onclick = () => sendReminder(all.find((x) => x.id === b.dataset.send), b)));
+      const list = all.filter((i) => (status === 'all' || i.phase === status) && (kind === 'all' || i.customer_kind === kind)
+        && (!dFrom || String(i.due_date) >= dFrom) && (!dTo || String(i.due_date) <= dTo));
+      const host = el.querySelector('#list');
+      host.innerHTML = B.ui.table({
+        rows: list, pageSize: 25, q: keepQ(), searchLabel: 'Buscar por cliente, CNPJ ou número da fatura', cardTitle: 'customer_name',
+        emptyText: status === 'overdue' && kind === 'all' && !dFrom && !dTo ? 'Nenhuma fatura em atraso. Tudo em dia.' : 'Nenhuma fatura aqui.',
+        onRow: (i) => openInvoice(i),
+        columns: [
+          { key: 'customer_name', label: 'Cliente', searchText: (i) => `${i.customer_name} ${i.customer_doc || ''}`, render: (i) => `<b>${esc(i.customer_name)}</b><div class="small muted">${esc(KIND[i.customer_kind] || '')}${i.customer_email ? ' · ' + esc(i.customer_email) : ' · sem e-mail'}</div>` },
+          { key: 'number', label: 'Fatura', render: (i) => `${esc(i.number)}<div class="small muted">${esc(i.description)}</div>` },
+          { key: 'due_date', label: 'Vencimento', searchText: () => '', render: (i) => `<span class="nowrap">${date(i.due_date)}</span><div>${phaseTag(i)}${i.days_overdue ? ` <span class="small muted">${i.days_overdue} d</span>` : ''}</div>` },
+          { key: 'amount', label: 'Valor', num: true, searchText: () => '', render: (i) => `<b>${brl(i.amount)}</b>` },
+          { key: 'reminders', label: 'Cobranças', card: false, searchText: () => '', render: (i) => `<span class="small muted">${i.reminders ? `${i.reminders} e-mail${i.reminders === 1 ? '' : 's'}<br>${esc(ago(i.last_reminder))}` : '—'}${i.reminders_paused ? '<br>pausada' : ''}</span>` },
+          { key: 'id', label: 'Ações', searchText: () => '', render: mainAct },
+        ],
+      });
+      B.ui.onTable(host);
+      const qi = host.querySelector('.lt-search input');
+      if (qi) { qi.id = 'q'; const lb = host.querySelector('.lt-search label'); if (lb) lb.htmlFor = 'q'; }
+    };
+    // um só tratador no contêiner da lista: continua valendo depois de buscar ou trocar de página
+    el.querySelector('#list').onclick = (e) => {
+      const pay = e.target.closest('[data-pay]'), snd = e.target.closest('[data-send]');
+      if (pay) payDialog(all.find((x) => x.id === pay.dataset.pay));
+      else if (snd) sendReminder(all.find((x) => x.id === snd.dataset.send), snd);
     };
     paint();
-    onTabs(el, (t) => (location.hash = `#/faturas/${t}`));
-    el.querySelector('#q').oninput = (e) => { q = e.target.value.trim(); paint(); };
-    el.querySelector('#csv').onclick = () => {
+    onTabs(el.querySelector('.u-mb16'), (t) => (location.hash = `#/faturas/${t}`));
+    const mfk = el.querySelector('#mf-kind'), mff = el.querySelector('#mf-from'), mft = el.querySelector('#mf-to');
+    mfk.onchange = () => { kind = mfk.value; paint(); };
+    mff.onchange = () => { dFrom = mff.value; paint(); };
+    mft.onchange = () => { dTo = mft.value; paint(); };
+    el.querySelector('#mf-clear').onclick = () => { kind = 'all'; dFrom = ''; dTo = ''; mfk.value = 'all'; mff.value = ''; mft.value = ''; paint(); };
+    const exportCsv = () => {
       const rows = [['Número', 'Cliente', 'CNPJ/CPF', 'E-mail', 'Descrição', 'Competência', 'Vencimento', 'Valor', 'Situação', 'Pago em', 'Forma']].concat(
         all.map((i) => [i.number, i.customer_name, i.customer_doc, i.customer_email, i.description, i.ref_month, i.due_date, String(i.amount).replace('.', ','), (PHASE[i.phase] || [i.phase])[0], i.paid_at, i.paid_method]));
       const blob = new Blob(['﻿' + rows.map((r) => r.map(csvCell).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `faturas-${today()}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     };
-    if (mayWrite) {
-      el.querySelector('#new').onclick = () => editInvoice(null);
-      if (wantNew) { const pre = B._pendingInvoice; B._pendingInvoice = null; editInvoice(null, pre); }
-      el.querySelector('#gen').onclick = async () => {
-        const ok = await confirmAction({ title: 'Gerar faturas do mês', text: 'Cria as faturas deste mês a partir das mensalidades do Partners e dos planos do Sign. Quem já tem fatura do mês não é duplicado.', confirmLabel: 'Gerar' });
-        if (ok == null) return;
-        const r = await run(null, () => rpc('bo_inv_generate', { p_month: monthStart() }));
-        toast(`${r.partners} do Partners e ${r.sign} do Sign, vencimento ${date(r.due_date)}`);
-        B.reload();
-      };
-    }
+    const generate = async () => {
+      const ok = await confirmAction({ title: 'Gerar faturas do mês', text: 'Cria as faturas deste mês a partir das mensalidades do Partners e dos planos do Sign. Quem já tem fatura do mês não é duplicado.', confirmLabel: 'Gerar' });
+      if (ok == null) return;
+      const r = await run(null, () => rpc('bo_inv_generate', { p_month: monthStart() }));
+      toast(`${r.partners} do Partners e ${r.sign} do Sign, vencimento ${date(r.due_date)}`);
+      B.reload();
+    };
+    B.ui.onPage(el, { new: () => editInvoice(null), gen: generate, csv: exportCsv });
+    if (mayWrite && wantNew) { const pre = B._pendingInvoice; B._pendingInvoice = null; editInvoice(null, pre); }
 
     function payDialog(i) {
       const box = modal({ title: 'Registrar recebimento', subtitle: `${esc(i.customer_name)} · ${esc(i.number)} · ${brl(i.amount)}`,
@@ -114,6 +139,8 @@
       if (ok == null) return;
       run(btn, () => rpc('bo_inv_send', { p_id: i.id }), 'E-mail enviado').then(B.reload).catch(() => {});
     }
+    // "Ver cliente": só quando a fatura nasceu de um fundo ou de uma conta Sign
+    const custLink = (i) => (i.funder_id ? `<a class="btn secondary" href="#/clientes/funder/${esc(i.funder_id)}">Ver cliente</a>` : i.sign_account_id ? `<a class="btn secondary" href="#/clientes/sign/${esc(i.sign_account_id)}">Ver cliente</a>` : '');
     function openInvoice(i) {
       const box = modal({ title: i.number, subtitle: `${esc(i.customer_name)} · ${phaseTag(i)}`, wide: false,
         body: `<dl class="kv"><dt>Descrição</dt><dd>${esc(i.description)}</dd><dt>Valor</dt><dd><b>${brl(i.amount)}</b></dd><dt>Vencimento</dt><dd>${date(i.due_date)}${i.days_overdue ? ` (${i.days_overdue} dias de atraso)` : ''}</dd>
@@ -121,10 +148,14 @@
           ${i.paid_at ? `<dt>Pago em</dt><dd>${date(i.paid_at)} · ${esc(i.paid_method || '')}</dd>` : ''}
           <dt>Cobranças enviadas</dt><dd>${i.reminders || 0}${i.last_reminder ? ` (última ${dateTime(i.last_reminder)})` : ''}${i.reminders_paused ? ' · régua pausada' : ''}</dd>
           ${i.notes ? `<dt>Observações</dt><dd>${esc(i.notes)}</dd>` : ''}</dl>`,
-        foot: mayWrite ? `${i.status === 'open' ? '<button class="btn secondary" data-a="edit">Editar</button><button class="btn secondary" data-a="' + (i.reminders_paused ? 'resume' : 'pause') + '">' + (i.reminders_paused ? 'Retomar régua' : 'Pausar régua') + '</button><button class="btn danger" data-a="cancel">Cancelar fatura</button>' : '<button class="btn secondary" data-a="reopen">Reabrir</button>'}` : '' });
+        foot: `${custLink(i)}${!mayWrite ? '' : i.status === 'open'
+          ? `<button class="btn secondary" data-a="receive">Registrar recebimento</button>${i.customer_email ? '<button class="btn secondary" data-a="remind">Cobrar por e-mail</button>' : ''}<button class="btn secondary" data-a="edit">Editar</button><button class="btn secondary" data-a="${i.reminders_paused ? 'resume' : 'pause'}">${i.reminders_paused ? 'Retomar régua' : 'Pausar régua'}</button><button class="btn danger" data-a="cancel">Cancelar fatura</button>`
+          : '<button class="btn secondary" data-a="reopen">Reabrir</button>'}` });
       box.querySelectorAll('[data-a]').forEach((b) => (b.onclick = async () => {
         const a = b.dataset.a;
         if (a === 'edit') { closeModal(); return editInvoice(i); }
+        if (a === 'receive') return payDialog(i);
+        if (a === 'remind') return sendReminder(i, b);
         if (a === 'cancel' && (await confirmAction({ title: 'Cancelar fatura', text: 'A fatura deixa de ser cobrada.', confirmLabel: 'Cancelar fatura', danger: true })) == null) return openInvoice(i);
         if (a === 'reopen' && (await confirmAction({ title: 'Reabrir fatura', text: `A fatura <b>${esc(i.number)}</b> volta para em aberto e pode voltar a ser cobrada por e-mail pela régua. Confirma?`, confirmLabel: 'Reabrir' })) == null) return openInvoice(i);
         run(b, () => rpc('bo_inv_status', { p_id: i.id, p_action: a }), 'Feito').then(() => { closeModal(); B.reload(); }).catch(() => {});
