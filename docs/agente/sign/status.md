@@ -20,7 +20,7 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Conta e identidade | 1.1 Entrar e criar conta | sim | sim | sim | **Aprovada com ressalvas** (24/11) | 1 |
 | 1 | 1.0 Shell e correções da 1.1 | sim | sim | sim | **Aprovada com ressalvas** (26/11; ciclo 2 pendente) | 1 |
-| 1 | 1.4 Perfil e conta (+ pacote 1.0-C2) | sim | sim | em reverificação | **Reprovada** no ciclo 1 (V-01 Alto); correções em andamento | 1 |
+| 1 | 1.4 Perfil e conta (+ pacote 1.0-C2) | sim | sim | sim | **Aprovada com ressalvas** (26/11, ciclo 3; 2 reprovações antes: V-01 ícone quebrado, N-01 texto null) | 3 |
 | 1 | 1.2 Recuperar senha | em curso | não | não | — | 0 |
 | 1 | 1.3 Onboarding | não | não | não | — | 0 |
 | 1 | 1.4 Perfil e conta | não | não | não | — | 0 |
@@ -31,8 +31,8 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 Autônomo: sem perguntas ao Yuri; produção só leitura; jurídico `[preencher]`. Em andamento: `ux-alinhamento.md` (designer) e Fichas das Partes 2 a 6 (idealizador).
 
 ## Próximo passo exato
-1. Nova ordem da Parte 1 (decisão 26/11): **1.4 Perfil e conta → 1.5 Verificação de identidade → 1.3 Onboarding → 1.2 → 1.6**, porque o onboarding reaproveita o formulário de perfil e a verificação. Infraestrutura da 1.4: o Supabase falso passa a **repassar as RPCs ao Postgres local** (modelo `scripts/wealth-local/fake-supabase.cjs`), para testar as funções reais. O pacote "ciclo 2 da 1.0" (pendência 1.0-C2) entra junto.
-2. Micro-especificação da 1.4 (idealizador) → construir → verificar.
+1. **1.5 Verificação de identidade** (migração do canal e-mail + correção de S-05: tentativa persistida; RN7, RN9, R2): micro-especificação (idealizador) → construir → verificar. Em seguida 1.3 Onboarding → 1.2 → 1.6.
+2. Lições da 1.4 aplicadas daqui em diante: testes de varredura de texto (`t-texto.cjs`) e helper `setKids` obrigatórios em toda tela nova; verificador inspeciona capturas.
 
 ## Bloqueios que dependem do Yuri
 Ver `pendencias.md` (J-01 a J-04, jurídico) e `docs/agente/depende-de-mim.md` (D-01 branch Supabase).

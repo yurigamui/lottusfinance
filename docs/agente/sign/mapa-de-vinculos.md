@@ -12,3 +12,6 @@ Vínculos reais hoje (código lido, 24/11/2026). Preenchido por seção à medid
 | `#/criar` | Cadastro enviado | tela "Confirme seu e-mail" → Reenviar, Usar outro e-mail, Entrar | Sim | 24/11 |
 | e-mail do Auth | link de confirmação | `#/onboarding/1` ou `#/entrar` com aviso | Sim | 24/11 |
 | e-mail do Auth | link de recuperação | `#/nova-senha` (1.2, hoje "Em construção") | Sim | 24/11 |
+| `#/conta/perfil` | abas Verificação e Segurança | `#/conta/verificacao`, `#/conta/seguranca` (hoje "Em construção") | Sim (menu, abas, Documentos) | 26/11 |
+| `#/conta/perfil` | "Verificar contato" | `#/conta/verificacao` | Sim | 26/11 |
+| shell | menu Documentos / Conta; avatar → Conta, Sair | `#/documentos`, `#/conta/perfil`, `#/entrar` | Sim | 26/11 |
