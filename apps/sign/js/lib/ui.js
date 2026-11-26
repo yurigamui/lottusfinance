@@ -112,7 +112,7 @@ export function toast(titulo, msg, kind = 'ok') {
   };
   const arm = () => { clearTimeout(timer); timer = setTimeout(close, ms); };
   const closeBtn = h('button', { class: 'toast-close', type: 'button', 'aria-label': 'Fechar aviso', onclick: close }, icon(ICON.x));
-  const el = h('div', { class: 'toast ' + (err ? 'error' : 'ok'), role: err ? 'alert' : null },
+  const el = h('div', { class: 'toast ' + (err ? 'error' : 'ok'), role: err ? 'alert' : 'status' },
     h('div', { class: 'toast-body' },
       h('div', { class: 'toast-icon' }, icon(err ? ICON.x : ICON.check)),
       h('div', { class: 'toast-text' }, h('div', { class: 'toast-title' }, titulo), msg ? h('div', { class: 'toast-msg' }, msg) : null),
@@ -180,10 +180,10 @@ export function modal({ title, sub, body, foot, wide, drawer, onClose } = {}) {
   return { el, close };
 }
 
-export function confirm(titulo, texto, rotulo = 'Confirmar', danger = false) {
+export function confirm(titulo, texto, rotulo = 'Confirmar', danger = false, cancelar = 'Cancelar') {
   return new Promise((resolve) => {
     let result = false;
-    const cancel = h('button', { class: 'btn secondary', type: 'button', onclick: () => m.close() }, 'Cancelar');
+    const cancel = h('button', { class: 'btn secondary', type: 'button', onclick: () => m.close() }, cancelar);
     const ok = h('button', { class: danger ? 'btn danger' : 'btn', type: 'button', onclick: () => { result = true; m.close(); } }, rotulo);
     const m = modal({ title: titulo, body: h('p', null, texto), foot: [cancel, ok], onClose: () => resolve(result) });
     (danger ? cancel : ok).focus();
@@ -191,12 +191,25 @@ export function confirm(titulo, texto, rotulo = 'Confirmar', danger = false) {
 }
 
 /* ---------- cabeçalho de página, estado vazio e carregando ---------- */
+/* A10-B1: o link "voltar" só vale para rota interna (#/...). javascript:, https://x e //x não viram link.
+   pageHead(titulo, sub, acoes, voltar). Também aceita pageHead(titulo, sub, { href, label }) (voltar no 3º argumento). */
+export const safeHashHref = (v) => (typeof v === 'string' && /^#\/[^\s\\]*$/.test(v) && !v.startsWith('#//') ? v : '');
+const isBack = (v) => v && typeof v === 'object' && !Array.isArray(v) && !v.nodeType && 'href' in v;
 export function pageHead(titulo, sub, acoes, voltar) {
-  const back = voltar && voltar.href ? h('a', { class: 'back', href: voltar.href }, voltar.label) : null;
+  if (isBack(acoes) && !voltar) { voltar = acoes; acoes = null; }
+  const href = voltar ? safeHashHref(voltar.href) : '';
+  const back = href ? h('a', { class: 'back', href }, voltar.label) : null;
   const list = [].concat(acoes || []).filter(Boolean);
   return h('div', { class: 'page-head' },
     h('div', null, back, h('h1', { tabindex: '-1' }, titulo), sub ? h('p', { class: 'page-sub' }, sub) : null),
     list.length ? h('div', { class: 'row' }, list) : null);
+}
+
+/* abas da área Conta (links de rota): Perfil, Verificação e Segurança */
+const ABAS_CONTA = [['Perfil', '#/conta/perfil'], ['Verificação', '#/conta/verificacao'], ['Segurança', '#/conta/seguranca']];
+export function abasConta(route) {
+  return h('nav', { class: 'tabs', 'aria-label': 'Conta' }, ABAS_CONTA.map(([rotulo, href]) =>
+    h('a', { class: 'tab-link' + (route === href ? ' active' : ''), href, 'aria-current': route === href ? 'page' : null }, rotulo)));
 }
 
 export function emptyState(titulo, texto, acao) {

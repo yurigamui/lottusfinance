@@ -8,3 +8,14 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Cross-Origin-Opener-Policy: same-origin-allow-popups
   X-Robots-Tag: noindex, nofollow
+
+# A10-MB: o HTML da área logada não pode voltar do cache (nem do bfcache de outro usuário) com dados da sessão anterior.
+# Só os HTML recebem no-store; JS e CSS têm ?v= e continuam em cache. A CSP acima não muda.
+/
+  Cache-Control: no-store
+/index.html
+  Cache-Control: no-store
+/assinar.html
+  Cache-Control: no-store
+/verificar.html
+  Cache-Control: no-store

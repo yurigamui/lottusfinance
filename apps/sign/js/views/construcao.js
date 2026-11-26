@@ -1,6 +1,6 @@
 /* Telas provisórias: destinos que ainda não existem (1.2, 1.3, Partes 2 a 5) e rota desconhecida. Sempre com saída.
    Públicas (recuperar, nova-senha, rota desconhecida sem sessão): .sg-single. Privadas: dentro do shell (1.0). */
-import { h, mount, brandLogo, pageHead, emptyState } from '../lib/ui.js?v=20261125a';
+import { h, mount, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261126a';
 
 function pagina(ctx, title, text, actions) {
   mount(ctx.root, h('div', { class: 'sg-page sg-single' },
@@ -9,14 +9,19 @@ function pagina(ctx, title, text, actions) {
       h('h1', null, title), h('p', { class: 'sg-lead' }, text), h('div', { class: 'sg-actions' }, actions)))));
 }
 
+/* A10-B4: entrar em rota pública nunca empilha histórico: link com href (abre em nova aba, copia) e clique com replace */
+function linkEntrar(ctx, texto) {
+  return h('a', { class: 'btn lg block', href: '#/entrar', onclick: (e) => { if (e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey) return; e.preventDefault(); ctx.go('#/entrar', true); } }, texto);
+}
+
 export const construcao = {
   title: 'Em construção',
   render(ctx) {
     const actions = [];
     if (ctx.hasSession) {
-      actions.push(h('button', { class: 'btn lg block', type: 'button', onclick: async () => { await ctx.api.signOut(); ctx.go('#/entrar'); } }, 'Sair'));
+      actions.push(h('button', { class: 'btn lg block', type: 'button', onclick: async () => { await ctx.api.signOut(); ctx.go('#/entrar', true); } }, 'Sair'));
     } else {
-      actions.push(h('a', { class: 'btn lg block', href: '#/entrar' }, 'Voltar ao início'));
+      actions.push(linkEntrar(ctx, 'Voltar ao início'));
     }
     pagina(ctx, 'Em construção', 'Esta área está em construção.', actions);
   },
@@ -25,18 +30,11 @@ export const construcao = {
 export const naoencontrada = {
   title: 'Página não encontrada',
   render(ctx) {
-    pagina(ctx, 'Página não encontrada', 'Não encontramos esta página.', [h('a', { class: 'btn lg block', href: '#/entrar' }, 'Ir para o início')]);
+    pagina(ctx, 'Página não encontrada', 'Não encontramos esta página.', [linkEntrar(ctx, 'Ir para o início')]);
   },
 };
 
 /* ---------- telas privadas (dentro do shell) ---------- */
-const ABAS = [['Perfil', '#/conta/perfil'], ['Verificação', '#/conta/verificacao'], ['Segurança', '#/conta/seguranca']];
-
-function abasConta(route) {
-  return h('nav', { class: 'tabs', 'aria-label': 'Conta' }, ABAS.map(([rotulo, href]) =>
-    h('a', { class: 'tab-link' + (route === href ? ' active' : ''), href, 'aria-current': route === href ? 'page' : null }, rotulo)));
-}
-
 /* def: { title, h1, sub, vazio, saida: [rótulo, href] | null, abas, minimal } */
 function privada(def) {
   return {

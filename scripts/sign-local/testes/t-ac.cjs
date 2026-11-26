@@ -300,8 +300,11 @@ async function criar(p, { email, nome = 'Ana Teste', pw = 'uma-senha-longa', ace
     const src = ['index.html', 'js/app.js', ...fs.readdirSync(path.join(ROOT, 'apps/sign/js/lib')).map((f) => 'js/lib/' + f), ...fs.readdirSync(path.join(ROOT, 'apps/sign/js/views')).map((f) => 'js/views/' + f)];
     const bad = src.filter((f) => { const s = fs.readFileSync(path.join(ROOT, 'apps/sign', f), 'utf8'); return /style\s*=\s*"|setAttribute\(\s*'style'|\.style\.|innerHTML|<script(?![^>]*\bsrc=)/.test(s); });
     check('AC18 sem <script> inline, style="" nem innerHTML nas views/libs', bad.length === 0, bad);
-    const diff = cp.spawnSync('git', ['diff', '--stat', '--', 'apps/sign/_headers'], { cwd: ROOT, encoding: 'utf8' }).stdout;
-    check('AC18 CSP (_headers) inalterada', diff.trim() === '', diff);
+    // 1.4: o _headers ganhou Cache-Control no-store nos HTML (A10-MB); a CSP (e o resto do bloco /*) continua idêntica à do último commit
+    const bloco = (txt) => txt.split('\n').filter((l) => /^\s*(Content-Security-Policy|X-Frame-Options|X-Content-Type-Options|Referrer-Policy|Permissions-Policy|Strict-Transport-Security|Cross-Origin-Opener-Policy|X-Robots-Tag):/.test(l)).join('\n');
+    const antes = cp.spawnSync('git', ['show', 'HEAD:apps/sign/_headers'], { cwd: ROOT, encoding: 'utf8' }).stdout;
+    const agora = fs.readFileSync(path.join(ROOT, 'apps/sign/_headers'), 'utf8');
+    check('AC18 CSP (_headers) inalterada', bloco(antes) !== '' && bloco(antes) === bloco(agora), [bloco(antes).length, bloco(agora).length]);
   })();
 
   await t('AC19 marca', open, {}, async (d) => {

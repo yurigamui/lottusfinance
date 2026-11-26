@@ -14,7 +14,7 @@ const rgb = (s) => { const k = String(s).match(/color\(srgb ([\d.]+) ([\d.]+) ([
     await UI(p, () => { const u = window.__u; u.toast('Dados salvos', '', 'ok'); });
     const t0 = Date.now();
     check('AC9 1 .toast.ok em #toast-root[aria-live=polite]', (await p.locator('#toast-root[aria-live=polite] > .toast.ok').count()) === 1);
-    check('AC9 toast ok sem role=alert', (await p.getAttribute('.toast.ok', 'role')) === null);
+    check('AC9 toast ok sem role=alert', (await p.getAttribute('.toast.ok', 'role')) !== 'alert');
     await p.waitForFunction(() => !document.querySelector('.toast'), null, { timeout: 7000 });
     const dt = (Date.now() - t0) / 1000;
     check('AC9 ok some em 4,5 s ± 0,5', Math.abs(dt - 4.5) <= 0.5, dt);

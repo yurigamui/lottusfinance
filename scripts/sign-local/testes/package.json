@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Dependência só dos testes do Sign (modo repasse do Supabase falso ao Postgres local). node_modules não é commitado.",
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
+}

@@ -1,7 +1,7 @@
 /* Seção 1.1: Entrar e criar conta (e-mail e senha), confirmação de e-mail e reenvio. */
-import { h, mount, setTitle, focusEl, safeUrl, brandLogo, safeStore } from '../lib/ui.js?v=20261125a';
-import { normEmail, isEmail, normName, nameOk, passwordMissing, LIMITS } from '../lib/fmt.js?v=20261125a';
-import { classify } from '../lib/api.js?v=20261125a';
+import { h, mount, setTitle, focusEl, safeUrl, brandLogo, safeStore } from '../lib/ui.js?v=20261126a';
+import { normEmail, isEmail, normName, nameOk, passwordMissing, LIMITS } from '../lib/fmt.js?v=20261126a';
+import { classify } from '../lib/api.js?v=20261126a';
 
 const T = {
   login: 'E-mail ou senha incorretos.',
@@ -13,6 +13,7 @@ const T = {
   nome: 'Informe o nome completo.',
   aceite: 'Aceite os Termos e a Política para criar a conta.',
   sessao: 'Sua sessão terminou. Entre de novo para continuar.',
+  sessaoDados: 'Sua sessão terminou. Entre de novo; seus dados continuam aqui.',
   vencido: 'Este link venceu ou já foi usado. Peça um novo.',
   invalido: 'Não foi possível usar este link. Entre com seu e-mail e senha ou, se o link venceu, peça um novo.',
   reenviado: 'Enviamos de novo. Verifique também a caixa de spam.',
@@ -92,10 +93,12 @@ function makeMsgs() {
   return { flash: h('div', { class: 'sg-msg', role: 'status' }), err: h('div', { class: 'sg-msg', role: 'alert' }) };
 }
 function alertBox(kind, ...kids) { return h('div', { class: 'sg-alert ' + kind }, ...kids); }
-function showOk(m, text) { m.flash.replaceChildren(alertBox('ok', text)); }
+/* B-1: só um alerta por vez (o mais recente): mostrar um limpa o outro */
+function showOk(m, text) { m.err.replaceChildren(); m.flash.replaceChildren(alertBox('ok', text)); }
 function showErr(m, text, retry) {
   const kids = [h('span', null, text)];
   if (retry) kids.push(h('button', { class: 'btn secondary sg-retry', type: 'button', onclick: retry }, 'Tentar de novo'));
+  m.flash.replaceChildren();
   m.err.replaceChildren(alertBox('err', ...kids));
 }
 function clearMsgs(m) { m.err.replaceChildren(); m.flash.replaceChildren(); }
@@ -112,16 +115,17 @@ function legalLink(url, text) {
 }
 
 /* ---------- reenvio (compartilhado: tela de confirmação e link vencido) ---------- */
-async function doResend(email, m, btn, retry, onOk) {
+async function doResend(email, m, btn, retry, onOk, onErr) {
   m.err.replaceChildren();
-  if (recentSends().length >= 3) { showErr(m, T.limiteReenvio); return false; }
+  const fail = (text, again) => { if (onErr) onErr(text); else showErr(m, text, again); return false; };
+  if (recentSends().length >= 3) return fail(T.limiteReenvio);
   noteSend();
   busy(btn, true);
   const res = await st.ctx.api.resend(email);
   busy(btn, false);
   const kind = classify(res.error);
-  if (kind === 'limite') { showErr(m, T.limiteReenvio); return false; }
-  if (res.error) { showErr(m, kind === 'rede' ? T.rede : T.geral, kind === 'rede' ? retry : null); return false; }
+  if (kind === 'limite') return fail(T.limiteReenvio);
+  if (res.error) return fail(kind === 'rede' ? T.rede : T.geral, kind === 'rede' ? retry : null);
   if (onOk) onOk(); else showOk(m, T.reenviado);
   return true;
 }
@@ -218,7 +222,7 @@ function drawForm(card, focusFirst) {
   const forgot = criar ? null : h('a', { class: 'sg-link', href: '#/recuperar', onclick: () => { const v = normEmail(email.input.value); if (v) sess.set(KEY_REC, v); } }, 'Esqueci a senha');
 
   /* aviso vindo de fora (sessão terminou, link vencido ou inválido) */
-  if (st.flash === 'sessao') m.flash.append(alertBox('warn', T.sessao));
+  if (st.flash === 'sessao' || st.flash === 'sessaoDados') m.flash.append(alertBox('warn', st.flash === 'sessao' ? T.sessao : T.sessaoDados));
   if (st.flash === 'vencido' || st.flash === 'invalido') {
     const rb = h('button', { class: 'btn secondary', type: 'button' }, 'Reenviar e-mail');
     const rclick = async () => {
@@ -226,10 +230,11 @@ function drawForm(card, focusFirst) {
       if (!isEmail(e)) { setErr(email, T.email); focusEl(email.input); return; }
       setErr(email, '');
       /* M-3: o alerta e o botão permanecem; só o texto muda e o botão espera o intervalo */
-      if (await doResend(e, m, rb, rclick, () => { vtext.textContent = T.reenviado; box.className = 'sg-alert ok'; })) { cool(rb); }
+      if (await doResend(e, m, rb, rclick, () => { vtext.textContent = T.reenviado; box.className = 'sg-alert ok'; }, (txt) => { vtext.textContent = baseTxt + ' ' + txt; box.className = 'sg-alert err'; })) { cool(rb); }
     };
     rb.addEventListener('click', rclick);
-    const vtext = h('span', null, st.flash === 'invalido' ? T.invalido : T.vencido);
+    const baseTxt = st.flash === 'invalido' ? T.invalido : T.vencido;
+    const vtext = h('span', null, baseTxt);
     const box = alertBox('err', vtext, rb);
     m.flash.append(box);
   }

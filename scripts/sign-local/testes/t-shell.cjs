@@ -91,7 +91,7 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
       if (r === '#/inexistente') check('AC4 rota desconhecida mostra "Não encontramos esta página."', /Não encontramos esta página\./.test(await text(p, '#view')));
       const s = SAIDA[r];
       if (!s) { check(`AC4 ${r}: sem botão de menu (saída pelo avatar)`, (await p.locator('#view a.btn, #view button').count()) === 0 && (await p.locator('.sidenav-items .nav-sec').count()) === 0); continue; }
-      const btn = p.locator('#view a.btn');
+      const btn = r === '#/conta/perfil' ? p.locator('#view a.btn', { hasText: 'Ir para Documentos' }) : p.locator('#view a.btn'); // 1.4: o Perfil tem também "Ir para Verificação"
       check(`AC4 ${r}: botão "${s[0]}"`, (await btn.count()) === 1 && (await btn.innerText()) === s[0] && (await btn.getAttribute('href')) === s[1], await btn.allInnerTexts());
       await btn.click(); await wait(p, (x) => location.hash === x, s[1]);
       check(`AC4 ${r}: o botão leva a ${s[1]}`, (await hash(p)) === s[1] && (await p.locator('.shell').count()) === 1);
@@ -230,11 +230,11 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
     await t('AC23 zoom 200% em ' + w, open, { width: w / 2, height: 500, scale: 2 }, async (d) => {
       const p = d.page; await logged(d);
       const visited = new Set(); const order = [];
-      const rodada = async (nome) => {
+      const rodada = async (nome, n = 10) => {
         const o = await overflow(p);
         check(`AC23 ${w} ${nome}: sem rolagem horizontal`, !o.hscroll && o.over.length === 0, o);
         await p.evaluate(() => { document.activeElement && document.activeElement.blur(); window.scrollTo(0, 0); });
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < n; i++) {
           await p.keyboard.press('Tab');
           const r = await p.evaluate(() => { const a = document.activeElement; if (!a || a === document.body) return null; const b = a.getBoundingClientRect(); return { id: a.getAttribute('aria-label') || a.textContent.trim().slice(0, 24), vis: b.right > 0 && b.left < innerWidth }; });
           if (r) { visited.add(r.id); order.push(r.id); if (!r.vis) check(`AC23 ${w} ${nome}: foco dentro da largura em ${r.id}`, false, r); }
@@ -243,7 +243,7 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
       await rodada('Documentos');
       check(`AC23 ${w} Documentos: Tab alcança menu, avatar e botão`, ['Documentos', 'Conta', 'Perfil', 'Ir para Conta'].every((x) => visited.has(x)), [...visited]);
       await p.evaluate(() => { location.hash = '#/conta/perfil'; }); await wait(p, () => location.hash === '#/conta/perfil' && document.querySelector('#view h1'));
-      visited.clear(); await rodada('Conta');
+      visited.clear(); await rodada('Conta', 18); // 1.4: o Perfil tem mais itens de Tab (campos, links)
       check(`AC23 ${w} Conta: Tab alcança menu, avatar, abas e botão`, ['Documentos', 'Perfil', 'Verificação', 'Segurança', 'Ir para Documentos'].every((x) => visited.has(x)), [...visited]);
       await p.click('#avatar');
       const o = await overflow(p);
@@ -276,8 +276,8 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
     check('AC25 aria-live só em #toast-root (e nas mensagens da 1.1)', await p.evaluate(() => [...document.querySelectorAll('[aria-live]')].every((e) => e.id === 'toast-root' || e.closest('.sg-msg'))));
     check('AC25 aria-live fora de main, #view e .shell', (await p.locator('main[aria-live], #view[aria-live], .shell[aria-live], #view [aria-live], .shell [aria-live]').count()) === 0);
     const antes = await p.title();
-    await p.click('.nav-btn[aria-label=Conta]'); await wait(p, () => location.hash === '#/conta/perfil' && document.title === 'Conta · Lottus Sign');
-    check('AC25 rota nova: <title> atualiza', antes === 'Documentos · Lottus Sign' && (await p.title()) === 'Conta · Lottus Sign', [antes, await p.title()]);
+    await p.click('.nav-btn[aria-label=Conta]'); await wait(p, () => location.hash === '#/conta/perfil' && document.title === 'Perfil · Conta · Lottus Sign');
+    check('AC25 rota nova: <title> atualiza', antes === 'Documentos · Lottus Sign' && (await p.title()) === 'Perfil · Conta · Lottus Sign', [antes, await p.title()]);
     check('AC25 rota nova: foco no h1', (await p.evaluate(() => document.activeElement.tagName)) === 'H1');
     await p.evaluate(() => { location.hash = '#/plano'; }); await wait(p, () => location.hash === '#/plano');
     check('AC25 título de Plano e uso', (await p.title()) === 'Plano e uso · Lottus Sign');
@@ -292,7 +292,7 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
     await via('marca da faixa (sidenav-mark)', '.nav-btn[aria-label=Conta]', '#/conta/perfil');
     await via('marca da faixa -> Documentos', '.sidenav-mark', '#/documentos');
     await via('botão "Ir para Conta"', '#view a.btn', '#/conta/perfil');
-    await via('botão "Ir para Documentos"', '#view a.btn', '#/documentos');
+    await via('botão "Ir para Documentos"', '#view a.btn:has-text("Ir para Documentos")', '#/documentos');
     await p.evaluate(() => { location.hash = '#/conta/perfil'; }); await wait(p, () => location.hash === '#/conta/perfil');
     await p.click('.org-link', { force: true }); await wait(p, () => location.hash === '#/documentos');
     check('AC28 logo da topbar leva a #/documentos', (await hash(p)) === '#/documentos');
@@ -319,7 +319,7 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
     await wait(p, () => location.hash === '#/documentos' && document.querySelector('.shell'));
     await p.waitForTimeout(300);
     d.fake.state.mode.meDown = true;
-    await p.evaluate(() => { location.hash = '#/conta/perfil'; });
+    await p.evaluate(() => { location.hash = '#/plano'; }); // 1.4: #/conta/perfil mostra o erro na própria tela (t-perfil.cjs)
     await p.reload(); await p.waitForSelector('.shell .banner.danger', { timeout: 8000 });
     check('estado erro: .banner.danger com o texto exato', (await text(p, '.shell-notice .banner.danger')).startsWith('Não foi possível carregar seus dados. Verifique sua conexão.'));
     check('estado erro: botão Tentar de novo', await p.getByRole('button', { name: 'Tentar de novo' }).isVisible());

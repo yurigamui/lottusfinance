@@ -9,4 +9,6 @@ window.LOTTUS_CONFIG = {
   privacyUrl: '',
   termsVersion: '[preencher]',
   privacyVersion: '[preencher]',
+  /* Suporte (seção 1.4, pendência E-01): e-mail a definir pelo Yuri. Vazio = o link "fale com o suporte" abre o e-mail sem destinatário. */
+  supportEmail: '',
 };

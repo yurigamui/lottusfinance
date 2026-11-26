@@ -6,14 +6,15 @@ const APP = process.env.SIGN_APP ? path.resolve(process.env.SIGN_APP) : path.res
 const PROD = 'https://rowhslnnlzfbhmzbylbz.supabase.co';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
 
-function headers() {
+// Lê o _headers como o Cloudflare Pages: cada bloco começa numa linha de caminho ("/*", "/", "/index.html"); os cabeçalhos dos blocos que casam são somados.
+function headers(reqPath) {
   const h = {}; let on = false;
   for (const l of fs.readFileSync(path.join(APP, '_headers'), 'utf8').split('\n')) {
-    if (/^\/\*/.test(l)) { on = true; continue; } if (!/^\s/.test(l)) { on = false; continue; }
-    if (on && l.includes(':')) { const i = l.indexOf(':'); h[l.slice(0, i).trim().toLowerCase()] = l.slice(i + 1).trim(); }
+    if (/^\S/.test(l) && !l.startsWith('#')) { const pat = l.trim(); on = pat === '/*' || pat === reqPath || (pat === '/' && reqPath === '/index.html'); continue; }
+    if (on && /^\s/.test(l) && l.includes(':')) { const i = l.indexOf(':'); h[l.slice(0, i).trim().toLowerCase()] = l.slice(i + 1).trim(); }
   }
   delete h['strict-transport-security'];
-  h['content-security-policy'] = h['content-security-policy'].replace(/;?\s*upgrade-insecure-requests/, '');
+  if (h['content-security-policy']) h['content-security-policy'] = h['content-security-policy'].replace(/;?\s*upgrade-insecure-requests/, '');
   return h;
 }
 function serve(configExtra) {
@@ -24,7 +25,7 @@ function serve(configExtra) {
       if (!fs.existsSync(p)) { r.writeHead(404); return r.end('404'); }
       let buf = fs.readFileSync(p);
       if (configExtra && p.endsWith(path.join('js', 'config.js'))) buf = Buffer.concat([buf, Buffer.from('\n' + configExtra + '\n')]);
-      const hd = { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream', ...headers() };
+      const hd = { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream', ...headers('/' + path.relative(APP, p).split(path.sep).join('/')) };
       // SIGN_GZIP=1: comprime texto como o Cloudflare Pages faz em produção (medição de desempenho mais fiel)
       if (process.env.SIGN_GZIP && /\.(html|js|css|svg)$/.test(p)) { buf = require('zlib').gzipSync(buf); hd['content-encoding'] = 'gzip'; }
       r.writeHead(200, hd); r.end(buf);
@@ -35,7 +36,7 @@ function serve(configExtra) {
 
 // opts: width, height, theme ('light'|'dark'), cfg (objeto mesclado em LOTTUS_CONFIG, ex.: { timeoutMs: 1500, resendCooldownMs: 1500 })
 async function open(opts = {}) {
-  const fake = create();
+  const fake = create({ pg: opts.pg }); // opts.pg = nome do banco local: modo repasse (ver fake-sign.cjs)
   const fport = await fake.start();
   const extra = opts.cfg ? `Object.assign(window.LOTTUS_CONFIG, ${JSON.stringify(opts.cfg)});` : '';
   const srv = await serve(extra);

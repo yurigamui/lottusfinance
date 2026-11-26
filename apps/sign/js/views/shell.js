@@ -1,5 +1,5 @@
 /* Seção 1.0: esqueleto da área logada (menu, barra superior, aviso e #view). Montado por DOM; texto do usuário só por textContent. */
-import { h, mount, icon, ICON, focusH1 } from '../lib/ui.js?v=20261125a';
+import { h, mount, icon, ICON, focusH1 } from '../lib/ui.js?v=20261126a';
 
 /* Itens do menu. Só entra quem tem built:true; as seções futuras ligam o seu item sem mudar a estrutura. */
 export const NAV = [
@@ -32,6 +32,12 @@ export function initialsOf(name, email) {
 }
 
 let S = null;
+
+/* Atualiza nome, e-mail, iniciais e nível do cabeçalho com um sign_me já carregado (ex.: depois de salvar o perfil). */
+export function updateMe(me) { if (S && !S.dead && me) { S.meOk = true; paintMe(S, me); S.notice.replaceChildren(); } }
+
+/* A10-MA: tira o shell do ar (ex.: a sessão mudou para outro usuário). O próximo ensureShell monta um novo, sem dado do anterior. */
+export function dropShell() { releaseShell(); }
 
 export function releaseShell() {
   if (!S) return;
@@ -90,10 +96,13 @@ async function loadMe(st) {
   try {
     const me = await st.ctx.api.me();
     if (st.dead) return;
+    st.meOk = true;
     paintMe(st, me);
     st.notice.replaceChildren();
   } catch (e) {
     if (st.dead) return;
+    st.meOk = false;
+    if (st.ownMe) return; /* a tela mostra o próprio aviso (evita dois "Tentar de novo") */
     const btn = showNotice(st, async () => {
       btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
       await loadMe(st);
@@ -102,14 +111,18 @@ async function loadMe(st) {
 }
 
 /* Monta o shell uma vez e devolve #view. Nas rotas seguintes só atualiza o item ativo; o nó .shell permanece. */
-export function ensureShell(ctx, { minimal = false } = {}) {
-  if (S && S.root === ctx.root && S.shell.isConnected) {
+export function ensureShell(ctx, { minimal = false, ownMe = false } = {}) {
+  const uid = ctx.session && ctx.session.user ? ctx.session.user.id : '';
+  /* A10-MA: shell reaproveitado só para o MESMO usuário; outro usuário (hash do Auth, outra aba) remonta tudo */
+  if (S && S.root === ctx.root && S.shell.isConnected && S.uid === uid) {
     S.ctx = ctx;
+    S.ownMe = !!ownMe;
     paintNav(S, ctx.route, !!minimal);
+    if (S.meOk === false && !ownMe) loadMe(S); /* saiu de uma tela que cuidava do erro: o shell volta a avisar */
     return S.view;
   }
   releaseShell();
-  const st = { ctx, root: ctx.root, dead: false, menuOpen: false, minimal: null, items: [], email: ctx.session && ctx.session.user ? ctx.session.user.email || '' : '' };
+  const st = { ctx, uid, ownMe: !!ownMe, meOk: null, root: ctx.root, dead: false, menuOpen: false, minimal: null, items: [], email: ctx.session && ctx.session.user ? ctx.session.user.email || '' : '' };
 
   const skip = h('button', { class: 'sr-only skip-link', type: 'button', onclick: () => focusH1(st.view) }, 'Ir para o conteúdo');
   st.nav = h('nav', { class: 'sidenav-items', 'aria-label': 'Menu principal' });
@@ -142,6 +155,7 @@ export function ensureShell(ctx, { minimal = false } = {}) {
   profile.addEventListener('focusout', (e) => { if (st.menuOpen && e.relatedTarget && !profile.contains(e.relatedTarget)) setMenu(st, false); });
   sair.addEventListener('click', async () => {
     setMenu(st, false);
+    if (st.ctx.canLeave && !(await st.ctx.canLeave())) return; /* formulário com alterações: pergunta antes de sair */
     await st.ctx.api.signOut();
     st.ctx.go('#/entrar', true);
   });
