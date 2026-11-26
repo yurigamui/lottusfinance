@@ -1,6 +1,7 @@
 // Supabase FALSO e local, só para testar o Lottus Sign 1.1 (Entrar e criar conta). Sem Postgres, tudo em memória.
 // Simula apenas /auth/v1/* (token, signup, resend, user, logout) e /rest/v1/rpc/sign_me. Nada aqui fala com a produção.
-// Modos forçáveis (state.mode): delay (ms), down (derruba a conexão), rl429 {token, signup, resend}, revealExisting, autoConfirm.
+// Modos forçáveis (state.mode): delay (ms), down (derruba a conexão), rl429 {token, signup, resend}, revealExisting, autoConfirm,
+// meName, meNoName, meVerified, meCert, meCertVencido (conteúdo de sign_me) e meDown (só sign_me cai).
 // Dados fictícios: contas @teste.example.
 const http = require('http');
 
@@ -92,7 +93,13 @@ function create() {
         const u = c && byId(c.sub);
         if (!u) return send(res, 401, { code: 'PGRST301', message: 'JWT invalid' });
         if (!u.confirmed) return send(res, 400, { code: 'P0001', message: 'email_not_confirmed', details: null, hint: null });
-        return send(res, 200, { email: u.email, onboarding_done: !!u.onboarding_done, channels: { email: true } });
+        if (state.mode.meDown) return req.socket.destroy();
+        /* Campos reais de sign_me usados pelo shell 1.0: name, cert{not_after...}|null e verified. Modos: meName (nome de 60 letras sem espaço), meNoName, meVerified, meCert, meCertVencido */
+        const name = state.mode.meNoName ? '' : state.mode.meName ? 'N'.repeat(60) : 'Ana Exemplo da Silva';
+        const future = new Date(Date.now() + 365 * 864e5).toISOString(), past = new Date(Date.now() - 864e5).toISOString();
+        const cert = state.mode.meCert ? { subject: 'CN=Ana', issuer: 'AC Teste', not_after: future } : state.mode.meCertVencido ? { subject: 'CN=Ana', issuer: 'AC Teste', not_after: past } : null;
+        const verified = !!(state.mode.meVerified || state.mode.meCert || state.mode.meCertVencido);
+        return send(res, 200, { email: u.email, name, cert, verified, onboarding_done: !!u.onboarding_done, channels: { email: true } });
       }
       send(res, 404, { message: 'não simulado: ' + req.method + ' ' + p });
     } catch (e) { send(res, 500, { message: e.message }); }

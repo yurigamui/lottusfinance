@@ -22,4 +22,15 @@ async function login(p, email, pw) {
   await p.fill('#email', email); await p.fill('#senha', pw);
   await p.click('form button[type=submit]');
 }
-module.exports = { check, t, done, hash, text, active, authCalls, login, PW, res };
+// Seção 1.0: entra com o fake e espera o shell (nome e nível carregados). hash opcional: abre essa rota depois do login.
+async function logged(d, { email = 'pronto@teste.example', hash, w } = {}) {
+  const p = d.page;
+  await d.go('#/entrar');
+  await login(p, email, PW);
+  await p.waitForFunction(() => /^#\/(documentos|onboarding)/.test(location.hash) && document.querySelector('.shell'), null, { timeout: 8000 });
+  if (hash) { await p.evaluate((h) => { location.hash = h; }, hash); await p.waitForFunction((h) => location.hash === h && document.querySelector('#view h1'), hash, { timeout: 8000 }); }
+  await p.waitForFunction(() => { const s = document.querySelector('.org-sub'); return s && !s.hidden; }, null, { timeout: 8000 }).catch(() => {});
+}
+// versão ?v= dos módulos, lida do index.html
+const VER = require('fs').readFileSync(require('path').resolve(__dirname, '../../../apps/sign/index.html'), 'utf8').match(/js\/app\.js\?v=(\w+)/)[1];
+module.exports = { logged, VER, check, t, done, hash, text, active, authCalls, login, PW, res };

@@ -33,7 +33,8 @@ async function criar(p, { email, nome = 'Ana Teste', pw = 'uma-senha-longa', ace
     await wait(p, () => location.hash === '#/onboarding/1');
     check('rota #/onboarding/1', (await hash(p)) === '#/onboarding/1');
     check('sign_me chamada', authCalls(d, /rpc\/sign_me/).length >= 1);
-    check('tela provisória com Sair', (await text(p, 'h1')) === 'Em construção' && await p.getByRole('button', { name: 'Sair' }).isVisible());
+    await p.click('#avatar'); /* spec 1.0: onboarding dentro do shell reduzido; Sair fica no menu do avatar */
+    check('tela provisória com Sair', (await text(p, 'h1')) === 'Primeiros passos' && await p.getByRole('button', { name: 'Sair' }).isVisible());
   });
 
   await t('AC3 retorno à origem', open, {}, async (d) => {
@@ -217,6 +218,7 @@ async function criar(p, { email, nome = 'Ana Teste', pw = 'uma-senha-longa', ace
   await t('AC15 Sair da tela provisória', open, {}, async (d) => {
     const p = d.page; await d.go('#/entrar'); await login(p, 'pronto@teste.example', PW);
     await wait(p, () => location.hash === '#/documentos');
+    await p.click('#avatar'); /* spec 1.0: Sair vive no menu do avatar */
     await p.getByRole('button', { name: 'Sair' }).click();
     await wait(p, () => location.hash === '#/entrar'); await p.waitForSelector('#email');
     check('Sair volta ao Entrar, formulário limpo', (await p.inputValue('#email')) === '' && (await p.locator('h1').innerText()) === 'Entrar');
@@ -241,12 +243,12 @@ async function criar(p, { email, nome = 'Ana Teste', pw = 'uma-senha-longa', ace
     check('Enter envia: erro e foco no primeiro campo inválido', (await active(p)) === 'email' && (await p.getAttribute('#email', 'aria-invalid')) === 'true');
     check('aria-describedby liga o erro', /email-err/.test(await p.getAttribute('#email', 'aria-describedby')));
     check('main sem aria-live', (await p.locator('main[aria-live], #sign[aria-live]').count()) === 0);
-    check('aria-live só na região de mensagens', await p.evaluate(() => [...document.querySelectorAll('[aria-live]')].every((e) => e.classList.contains('sg-msg') || e.closest('.sg-msg'))));
+    check('aria-live só na região de mensagens (e no #toast-root da 1.0)', await p.evaluate(() => [...document.querySelectorAll('[aria-live]')].every((e) => e.classList.contains('sg-msg') || e.closest('.sg-msg') || e.id === 'toast-root')));
     await p.fill('#email', 'pronto@teste.example'); await p.fill('#senha', PW); await p.keyboard.press('Enter');
     await wait(p, () => location.hash === '#/documentos');
     await p.waitForTimeout(200);
     check('rota nova: foco no h1', (await p.evaluate(() => document.activeElement && document.activeElement.tagName)) === 'H1');
-    check('rota nova: <title> muda', (await p.title()) === 'Em construção · Lottus Sign', await p.title());
+    check('rota nova: <title> muda', (await p.title()) === 'Documentos · Lottus Sign', await p.title()); /* spec 1.0: tela de Documentos */
   });
 
   await t('AC17 rede fora do ar', open, {}, async (d) => {

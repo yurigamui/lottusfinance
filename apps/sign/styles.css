@@ -139,7 +139,7 @@ b { font-weight: 600; }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
 
 /* ---------- Estrutura: trilho de seções + painel ---------- */
-.shell { display: flex; height: 100vh; overflow: hidden; }
+.shell { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
 
 .sidenav { width: 84px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 26px; padding: 26px 0 22px; position: relative; z-index: 40; }
 
@@ -413,7 +413,7 @@ textarea.input { min-height: 88px; resize: vertical; }
 
 
 /* ---------- Login e autenticador ---------- */
-.auth { min-height: 100vh; display: grid; grid-template-columns: minmax(380px, 0.9fr) minmax(0, 1.1fr); padding: 14px; gap: 14px; }
+.auth { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(380px, 0.9fr) minmax(0, 1.1fr); padding: 14px; gap: 14px; }
 
 .auth-side {
   position: relative; overflow: hidden; border-radius: 32px; padding: 44px; display: flex; flex-direction: column; gap: 28px;
@@ -509,7 +509,7 @@ textarea.input { min-height: 88px; resize: vertical; }
 
   .auth-logo-sm { display: block; }
 
-  .auth-main { min-height: 100vh; justify-content: flex-start; padding-top: 48px; }
+  .auth-main { min-height: 100vh; min-height: 100dvh; justify-content: flex-start; padding-top: 48px; }
 
 }
 @media (prefers-reduced-motion: reduce) { .otp.shake { animation: none; } }
@@ -521,7 +521,7 @@ textarea.input { min-height: 88px; resize: vertical; }
 /* ---------- Modal ---------- */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(23, 18, 16, 0.45); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 24px; z-index: 50; }
 
-.modal { background: var(--card); border-radius: 24px; width: 100%; max-width: 520px; max-height: calc(100vh - 48px); overflow-y: auto; padding: 26px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25); animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal { background: var(--card); border-radius: 24px; width: 100%; max-width: 520px; max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 26px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25); animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
 
 .modal.wide { max-width: 1080px; }
 
@@ -1455,3 +1455,74 @@ table tr.clk:hover td { background: var(--field); }
   .sg-check { flex-direction: column; gap: 0; }
   .sg-check input { margin: 0; }
 }
+
+/* ---------- importado do Wealth (seção 1.0): copiado literalmente; abaixo dele, só regras novas com tokens existentes ---------- */
+.banner { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 16px; margin-bottom: 16px; font-weight: 600; }
+.banner.warn { background: var(--warning-tint); color: var(--warning); }
+.banner.danger { background: var(--danger-tint); color: var(--danger); }
+.banner.info { background: var(--rosa-tint); color: var(--rosa); }
+.banner .grow { font-weight: 500; }
+.ob-steps { list-style: none; padding: 0; margin: 0 0 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+.ob-steps li { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--soft, rgba(0,0,0,.04)); }
+.ob-steps li span { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; background: var(--line); color: var(--ink); }
+.ob-steps li.on { color: var(--rosa); background: var(--rosa-tint); }
+.ob-steps li.on span, .ob-steps li.done span { background: var(--rosa); color: #fff; }
+.tabs .tab-link { padding: 7px 14px; border-radius: 999px; font-weight: 700; font-size: 12.5px; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.tabs .tab-link:hover { color: var(--ink); }
+.tabs .tab-link.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(43, 35, 33, 0.14); }
+nav.tabs { display: inline-flex; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.show-sm { display: none; }
+@media (max-width: 640px) { .hide-sm { display: none; } .show-sm { display: block; } }
+@media (max-width: 420px) {
+  .sidenav-mark { display: none; }
+  .sidenav { padding: 8px; gap: 0; justify-content: center; overflow-x: visible; }
+  .sidenav-items { gap: 2px; justify-content: center; width: 100%; }
+  .nav-btn { width: 44px; height: 44px; border-radius: 14px; }
+}
+
+/* ---------- Sign 1.0: regras novas do shell, avisos e selos ---------- */
+.tag.muted { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+.tag .ico { width: 12px; height: 12px; margin-right: 4px; flex: none; }
+.skip-link:focus { position: fixed; top: 8px; left: 8px; width: auto; height: auto; clip: auto; overflow: visible; padding: 12px 16px; border-radius: 12px; background: var(--action); color: var(--on-action); font-weight: 700; z-index: 100; border: 0; cursor: pointer; }
+.org { min-width: 0; flex: 1; }
+.org > div { min-width: 0; }
+.org-link { display: block; flex: none; line-height: 0; border-radius: 10px; }
+.org-name, .menu-name, .menu-sub, .page-sub, .page-head h1, .toast-title, .toast-msg { overflow-wrap: anywhere; }
+.topbar-right { flex-shrink: 0; }
+.avatar, .menu-item, .btn.sm, .tabs button, .tab-link { min-height: 44px; min-width: 44px; }
+.avatar { display: grid; place-items: center; }
+.shell-notice:empty { display: none; }
+.shell-notice { padding: 16px 40px 0; flex-shrink: 0; }
+.shell-notice .banner { flex-wrap: wrap; margin-bottom: 0; }
+.content .btn, .modal .btn, .shell-notice .btn { min-height: 44px; }
+.page-head > div { min-width: 0; }
+.empty strong { display: block; font-size: 15px; color: var(--ink); margin-bottom: 4px; }
+.empty p { margin: 0 0 12px; }
+.empty .btn { margin-top: 12px; }
+.sidenav.minimal { display: none; }
+@media (min-width: 761px) { .sidenav.minimal { display: flex; } .sidenav.minimal .sidenav-items { display: none; } }
+.toast-close { flex: none; min-width: 44px; min-height: 44px; margin: -10px -10px 0 0; display: grid; place-items: center; border-radius: 12px; }
+.toast-close svg { width: 16px; height: 16px; }
+.modal { display: flex; flex-direction: column; overflow: hidden; }
+.modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-wrap: anywhere; }
+.modal-head, .modal-foot { flex: none; }
+.modal-head h2 { overflow-wrap: anywhere; }
+@media (min-width: 761px) { .content { padding-inline: max(40px, calc((100% - 1200px) / 2)); } }
+@media (max-width: 760px) { .shell-notice { padding: 12px 16px 0; } }
+.nav-sec:focus-within .nav-btn.active:focus-visible { box-shadow: var(--focus), 0 6px 14px rgba(43, 35, 33, 0.22); }
+#toast-root { top: auto; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+.menu { width: min(230px, calc(100vw - 32px)); }
+/* zoom de 200% em 320 px (largura útil de 160 px): botões e abas quebram linha em vez de passar da borda */
+@media (max-width: 240px) {
+  .btn { white-space: normal; text-align: center; padding-left: 12px; padding-right: 12px; }
+  .empty { padding: 24px 4px; }
+  nav.tabs { flex-wrap: wrap; border-radius: 18px; overflow-x: visible; }
+  .tabs .tab-link { white-space: normal; }
+  .topbar { padding: 10px 8px; gap: 8px; }
+  .content { padding-left: 8px; padding-right: 8px; }
+}
+.tabs .tab-link { display: inline-flex; align-items: center; }
+/* AC13: contraste mínimo de 4,5:1 no tema claro (rosa e verde puros davam 4,25 e 4,47); só o texto escurece, com tokens existentes */
+.tag.brand, .banner.info { color: color-mix(in srgb, var(--rosa) 85%, var(--ink)); }
+.tag.success { color: color-mix(in srgb, var(--success) 88%, var(--ink)); }

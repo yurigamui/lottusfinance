@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const { create } = require('./fake-sign.cjs');
-const APP = path.resolve(__dirname, '../../../apps/sign');
+const APP = process.env.SIGN_APP ? path.resolve(process.env.SIGN_APP) : path.resolve(__dirname, '../../../apps/sign'); // SIGN_APP: servir outra cópia (ex.: o commit anterior, para comparar capturas)
 const PROD = 'https://rowhslnnlzfbhmzbylbz.supabase.co';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
 
@@ -24,7 +24,10 @@ function serve(configExtra) {
       if (!fs.existsSync(p)) { r.writeHead(404); return r.end('404'); }
       let buf = fs.readFileSync(p);
       if (configExtra && p.endsWith(path.join('js', 'config.js'))) buf = Buffer.concat([buf, Buffer.from('\n' + configExtra + '\n')]);
-      r.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream', ...headers() }); r.end(buf);
+      const hd = { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream', ...headers() };
+      // SIGN_GZIP=1: comprime texto como o Cloudflare Pages faz em produção (medição de desempenho mais fiel)
+      if (process.env.SIGN_GZIP && /\.(html|js|css|svg)$/.test(p)) { buf = require('zlib').gzipSync(buf); hd['content-encoding'] = 'gzip'; }
+      r.writeHead(200, hd); r.end(buf);
     });
     s.listen(0, '127.0.0.1', () => ok(s));
   });
