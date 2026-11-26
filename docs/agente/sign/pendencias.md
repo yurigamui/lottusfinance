@@ -77,3 +77,7 @@
 | P-01 | **Médio (1.1).** Em `#/criar`, "Termos de uso" e "Política de Privacidade" abrem o próprio Sign quando `termsUrl`/`privacyUrl` estão vazios: `legalLink` deve renderizar só texto. Corrigir no próximo ciclo que tocar `entrar.js` | Média | Desenvolvedor | Antes do G5 da Parte 1 | verificação 1.4 ciclo 3 |
 | P-02 | Nome legado só com caracteres invisíveis deixa avatar/nome em branco: `initialsOf`/`paintMe` descartarem nome sem caractere visível | Baixa | Desenvolvedor | Antes do G5 | verificação 1.4 c3 |
 | P-03/P-04 | Checkbox de aceite 24×24 px; botões do modal "Descartar" sem largura total em 320 | Baixa | Desenvolvedor | Antes do G5 | verificação 1.4 c3 |
+| T-07b | `sign-messenger` (entrega real do código por e-mail) e a função de borda de validação de certificado não estão no repositório: entrega real e validação criptográfica ficam **não verificadas** na 1.5; formato do arquivo assinado `[preencher]` | Alta | Yuri/time (D-02) | Release | secao-1-5 |
+| H-3 | Pepper do hash do código no Vault | Média | Arquiteto | Release | secao-1-5 |
+| H-4 | Retenção das linhas de `sign_outbox` (só a purga do `code` está especificada) | Média | Yuri | Release | secao-1-5 |
+| H-5 | Ligar o WhatsApp exige template aprovado e `whatsapp_secret_id` (serviço pago) | Média | Yuri | Pós-v1 | secao-1-5 |
