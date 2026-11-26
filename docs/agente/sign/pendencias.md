@@ -54,3 +54,4 @@
 | A10-B3 | Guarda de rota confia na sessão local: com `sign_me` 401 o shell monta e o aviso vem depois | Baixa | Desenvolvedor | Parte 2 | auditor 1.0 |
 | A10-B4 | `construcao.js` usa `go('#/entrar')` sem replace em rotas públicas | Baixa | Desenvolvedor | Ciclo 2 da 1.0 | auditor 1.0 |
 | A10-N | `assinar.js` e `verificar.js` ainda usam `innerHTML`/`insertAdjacentHTML` (escapam os dados, mas serão reescritos nas Partes 3 e 4 sem innerHTML) | Média | Desenvolvedor | Partes 3 e 4 | auditor 1.0 |
+| 1.0-C2 | **Ciclo 2 da 1.0** (pacote de correções): A10-MA, A10-MB, M-1 (aviso de sessão), M-2 (sidenav ≤420 px), B-1, B-2, A10-B1, A10-B2, A10-B4. Construir junto da próxima seção; verificar com a regressão da 1.0 | Média | Desenvolvedor | Antes do G5 da Parte 1 | verificação 1.0 |
