@@ -51,15 +51,17 @@
   }
 
   B.views.planos = async (el, [raw, sub], me) => {
-    const tab = ['partners', 'sign', 'tabelas'].includes(raw) ? raw : 'partners';
+    const tab = ['partners', 'sign', 'tabelas', 'catalogo', 'precos'].includes(raw) ? raw : 'partners';
     const admin = can(me, 'admin');
-    el.innerHTML = head('Preços e planos', 'Em que faixa cada fundo está e quanto cada conta do Lottus Sign usou no mês.') +
-      `<div class="u-mb16">${tabs([['partners', 'Lottus Partners'], ['sign', 'Lottus Sign'], ['tabelas', 'Tabelas de preço']], tab)}</div><div id="pl-body"><div class="spinner" aria-label="Carregando"></div></div>`;
+    el.innerHTML = head('Preços e planos', 'Em que faixa cada fundo está, quanto cada conta do Lottus Sign usou no mês, o catálogo de planos e os preços personalizados.') +
+      `<div class="u-mb16">${tabs([['partners', 'Lottus Partners'], ['sign', 'Lottus Sign'], ['tabelas', 'Tabelas de preço'], ['catalogo', 'Catálogo'], ['precos', 'Preços personalizados']], tab)}</div><div id="pl-body"><div class="spinner" aria-label="Carregando"></div></div>`;
     onTabs(el, (k) => { location.hash = `#/planos/${k}`; });
     const host = el.querySelector('#pl-body');
     try {
       if (tab === 'partners') await partnersTab(host, admin);
       else if (tab === 'sign') await signTab(host, admin, /^\d{4}-\d{2}/.test(sub || '') ? sub.slice(0, 7) + '-01' : null);
+      else if (tab === 'catalogo') await catalogTab(host);
+      else if (tab === 'precos') await overridesTab(host);
       else await tablesTab(host, admin);
     } catch (e) { host.innerHTML = B.ui.errorCard(B.message(e)); }
   };
@@ -175,6 +177,60 @@
         closeModal(); done(nr);
       } catch (e) { err.hidden = false; err.textContent = B.message(e); }
     };
+  }
+
+
+  /* ------------------------------------------------------------ catálogo (somente leitura) */
+  const WEALTH = { gratis: 'Grátis', pro: 'Pro', fund: 'Fundo' };
+  /** Caixa de aviso quando a RPC ainda não existe no banco (migração não aplicada) ou falha. */
+  const planoErr = (e) => `<div class="card"><div class="${B.plan.isMissing(e) ? 'note-box' : 'error-box'}" role="${B.plan.isMissing(e) ? 'status' : 'alert'}">${esc(B.plan.errorMessage(e))}</div>${B.plan.isMissing(e) ? '' : '<div class="err-actions"><button type="button" class="btn secondary" data-pl-retry>Tentar de novo</button></div>'}</div>`;
+  async function catalogTab(host) {
+    let cat;
+    try { cat = await B.plan.catalog(); } catch (e) { host.innerHTML = planoErr(e); const r = host.querySelector('[data-pl-retry]'); if (r) r.onclick = () => catalogTab(host); return; }
+    const S = cat.partners || {}, sign = cat.sign || [], wealth = cat.wealth || [];
+    const tiers = (S.tiers || []).map((t) => (t.up_to == null ? `acima disso, ${(Number(t.rate_aa) * 100).toFixed(2).replace('.', ',')}% ao ano sobre o patrimônio (mínimo de ${brl(t.min)} por mês)` : `até R$ ${mi(Number(t.up_to))}: ${brl(t.monthly)} por mês`));
+    host.innerHTML = `<p class="muted small u-mb16">Visão única, só para consulta, dos preços de tabela dos três produtos. Para alterar, use as outras abas; o preço de cada cliente fica na ficha dele, em Plano e preço.</p>
+      <div class="stack">
+        <div class="card"><h2>Lottus Sign</h2>${B.ui.table({ rows: sign, pageSize: 25, search: false, cardTitle: 'name', emptyText: 'Nenhum plano ativo.', columns: [
+          { key: 'name', label: 'Plano', render: (p) => `<b>${esc(p.name)}</b>` },
+          { key: 'price_month', label: 'Por mês', num: true, render: (p) => brl(p.price_month) },
+          { key: 'docs_included', label: 'Documentos incluídos', num: true, render: (p) => esc(p.docs_included) },
+          { key: 'extra_doc_price', label: 'Documento extra', num: true, render: (p) => (p.extra_doc_price == null ? 'Sem excedente (bloqueia)' : brl(p.extra_doc_price)) },
+        ] })}</div>
+        <div class="card"><h2>Lottus Partners</h2><dl class="kv">
+          <dt>Teste grátis até</dt><dd>R$ ${esc(mi(Number(S.free_pl_limit || 0)))} de patrimônio</dd>
+          <dt>Faixas</dt><dd>${tiers.length ? tiers.map((t) => `<div>${esc(t)}</div>`).join('') : '—'}</dd>
+          <dt>Prazo para cadastrar o cartão</dt><dd>${esc(S.grace_days)} dias</dd>
+          <dt>Vencimento das faturas</dt><dd>dia ${esc(S.due_day)} do mês seguinte</dd></dl></div>
+        <div class="card"><h2>Lottus Wealth</h2>${B.ui.table({ rows: wealth, pageSize: 25, search: false, cardTitle: 'code', emptyText: 'Nenhum plano.', columns: [
+          { key: 'code', label: 'Plano', render: (p) => `<b>${esc(WEALTH[p.code] || p.code)}</b>` },
+          { key: 'price_month', label: 'Por mês', num: true, render: (p) => brl(p.price_month) },
+        ] })}</div></div>`;
+    B.ui.onTable(host);
+  }
+
+  /* ------------------------------------------------------------ preços personalizados */
+  // A RPC bo_price_override_list pede um cliente (produto + id): não existe listagem global. Esta aba leva à ficha de cada cliente.
+  async function overridesTab(host) {
+    let d;
+    try { d = await rpc('bo_customers'); } catch (e) { host.innerHTML = B.ui.errorCard(B.message(e)); return; }
+    const rows = (d.rows || []).filter((c) => c.status !== 'cancelled');
+    host.innerHTML = `<div class="card"><h2>Preços personalizados</h2>
+      <p class="muted small">O preço personalizado de cada cliente (tipo, valor, validade, motivo e quem definiu) fica na ficha dele, na aba Plano e preço, onde também se define ou se revoga. Escolha o cliente abaixo.</p>
+      <div id="po-list"></div></div>`;
+    host.querySelector('#po-list').innerHTML = B.ui.table({
+      rows, pageSize: 25, cardTitle: 'name', searchLabel: 'Buscar cliente', emptyText: 'Nenhum cliente ainda.',
+      rowHref: (c) => `#/clientes/${c.kind}/${c.id}`,
+      columns: [
+        { key: 'name', label: 'Cliente', searchText: (c) => `${c.name} ${c.doc || ''} ${c.email || ''}`, render: (c) => `<b>${esc(c.name)}</b><div class="small muted">${esc(cnpj(c.doc || ''))}</div>` },
+        { key: 'plan', label: 'Plano', searchText: (c) => `${c.product} ${c.plan}`, render: (c) => `${esc(c.product)}<div class="small muted">${esc(c.plan)}</div>` },
+        { key: 'mrr', label: 'Mensal', num: true, searchText: () => '', render: (c) => `<b>${brl(c.mrr)}</b>` },
+        { key: 'kind', label: 'Ver', card: false, searchText: () => '', render: (c) => `<a class="btn secondary sm" data-plano-link href="#/clientes/${esc(c.kind)}/${esc(c.id)}">Plano e preço</a>` },
+      ],
+    });
+    B.ui.onTable(host);
+    // o link abre a ficha já na aba Plano e preço
+    host.querySelector('#po-list').addEventListener('click', (e) => { if (e.target.closest('a, tr[data-ri]')) B._fichaTab = 'plano'; });
   }
 
   /* ------------------------------------------------------------ tabelas de preço */

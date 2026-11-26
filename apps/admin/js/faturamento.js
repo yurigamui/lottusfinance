@@ -47,6 +47,14 @@
     const cnt = (k) => all.filter((i) => (k === 'all' ? true : i.phase === k)).length;
     if (!arg && !cnt('overdue')) status = cnt('open') ? 'open' : 'all';
     let kind = 'all', dFrom = '', dTo = '';
+    // Em atraso: etapa de carência vinda de bo_overdue_list (D3: só informa; não bloqueia nem rebaixa ninguém)
+    let od = null;
+    if (status === 'overdue') { try { od = { d: await B.plan.overdue() }; } catch (e) { od = { e }; } }
+    const ovMap = new Map(((od && od.d && od.d.items) || []).map((x) => [x.id, x]));
+    const grace = od && od.d && od.d.grace_days != null ? Number(od.d.grace_days) : null;
+    const daysOf = (i) => (ovMap.has(i.id) ? Number(ovMap.get(i.id).days_overdue) : Number(i.days_overdue || 0));
+    const stageOf = (i) => (ovMap.has(i.id) ? ovMap.get(i.id).stage : grace != null ? (daysOf(i) <= grace ? 'grace' : 'beyond_grace') : null);
+    const STAGE = { grace: ['Dentro da carência', 'warning'], beyond_grace: ['Além da carência', 'danger'] };
     const moreActs = [];
     if (mayWrite) moreActs.push({ id: 'gen', label: 'Gerar faturas do mês' });
     moreActs.push({ id: 'csv', label: 'Exportar CSV' });
@@ -54,6 +62,7 @@
       ${B.ui.pageHead({ title: 'A receber', sub: 'Quem está devendo para a Lottus: mensalidades do Partners, planos do Sign e cobranças avulsas.', primary: mayWrite ? { id: 'new', label: 'Nova fatura' } : null, more: moreActs })}
       <div class="kpi4 kpi4-c" id="sum"></div>
       <div class="u-mb16">${tabs(FILTERS.map(([k, l]) => [k, `${l}${cnt(k) ? ` (${cnt(k)})` : ''}`]), status)}</div>
+      <div id="od-info"></div>
       <div class="u-mb16" id="mf-box">${B.ui.more('Mais filtros', `<div class="grid-2">
           <div class="field"><label for="mf-kind">Tipo de cliente</label><select class="input" id="mf-kind"><option value="all">Todos</option>${Object.entries(KIND).map(([k, l]) => `<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select></div>
           <div class="grid-2"><div class="field"><label for="mf-from">Vence a partir de</label><input class="input" type="date" id="mf-from"></div>
@@ -68,12 +77,23 @@
       ['Faturado no mês', brl(sum((i) => i.phase !== 'cancelled' && String(i.ref_month || i.created_at || '').slice(0, 7) === today().slice(0, 7))), 'competência do mês', ''],
     ].map(([l, v, s, c]) => `<div class="tile ${c}"><span class="kpi-label">${esc(l)}</span><span class="tile-value">${v}</span><span class="small muted">${esc(s)}</span></div>`).join('');
 
+    const odBox = el.querySelector('#od-info');
+    if (od && od.d) {
+      const late = all.filter((i) => i.phase === 'overdue');
+      const n1 = late.filter((i) => stageOf(i) === 'grace').length, n2 = late.filter((i) => stageOf(i) === 'beyond_grace').length;
+      odBox.innerHTML = `<div class="card u-mb16 od-info"><p><b>${od.d.total}</b> fatura${Number(od.d.total) === 1 ? '' : 's'} em atraso, somando <b>${brl(od.d.total_amount)}</b>.</p>
+        <p class="small muted">Carência de ${esc(grace)} dias: ${n1} dentro da carência e ${n2} além dela. Nada é bloqueado nem rebaixado sozinho: a equipe decide caso a caso (Cobrar, pausar a régua ou falar com o cliente).</p></div>`;
+    } else if (od && od.e) {
+      odBox.innerHTML = `<div class="${B.plan.isMissing(od.e) ? 'note-box' : 'error-box'} u-mb16" role="status">Etapa de carência: ${esc(B.plan.errorMessage(od.e))}</div>`;
+    }
+    const custHref = (i) => (i.funder_id ? `#/clientes/funder/${i.funder_id}` : i.sign_account_id ? `#/clientes/sign/${i.sign_account_id}` : null);
     // ação principal da linha: Cobrar (atrasada, com e-mail) ou Receber; o resto fica no modal da fatura
     const mainAct = (i) => {
-      if (!mayWrite || i.status !== 'open') return '';
-      return i.phase === 'overdue' && i.customer_email
+      const lk = od && custHref(i) ? `<a class="btn ghost sm" href="${esc(B.safeUrl(custHref(i)))}" aria-label="Ver cliente de ${esc(i.number)}">Ver cliente</a>` : '';
+      if (!mayWrite || i.status !== 'open') return lk;
+      return (i.phase === 'overdue' && i.customer_email
         ? `<button type="button" class="btn secondary sm" data-send="${esc(i.id)}" aria-label="Cobrar ${esc(i.number)} por e-mail">Cobrar</button>`
-        : `<button type="button" class="btn secondary sm" data-pay="${esc(i.id)}" aria-label="Registrar recebimento de ${esc(i.number)}">Receber</button>`;
+        : `<button type="button" class="btn secondary sm" data-pay="${esc(i.id)}" aria-label="Registrar recebimento de ${esc(i.number)}">Receber</button>`) + lk;
     };
     const keepQ = () => { const inp = el.querySelector('#list .lt-search input'); return inp ? inp.value : ''; };
     const paint = () => {
@@ -89,6 +109,7 @@
           { key: 'number', label: 'Fatura', render: (i) => `${esc(i.number)}<div class="small muted">${esc(i.description)}</div>` },
           { key: 'due_date', label: 'Vencimento', searchText: () => '', render: (i) => `<span class="nowrap">${date(i.due_date)}</span><div>${phaseTag(i)}${i.days_overdue ? ` <span class="small muted">${i.days_overdue} d</span>` : ''}</div>` },
           { key: 'amount', label: 'Valor', num: true, searchText: () => '', render: (i) => `<b>${brl(i.amount)}</b>` },
+          ...(grace != null && status === 'overdue' ? [{ key: 'stage', label: 'Carência', searchText: (i) => (STAGE[stageOf(i)] || [''])[0], render: (i) => { const g = STAGE[stageOf(i)]; return g ? `<span class="tag ${g[1]}">${esc(g[0])}</span><div class="small muted">${daysOf(i)} dia${daysOf(i) === 1 ? '' : 's'} de atraso</div>` : '—'; } }] : []),
           { key: 'reminders', label: 'Cobranças', card: false, searchText: () => '', render: (i) => `<span class="small muted">${i.reminders ? `${i.reminders} e-mail${i.reminders === 1 ? '' : 's'}<br>${esc(ago(i.last_reminder))}` : '—'}${i.reminders_paused ? '<br>pausada' : ''}</span>` },
           { key: 'id', label: 'Ações', searchText: () => '', render: mainAct },
         ],
@@ -176,6 +197,8 @@
             <div class="field"><label>Vencimento</label><input class="input" id="f-due" type="date" min="2000-01-01" value="${esc(v.due_date)}"></div></div>
           <div class="field"><label>Observações</label><textarea class="input" id="f-notes">${esc(v.notes || '')}</textarea></div>
           <div class="error-box" id="f-err" hidden></div></div>`,
+        // Esc, ✕ e fundo também voltam à ficha (onClose do modal); só se a pessoa ainda está em A receber (trocar de tela já leva a outro lugar)
+        onClose: () => { if (!i && ret && /^#\/faturas(\/|$)/.test(location.hash)) location.hash = ret; },
         foot: '<button class="btn secondary" data-close>Cancelar</button><button class="btn" data-ok>Salvar</button>' });
       box.querySelector('[data-close]').onclick = () => { closeModal(); if (!i && ret) location.hash = ret; };
       box.querySelectorAll('input, textarea').forEach((x) => x.addEventListener('input', () => fieldError(x, '')));
@@ -198,10 +221,17 @@
   B.views.cobranca = async (el, _a, me) => {
     const admin = can(me, 'admin');
     const [s, mails] = await Promise.all([rpc('bo_inv_settings', { p: null }), admin ? rpc('bo_emails', { p_limit: 200 }).catch(() => null) : null]);
+    // a geração automática (dia 2) vem da migração de planos e preços: se bo_plan_catalog ainda não existe, o banco não foi atualizado
+    const autoOn = await B.plan.catalog().then(() => true, () => false);
     const sent = ((mails && mails.items) || []).filter((m) => /^invoice_/.test(m.kind)).slice(0, 12);
     const STEPS = [['3 dias antes', 'Lembrete amigável de vencimento'], ['No dia', 'Aviso de que vence hoje'], ['3 dias depois', 'Aviso de atraso'], ['7 dias depois', 'Segundo aviso de atraso'], ['15 dias depois', 'Último aviso automático']];
     el.innerHTML = `
       ${head('Régua de cobrança', 'Os e-mails de cobrança saem sozinhos, todos os dias às 9h20 (Brasília), para faturas em aberto com e-mail do cliente.')}
+      <div class="card dash-row"><h2>Geração automática das faturas</h2>
+        <p>${autoOn
+          ? `Todo dia 2, às 10h (Brasília), o sistema gera as faturas do mês anterior (taxa de plataforma dos fundos e mensalidade do Sign), com vencimento no dia <b>${esc(s.due_day)}</b> do mês seguinte à competência. Quem já tem fatura da competência não é duplicado.`
+          : `Prevista para todo dia 2, com vencimento no dia <b>${esc(s.due_day)}</b>. ${esc(B.plan.MISSING_TEXT)} Até lá, use "Gerar faturas do mês" em A receber.`}</p>
+        <p class="small muted">Régua de e-mails: ${s.remind_enabled ? '<b>ligada</b>' : '<b>desligada</b>'}. ${autoOn ? 'As faturas geradas automaticamente ainda não entram nos e-mails da régua (pendência em análise): para cobrá-las, use Cobrar em A receber.' : ''} Nenhuma conta é bloqueada nem rebaixada sozinha por atraso.</p></div>
       <div class="grid-2 dash-row">
         <div class="card"><h2>Quando enviar</h2>
           <div class="queue">${STEPS.map(([w, t], i) => `<div class="queue-row"><span class="queue-count">${i + 1}</span><span class="queue-label"><b>${esc(w)}</b><br><span class="small muted">${esc(t)}</span></span></div>`).join('')}</div>

@@ -94,7 +94,8 @@
     const [c, staff] = await Promise.all([rpc('bo_customer', { p_kind: kind, p_id: id }), rpc('bo_staff_names').catch(() => [])]);
     const mayWrite = can(me, 'approver');
     const TABS = [['resumo', 'Resumo'], ['faturas', `Faturas (${c.invoices.length})`], ['pessoas', 'Pessoas'], ['historico', 'Histórico'], ['plano', 'Plano e preço']];
-    let tab = 'resumo';
+    let tab = B._fichaTab === 'plano' ? 'plano' : 'resumo'; // depois de trocar plano/preço, a ficha volta nesta aba
+    B._fichaTab = null;
     const moreActs = mayWrite ? [{ id: 'note', label: 'Registrar nota' }, { id: 'task', label: 'Marcar tarefa' }, c.cancelled_at ? { id: 'react', label: 'Reativar cliente' } : { id: 'cancel', label: 'Marcar como cancelado', danger: true }] : [];
     el.innerHTML = `
       <a class="small tap" href="#/clientes">‹ Clientes</a>
@@ -154,14 +155,8 @@
       } else if (tab === 'historico') {
         box.innerHTML = `<div class="card">${c.events.length ? `<ol class="timeline">${c.events.map((e) => `<li><span class="tl-when small muted">${dateTime(e.at)}</span><b>${esc(EVENT[e.event] || e.event)}</b> ${esc(e.text || '')}${e.mrr_before != null && e.mrr_after != null && Number(e.mrr_before) !== Number(e.mrr_after) ? ` <span class="small muted">(${brl(e.mrr_before)} → ${brl(e.mrr_after)})</span>` : ''}${e.by_name ? ` <span class="small muted">· ${esc(e.by_name)}</span>` : ''}</li>`).join('')}</ol>` : empty('Sem histórico.')}</div>`;
       } else {
-        // Casca: o preço de tabela e a troca de plano chegam no Pacote 3; hoje só mostra o que a ficha já traz
-        const dest = c.kind === 'funder' ? `#/parceiros/${esc(c.id)}` : '#/planos/sign';
-        box.innerHTML = `<div class="card"><h2>Plano e preço</h2><dl class="kv">
-          <dt>Plano atual</dt><dd>${esc(c.product)} · ${esc(c.plan)}</dd>
-          ${c.plan_requested ? `<dt>Pediu troca para</dt><dd>${esc(c.plan_requested)}</dd>` : ''}
-          <dt>Valor mensal hoje</dt><dd><b>${brl(c.mrr)}</b></dd>
-          <dt>Preço de tabela</dt><dd class="muted">[preencher] aparece aqui quando o plano e o preço forem ligados à ficha. Por enquanto, veja a tabela em Preços e planos.</dd></dl>
-          <p class="u-m16t"><a class="btn secondary" href="${dest}">${c.kind === 'funder' ? 'Abrir na gestão dos fundos' : 'Abrir Preços e planos'}</a></p></div>`;
+        // Plano, preço de tabela, preço personalizado e troca de plano: plano-ficha.js (bo_customer_plan)
+        B.planoFicha.render(box, { c, kind, id, me, fallbackHref: c.kind === 'funder' ? `#/parceiros/${c.id}` : '#/planos/sign' });
       }
     };
     paint();
