@@ -1888,8 +1888,8 @@ table.pos td.c-cust { max-width: 160px; }
 .dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .dash-card { min-width: 0; margin: 0; padding-bottom: 8px; }
 .dash-card .card-head { padding: 0 4px 8px; }
-.span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
-@media (max-width: 1100px) { .span-8, .span-7, .span-5, .span-4 { grid-column: span 12; } }
+.span-12 { grid-column: span 12; } .span-6 { grid-column: span 6; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
+@media (max-width: 1100px) { .span-8, .span-7, .span-6, .span-5, .span-4 { grid-column: span 12; } }
 .dash-alloc { display: grid; gap: 12px; }
 .dash-t th, .dash-t td { white-space: nowrap; }
 .dash-t th[scope=row] { text-align: left; font-weight: 600; }
@@ -1910,3 +1910,8 @@ table.fit.dash-t td.num, table.fit.dash-t th.num, table.fit.dash-t th[scope=row]
 .card-foot { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .card-link { color: var(--rosa); font-weight: 600; text-decoration: none; font-size: 13.5px; } .card-link:hover { text-decoration: underline; }
 svg.selectable, svg.selectable text { user-select: none; -webkit-user-select: none; }
+
+.dash-card .donut-box { flex-direction: column !important; flex-wrap: wrap !important; align-items: stretch; gap: 12px; }
+.dash-card .donut-box svg { align-self: center; }
+.dash-card .legend-row .grow { overflow-wrap: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-card .legend-row b { white-space: nowrap; }

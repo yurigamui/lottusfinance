@@ -80,3 +80,6 @@ Pendente: o dia exato do vencimento (só mês/ano no nome) e o histórico real d
 
 ## Produção — função de borda wealth-pu v5 (25/11/2026, com OK do Yuri)
 Publicada `wealth-pu` (versão 5, `verify_jwt` desligado como antes: ela mesma exige o segredo do cron). Inclui cripto (Mercado Bitcoin), ANBIMA (só liga com credenciais; hoje "sem credenciais"), histórico B3/CVM e a ação `pu_at`. A curva da renda fixa passou a ser só do banco; a função preenche o preço a mercado de pré e IPCA+ (revisão independente: pode publicar). **Não testada em execução** (sem Deno aqui): o primeiro resultado real vem da rodada do cron (21:30 UTC, dias úteis); conferir o `log` e a tabela de preços. O histórico de ações e fundos é preenchido aos poucos (B3: 3 meses por execução; CVM: 4) — a carteira do Geraldo (AMBEV desde janeiro) fecha em cerca de 4 rodadas. Publicar `wealth-billing` e `wealth-api` continua dependendo de OK e de credenciais.
+
+## Correção de layout (26/11/2026)
+Na tela Patrimônio publicada, os cartões "Investimentos" e "Gastos" ficavam espremidos em colunas estreitas: faltava a classe de grade `span-6` no CSS (só existiam 4, 5, 7, 8 e 12). Corrigido, e as legendas da rosca não quebram mais palavra nem número. Conferido em 1280 e 390 px (cartões com 538 px e 342 px). Versão dos arquivos `v4b`.
