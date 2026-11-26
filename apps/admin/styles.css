@@ -1024,6 +1024,43 @@ table.stack-m td, .lt-table td { overflow-wrap: anywhere; }
   table.stack-m td:empty { display: none; }
 }
 
+/* ---------- Pacote 2a (correções): alvos de toque, anel do título do modal, valor no cartão ---------- */
+.modal h2:focus, .modal h2:focus-visible, .modal:focus-visible { outline: none; box-shadow: none; }
+table.stack-m td.num { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  table.stack-m td.num { padding: 0 2px; flex-wrap: wrap; justify-content: flex-end; white-space: normal; }
+  table.stack-m td.num::before { margin-right: auto; }
+  table.stack-m td.num > * { min-width: 0; overflow-wrap: anywhere; }
+}
+@media (max-width: 768px) {
+  .sidenav-mark { width: 44px; height: 44px; }
+  .input, select.input, select { min-height: 44px; }
+  textarea.input { min-height: 88px; }
+  details > summary { display: list-item; min-height: 44px; box-sizing: border-box; padding-block: 12px; }
+  .chart-table summary { padding-inline: 2px; }
+  /* chave: o campo nativo (invisível) cobre a linha inteira, que tem ao menos 44 px */
+  .switch-row { min-height: 44px; align-items: center; }
+  .switch-row input { pointer-events: auto; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+  /* caixa de marcar nativa: área de 44 px; o quadradinho visível continua de 22 px */
+  input[type='checkbox']:not(.switch-row > input) { -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 44px; height: 44px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; vertical-align: middle; }
+  input[type='checkbox']:not(.switch-row > input)::before { content: ''; position: absolute; inset: 11px; border: 2px solid var(--line-strong); border-radius: 6px; background: var(--card); }
+  input[type='checkbox']:not(.switch-row > input):checked::before { background: var(--rosa); border-color: var(--rosa); }
+  input[type='checkbox']:not(.switch-row > input):checked::after { content: ''; position: absolute; left: 17px; top: 13px; width: 6px; height: 12px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  input[type='checkbox']:not(.switch-row > input):disabled { opacity: 0.6; cursor: default; }
+  input[type='checkbox']:not(.switch-row > input):focus-visible { box-shadow: none; outline: 2px solid var(--rosa); outline-offset: -2px; border-radius: 8px; }
+  /* calendário: peça com 44 px de altura (e de largura onde cabe) */
+  .cal-day { padding: 4px; }
+  .cal-chip { min-height: 44px; min-width: 44px; box-sizing: border-box; padding-top: 14px; padding-bottom: 14px; }
+}
+/* calendário em telas estreitas: sete colunas de 44 px não cabem; vira agenda (só os dias com peças) */
+@media (max-width: 600px) {
+  .cal-head { display: none; }
+  .cal-grid { display: flex; flex-direction: column; }
+  .cal-day { min-height: 0; border-right: 0; }
+  .cal-day:not(:has(.cal-chip)) { display: none; }
+  .cal-chip { width: 100%; font-size: 12px; }
+}
+
 /* ---------- Pacote 2b: telas mais carregadas (Início, A receber, Clientes, Produtos, Preços, Resultado, Mensageria, E-mails) ---------- */
 .kpi4-c { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .today .queue-row { grid-template-columns: 14px minmax(0, 1fr) auto; }

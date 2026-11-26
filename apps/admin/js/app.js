@@ -433,6 +433,7 @@
     if (expired === true) saveReturn(); else clearReturn();
     setDrawer(false, false);
     window.BO.closeModal();
+    stopTabObserver();
     gsReset();
     await sb.auth.signOut();
     me = null;
@@ -641,9 +642,10 @@
         (inv || []).slice(0, 3).map((i) => ({ h: 'faturas/all', t: `${i.number} · ${i.customer_name}`, k: 'Fatura', q: String(i.number || ''), v: 'faturas' })),
         leads.slice(0, 3).map((l) => ({ h: `funil/${enc(l.id)}`, t: l.name, k: 'Lead' })),
         (con || []).slice(0, 3).map((c) => ({ h: 'contatos', t: c.name || c.email, k: 'Contato', q: String(c.email || c.name || ''), v: 'contatos' })));
-      gl.innerHTML = items.length
+      const partial = [cusAll, inv, con, leadsAll].some((x) => x === null) ? '<div class="small muted gs-msg gs-partial">Algumas fontes não responderam.</div>' : '';
+      gl.innerHTML = (items.length
         ? items.map((x) => `<a href="#/${esc(x.h)}"${x.q ? ` data-gq="${esc(x.q)}" data-gv="${esc(x.v)}"` : ''}><b>${esc(x.t)}</b><span class="small muted">${esc(x.k)}</span></a>`).join('')
-        : `<div class="small muted gs-msg">Nada encontrado para “${esc(v)}”.</div>`;
+        : `<div class="small muted gs-msg">Nada encontrado para “${esc(v)}”.</div>`) + partial;
       gl.hidden = false;
     }
     gq.oninput = () => {
@@ -670,6 +672,12 @@
   const NEW_ITEMS = [['faturas', 'Fatura', 'approver'], ['pagar', 'Conta a pagar', 'approver'], ['funil', 'Lead', 'analyst'], ['tarefas', 'Tarefa', 'analyst'],
     ['contatos', 'Contato', 'approver'], ['campanhas', 'Campanha', 'approver'], ['calendario', 'Peça de conteúdo', 'analyst']];
   const RANK = { analyst: 1, approver: 2, admin: 3 };
+
+  let tabObs = null, tabRaf = 0;
+  function stopTabObserver() {
+    if (tabObs) { tabObs.disconnect(); tabObs = null; }
+    if (tabRaf) { cancelAnimationFrame(tabRaf); tabRaf = 0; }
+  }
 
   function startShell() {
     window.BO.me = me;
@@ -752,8 +760,9 @@
     bindShellGlobals();
     // abas: papéis, setas, esmaecido e aba ativa visível também quando a própria tela redesenha a barra
     const viewEl = document.getElementById('view');
-    let tabRaf = 0;
-    new MutationObserver(() => { if (tabRaf) return; tabRaf = requestAnimationFrame(() => { tabRaf = 0; window.BO.ui.tabsReady(viewEl); }); }).observe(viewEl, { childList: true, subtree: true });
+    stopTabObserver(); // B-3: um observador por login (o do login anterior sai)
+    tabObs = new MutationObserver(() => { if (tabRaf) return; tabRaf = requestAnimationFrame(() => { tabRaf = 0; window.BO.ui.tabsReady(viewEl); }); });
+    tabObs.observe(viewEl, { childList: true, subtree: true });
     const home = me.partner ? '#/assinar' : '#/painel';
     // Voltou depois de a sessão cair: abre a tela em que estava (representante de parceiro: só Operações)
     let back = takeReturn();
@@ -840,6 +849,10 @@
     }
     const fn = me.partner ? window.BO.views.assinar : window.BO.views[view];
     el.innerHTML = '<div class="spinner" aria-label="Carregando"></div>';
+    // B-4: modal aberto por esta rota com endereço profundo (#/funil/l1): o core liga ao primeiro modal que abrir sem ação da pessoa
+    window.BO._routeModal = null;
+    window.BO._routeOpen = rest.length >= 1 && rest[rest.length - 1] !== 'new'
+      ? { hash: location.hash, base: '#/' + [view, ...rest.slice(0, -1)].join('/'), n: window.BO._inputCount(), t: Date.now() } : null;
     try {
       await fn(el, params, me);
       if (mine !== navSeq) return;

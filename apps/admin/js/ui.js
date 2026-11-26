@@ -303,12 +303,31 @@
       }
       tabFade(list);
     });
+    restoreTabFocus();
+  }
+  /* M-1: ativar uma aba pelo teclado (Enter/Espaço) redesenha a barra; o foco volta à aba ativa nova da mesma barra */
+  let tabKey = null;
+  function restoreTabFocus() {
+    if (!tabKey) return;
+    if (Date.now() - tabKey.t > 4000) { tabKey = null; return; }
+    const a = document.activeElement;
+    if (a && a !== document.body && a.isConnected) { if (a.closest && a.closest('[role=tablist]')) tabKey = null; return; }
+    const list = document.querySelectorAll(TAB_SEL)[tabKey.i];
+    const sel = list && list.querySelector('[role=tab][aria-selected=true]');
+    if (!sel) return;
+    tabKey = null;
+    sel.focus({ preventScroll: true });
+    sel.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   document.addEventListener('keydown', (e) => {
     const t = e.target && e.target.closest ? e.target.closest('[role=tab]') : null;
     if (!t) return;
     const list = t.closest('[role=tablist]');
     if (!list) return;
+    if ((e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') && !e.repeat) {
+      const i = [...document.querySelectorAll(TAB_SEL)].indexOf(list);
+      if (i >= 0) tabKey = { i, t: Date.now() };
+    }
     if ((e.key === ' ' || e.key === 'Spacebar') && t.tagName === 'A') { e.preventDefault(); t.click(); return; }
     const k = e.key;
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(k)) return;

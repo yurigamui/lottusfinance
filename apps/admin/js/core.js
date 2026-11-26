@@ -184,6 +184,9 @@
   /* Modal: folha inferior no celular, centrado no desktop; foco preso, Esc fecha, foco volta a quem abriu */
   let modalOpener = null;
   let modalOnClose = null;
+  // conta ações da pessoa (toque, clique, tecla): um modal aberto sem ação nova depois da rota veio do endereço (B-4)
+  let inputCount = 0;
+  ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => document.addEventListener(ev, () => { inputCount++; }, true));
   let modalUid = 0;
   const visible = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
   const modalFocusables = (m) => [...m.querySelectorAll('a[href], button, input:not([type=hidden]), select, textarea, summary, [tabindex]')]
@@ -226,6 +229,12 @@
     document.documentElement.classList.remove('modal-open');
     const op = modalOpener, cb = modalOnClose;
     modalOpener = null; modalOnClose = null;
+    // B-4: modal aberto por endereço profundo (#/funil/l1): ao fechar, o endereço volta para a lista (F5 não reabre)
+    const rm = window.BO && window.BO._routeModal;
+    if (rm) {
+      window.BO._routeModal = null;
+      if (had && location.hash === rm.hash) history.replaceState(null, '', rm.base);
+    }
     if (had && op && op !== document.body && op.isConnected && typeof op.focus === 'function') op.focus({ preventScroll: true });
     if (had && cb) cb();
   }
@@ -238,7 +247,12 @@
       // um modal no lugar de outro: o foco volta ao elemento que abriu o primeiro
       const cb = modalOnClose; modalOnClose = null; root.innerHTML = '';
       if (cb) cb();
-    } else modalOpener = document.activeElement;
+    } else {
+      modalOpener = document.activeElement;
+      const ro = window.BO._routeOpen;
+      window.BO._routeOpen = null;
+      window.BO._routeModal = ro && ro.n === inputCount && location.hash === ro.hash && Date.now() - ro.t < 8000 ? ro : null;
+    }
     modalOnClose = onClose || null;
     const uid = ++modalUid;
     root.innerHTML = `
@@ -351,7 +365,7 @@
   window.BO = {
     sb, rpc, safeUrl, message, esc, brl, pct, date, dateTime, ago, cnpj, cpf, yearsSince, tag, check,
     TZ, isoOf, today, monthStart, addDays, addMonths, parseMoney,
-    DOC_KIND, ACCESS, ROLE, LEVEL, REVENUE, toast, modal, closeModal, confirmAction, run,
+    DOC_KIND, ACCESS, ROLE, LEVEL, REVENUE, toast, modal, closeModal, _inputCount: () => inputCount, confirmAction, run,
     signedUrl, openFile, isImage, copy,
   };
 })();
