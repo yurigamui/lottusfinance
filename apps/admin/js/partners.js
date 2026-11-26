@@ -49,12 +49,12 @@
         const r = readiness(f);
         return `<a class="card fund-card" href="#/parceiros/${esc(f.id)}">
           <div class="fund-top"><div class="fund-mark">${esc((f.trade_name || f.legal_name || '?').trim()[0].toUpperCase())}</div>
-            <div class="grow"><b>${esc(f.trade_name || f.legal_name)}</b><div class="small muted">${esc(KIND[f.kind] || f.kind)} · ${esc(cnpj(f.cnpj))}</div></div>
+            <div class="grow" title="${esc(f.trade_name || f.legal_name)}"><b>${esc(f.trade_name || f.legal_name)}</b><div class="small muted">${esc(KIND[f.kind] || f.kind)} · ${esc(cnpj(f.cnpj))}</div></div>
             ${f.is_default ? '<span class="tag brand">Padrão</span>' : ''}</div>
           <div class="fund-stats">
-            <div><span>Em carteira</span><b>${brl(f.exposure.open_gross)}</b></div>
+            <div><span>Em carteira</span><b title="${esc(brl(f.exposure.open_gross))}">${brl(f.exposure.open_gross)}</b></div>
             <div><span>Custo</span><b>${f.funding_monthly_rate != null ? pct(f.funding_monthly_rate) + ' a.m.' : '—'}</b></div>
-            <div><span>Limite</span><b>${f.limit_total ? brl(f.limit_total) : 'Sem limite'}</b></div>
+            <div><span>Limite</span><b title="${f.limit_total ? esc(brl(f.limit_total)) : 'Sem limite'}">${f.limit_total ? brl(f.limit_total) : 'Sem limite'}</b></div>
           </div>
           <div class="fund-foot">${!f.active ? '<span class="tag">Inativo</span>'
             : r.ok ? '<span class="tag success">Pronto para operar</span>'

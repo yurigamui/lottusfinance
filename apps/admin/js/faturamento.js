@@ -85,7 +85,7 @@
         emptyText: status === 'overdue' && kind === 'all' && !dFrom && !dTo ? 'Nenhuma fatura em atraso. Tudo em dia.' : 'Nenhuma fatura aqui.',
         onRow: (i) => openInvoice(i),
         columns: [
-          { key: 'customer_name', label: 'Cliente', searchText: (i) => `${i.customer_name} ${i.customer_doc || ''}`, render: (i) => `<b>${esc(i.customer_name)}</b><div class="small muted">${esc(KIND[i.customer_kind] || '')}${i.customer_email ? ' · ' + esc(i.customer_email) : ' · sem e-mail'}</div>` },
+          { key: 'customer_name', label: 'Cliente', searchText: (i) => `${i.customer_name} ${i.customer_doc || ''} ${B.cnpj(i.customer_doc || '')} ${i.customer_email || ''}`, render: (i) => `<b>${esc(i.customer_name)}</b><div class="small muted">${esc(KIND[i.customer_kind] || '')}${i.customer_email ? ' · ' + esc(i.customer_email) : ' · sem e-mail'}</div>` },
           { key: 'number', label: 'Fatura', render: (i) => `${esc(i.number)}<div class="small muted">${esc(i.description)}</div>` },
           { key: 'due_date', label: 'Vencimento', searchText: () => '', render: (i) => `<span class="nowrap">${date(i.due_date)}</span><div>${phaseTag(i)}${i.days_overdue ? ` <span class="small muted">${i.days_overdue} d</span>` : ''}</div>` },
           { key: 'amount', label: 'Valor', num: true, searchText: () => '', render: (i) => `<b>${brl(i.amount)}</b>` },
@@ -124,7 +124,10 @@
       B.reload();
     };
     B.ui.onPage(el, { new: () => editInvoice(null), gen: generate, csv: exportCsv });
-    if (mayWrite && wantNew) { const pre = B._pendingInvoice; B._pendingInvoice = null; editInvoice(null, pre); }
+    // "Nova fatura" da ficha do cliente: ao salvar ou cancelar, volta à ficha (guardada em B._invReturn)
+    let ret = null;
+    if (mayWrite && wantNew) { const pre = B._pendingInvoice; B._pendingInvoice = null; ret = /^#\/clientes\/(funder|sign)\//.test(B._invReturn || '') ? B._invReturn : null; B._invReturn = null; editInvoice(null, pre); }
+    else B._invReturn = null;
 
     function payDialog(i) {
       const box = modal({ title: 'Registrar recebimento', subtitle: `${esc(i.customer_name)} · ${esc(i.number)} · ${brl(i.amount)}`,
@@ -174,7 +177,7 @@
           <div class="field"><label>Observações</label><textarea class="input" id="f-notes">${esc(v.notes || '')}</textarea></div>
           <div class="error-box" id="f-err" hidden></div></div>`,
         foot: '<button class="btn secondary" data-close>Cancelar</button><button class="btn" data-ok>Salvar</button>' });
-      box.querySelector('[data-close]').onclick = closeModal;
+      box.querySelector('[data-close]').onclick = () => { closeModal(); if (!i && ret) location.hash = ret; };
       box.querySelectorAll('input, textarea').forEach((x) => x.addEventListener('input', () => fieldError(x, '')));
       box.querySelector('[data-ok]').onclick = async (e) => {
         const g = (s) => box.querySelector(s).value;
@@ -183,7 +186,7 @@
         try {
           await run(e.target, () => rpc('bo_inv_save', { p: { id: i && i.id, customer_kind: v.customer_kind, funder_id: v.funder_id, sign_account_id: v.sign_account_id, customer_name: g('#f-name'), customer_doc: g('#f-doc'),
             customer_email: g('#f-mail'), description: g('#f-desc'), amount: B.parseMoney(g('#f-amt')), due_date: g('#f-due'), notes: g('#f-notes') } }), 'Fatura salva');
-          closeModal(); B.reload();
+          closeModal(); if (!i && ret) location.hash = ret; else B.reload();
         } catch { /* aviso já mostrado */ }
       };
     }

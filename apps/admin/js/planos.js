@@ -24,6 +24,14 @@
     if (n > max) { fieldError(inp, 'Valor alto demais. Confira os zeros.'); return undefined; }
     return n;
   }
+  /** Depois de salvar uma linha, a lista é refeita; volta à página em que a pessoa estava (a busca já é mantida) e devolve o foco ao botão. */
+  const pageOf = (box) => { const m = /Mostrando (\d+) a/.exec((box.querySelector('.lt-count') || {}).textContent || ''); return m ? Math.floor((Number(m[1]) - 1) / 25) : 0; };
+  function restorePage(box, n, focusSel) {
+    const c = document.querySelector('.content'), y = window.scrollY, t = c ? c.scrollTop : 0;
+    for (let i = 0; i < n; i++) { const nx = box.querySelector('[data-lt-next]'); if (!nx || nx.disabled) break; nx.click(); }
+    window.scrollTo(0, y); if (c) c.scrollTop = t;
+    const b = focusSel && box.querySelector(focusSel); if (b) b.focus({ preventScroll: true });
+  }
   const mi = (n) => (n >= 1e6 ? (n / 1e6).toString().replace('.', ',') + ' mi' : n >= 1e3 ? (n / 1e3).toString().replace('.', ',') + ' mil' : String(n));
   const monthLabel = (m) => { const d = new Date(String(m).slice(0, 10) + 'T12:00:00'); const t = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); return t.charAt(0).toUpperCase() + t.slice(1); };
   const shiftMonth = (m, n) => B.addMonths(m, n);
@@ -97,7 +105,7 @@
         text: on ? `<b>${esc(f.name || 'Este fundo')}</b> deixa de pagar a mensalidade enquanto estiver isento. Confirma?` : `<b>${esc(f.name || 'Este fundo')}</b> volta a pagar a mensalidade da faixa. Confirma?`,
         confirmLabel: on ? 'Isentar' : 'Passar a cobrar', danger: on });
       if (ok == null) return;
-      try { const r = await run(b, () => rpc('bo_billing_funder_set', { p_funder: b.dataset.ex, p: { exempt: on } }), on ? 'Fundo isento' : 'Cobrança retomada'); rows = r.rows; paint(); } catch (x) { /* já avisado */ }
+      try { const r = await run(b, () => rpc('bo_billing_funder_set', { p_funder: b.dataset.ex, p: { exempt: on } }), on ? 'Fundo isento' : 'Cobrança retomada'); rows = r.rows; const pg = pageOf(plist); paint(); restorePage(plist, pg, `[data-ex="${b.dataset.ex}"]`); } catch (x) { /* já avisado */ }
     };
     host.querySelector('#ps').onchange = paint; paint();
   }
@@ -140,7 +148,7 @@
       });
       B.ui.onTable(slist);
     };
-    slist.onclick = (e) => { const b = e.target.closest('[data-ed]'); if (b && slist.contains(b)) editAccount(rows.find((r) => r.id === b.dataset.ed), plans, (nr) => { rows = nr.rows; paint(); }); };
+    slist.onclick = (e) => { const b = e.target.closest('[data-ed]'); if (b && slist.contains(b)) editAccount(rows.find((r) => r.id === b.dataset.ed), plans, (nr) => { rows = nr.rows; const pg = pageOf(slist), id = b.dataset.ed; paint(); restorePage(slist, pg, `[data-ed="${id}"]`); }); };
     paint();
   }
 

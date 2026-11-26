@@ -1137,3 +1137,56 @@ details.row-more > summary { font-weight: 700; }
 @media (max-width: 640px) {
   .lt-table tr { padding: 10px 14px; gap: 2px 12px; }
 }
+
+/* ---------- Pacote 2b (correções ciclo 1) ---------- */
+/* A1: nome longo, HTML e valor grande nunca alargam a tela nem cortam texto */
+.content { min-width: 0; }
+.list-row > * { min-width: 0; }
+.list-row .grow, .list-row .grow b, .list-row .grow .small { overflow-wrap: anywhere; min-width: 0; }
+.list-row .amt { flex: 0 1 auto; max-width: 100%; text-align: right; overflow-wrap: anywhere; }
+.row > .row, .row > div { min-width: 0; }
+.search { max-width: min(100%, calc(100vw - 48px)); }
+.fund-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.fund-card { min-width: 0; }
+.fund-top .grow, .fund-top .grow b { overflow-wrap: anywhere; min-width: 0; }
+.fund-stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr)); }
+.fund-stats b { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .dash-row .list-row { flex-wrap: wrap; }
+  .dash-row .list-row .grow { flex: 1 1 140px; }
+  .fund-stats b { font-size: 12.5px; }
+}
+table.stack-m td.st-actions { text-align: right; }
+/* A2: cartões de B.ui.table (Preços e planos e demais): linha pequena e valor quebram dentro do cartão */
+@media (max-width: 640px) {
+  .lt-table td.num { white-space: normal; flex-wrap: wrap; justify-content: flex-end; }
+  .lt-table td.num::before { margin-right: auto; }
+  .lt-table td.num > * { min-width: 0; overflow-wrap: anywhere; }
+  .lt-table td.num > .small { flex: 1 0 100%; text-align: right; }
+  .lt-table .small, .lt-table .tag { white-space: normal; max-width: 100%; }
+}
+/* M1: cartões compactos no celular (rótulo e valor na mesma linha quando cabe) */
+@media (max-width: 640px) {
+  .lt-table tbody { gap: 6px; }
+  .lt-table tr { padding: 8px 12px; gap: 2px 10px; border-radius: 14px; }
+  .lt-table td::before { display: inline; margin-right: 6px; }
+  .lt-table td.lt-title { line-height: 1.3; }
+  .lt-table .row-more { margin-top: 0; }
+  .lt-table .pbar { margin-top: 4px; }
+  .lt-table td[data-label="Ações"], .lt-table td[data-label="Abrir"] { gap: 6px; }
+}
+/* M3: valor de KPI/tile nunca quebra no meio dos algarismos; a fonte acompanha a largura do cartão */
+.kpi4 > .tile, .kpis > .kpi { container-type: inline-size; }
+.kpi4 > .tile .tile-value { font-size: clamp(13px, 9cqi, 24px); overflow-wrap: break-word; font-variant-numeric: tabular-nums; }
+.kpi4 > .tile.main .tile-value { font-size: clamp(13px, 9cqi, 30px); }
+.kpis > .kpi .kpi-value { font-size: clamp(13px, 9cqi, 28px); overflow-wrap: break-word; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .kpis > .kpi .kpi-value { overflow-wrap: break-word; } }
+/* B3: links soltos no texto com área de toque de 44 px no celular */
+@media (max-width: 768px) { .tap { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; } }
+/* B5: um anel de foco só (contorno) */
+.ph .btn:focus-visible, .ph-item:focus-visible, .lt .btn:focus-visible, .more > summary:focus-visible, .lt .input:focus-visible, .lt-link:focus-visible, .camp-open:focus-visible, .td-row:focus-visible, .td .btn:focus-visible { box-shadow: none; }
+/* gráfico (largura mínima de 260 px) em cartão estreito: o cartão cede o respiro lateral */
+@media (max-width: 340px) {
+  .card:has(> .chart-host) { padding-inline: 14px; }
+  .card > .chart-host { margin-inline: -14px; }
+}

@@ -72,7 +72,7 @@
         <div id="dp-rev" role="tabpanel"><div class="card-head"><h2>Evolução</h2>${tabs(METRICS.map(([k, l]) => [k, l]), metric).replace('class="tabs"', 'class="tabs" id="mt"')}</div><div id="ch"></div></div>
         <div id="dp-funnel" role="tabpanel" hidden><div class="card-head"><h2>Funil comercial</h2><a class="small" href="#/funil">abrir funil</a></div>
           <div class="conc">${STAGES.map(([k, l]) => { const s = (d.stages || {})[k] || {}; const v = Number(s.count || 0); return `<div class="conc-row"><span class="conc-name">${l}</span><span class="conc-val">${nf(v)}${Number(s.value) ? ` <span class="muted">· ${brl(s.value)}/mês</span>` : ''}</span><div class="meter"><span style="width:${Math.max(v ? 3 : 0, (v / stagesMax) * 100).toFixed(1)}%"></span></div></div>`; }).join('')}</div></div>
-        <div id="dp-mkt" role="tabpanel" hidden><div class="card-head"><h2>Campanhas com mais alcance</h2><a class="small" href="#/resultados">ver resultados</a></div>
+        <div id="dp-mkt" role="tabpanel" hidden><div class="card-head"><h2>Campanhas com mais alcance</h2><a class="small tap" href="#/resultados">ver resultados</a></div>
           ${(d.top_campaigns || []).length ? `<div class="conc">${d.top_campaigns.map((c) => `<div class="conc-row"><span class="conc-name" title="${esc(c.name)}">${esc(c.name)} <span class="small muted">${esc(CHANNEL[c.channel] || '')}</span></span><span class="conc-val">${nf(c.reach)} <span class="muted">· ${nf(c.leads)} leads</span></span></div>`).join('')}</div>` : empty('Nenhuma campanha ainda.')}
           <p class="small muted u-m4t">Alcance nos últimos 30 dias: <b>${nf(w.reach_30d)}</b> · ${nf(w.contacts_active)} contatos ativos na base.</p></div>
       </div></div>`;

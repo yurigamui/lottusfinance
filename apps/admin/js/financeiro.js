@@ -36,12 +36,12 @@
     const paint = () => {
       const t = q.toLowerCase();
       const list = all.filter((x) => (f === 'all' || (f === 'open' ? x.status === 'open' : x.status === f)) && (!cat || x.category === cat) && (!t || `${x.supplier} ${x.description || ''}`.toLowerCase().includes(t)));
-      el.querySelector('#list').innerHTML = !list.length ? empty(f === 'open' ? 'Nenhuma conta em aberto. Cadastre as despesas da Lottus para enxergar o caixa.' : 'Nada aqui.') : `<table>
+      el.querySelector('#list').innerHTML = !list.length ? empty(f === 'open' ? 'Nenhuma conta em aberto. Cadastre as despesas da Lottus para enxergar o caixa.' : 'Nada aqui.') : `<table class="stack-m">
         <thead><tr><th>Fornecedor</th><th>Categoria</th><th>Vencimento</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead>
-        <tbody>${list.map((x) => `<tr class="link" data-id="${esc(x.id)}"><td><b>${esc(x.supplier)}</b><div class="small muted">${esc(x.description || '')}${x.recurring !== 'none' ? ' · ' + esc(REC[x.recurring]) : ''}</div></td>
-          <td>${esc(CAT[x.category] || x.category)}</td><td class="nowrap">${date(x.due_date)}</td><td class="num"><b>${brl(x.amount)}</b></td>
-          <td>${phase(x.phase)}${x.paid_at ? ` <span class="small muted">${date(x.paid_at)}${x.account ? ' · ' + esc(x.account) : ''}</span>` : ''}</td>
-          <td class="num">${mayWrite && x.status === 'open' ? `<button class="btn secondary sm" data-pay="${esc(x.id)}">Pagar</button>` : ''}</td></tr>`).join('')}</tbody></table>`;
+        <tbody>${list.map((x) => `<tr class="link" data-id="${esc(x.id)}"><td class="st-title"><b>${esc(x.supplier)}</b><div class="small muted">${esc(x.description || '')}${x.recurring !== 'none' ? ' · ' + esc(REC[x.recurring]) : ''}</div></td>
+          <td data-label="Categoria">${esc(CAT[x.category] || x.category)}</td><td class="nowrap" data-label="Vencimento">${date(x.due_date)}</td><td class="num" data-label="Valor"><b>${brl(x.amount)}</b></td>
+          <td data-label="Situação">${phase(x.phase)}${x.paid_at ? ` <span class="small muted">${date(x.paid_at)}${x.account ? ' · ' + esc(x.account) : ''}</span>` : ''}</td>
+          <td class="num st-actions">${mayWrite && x.status === 'open' ? `<button class="btn secondary sm" data-pay="${esc(x.id)}">Pagar</button>` : ''}</td></tr>`).join('')}</tbody></table>`;
       el.querySelectorAll('#list tr[data-id]').forEach((r) => (r.onclick = (e) => { if (!e.target.closest('button')) open(all.find((x) => x.id === r.dataset.id)); }));
       el.querySelectorAll('[data-pay]').forEach((b) => (b.onclick = () => pay(all.find((x) => x.id === b.dataset.pay))));
     };
@@ -126,11 +126,11 @@
       <div class="card dash-row"><h2>Saldo previsto por semana</h2><div id="ch"></div></div>
       <div class="grid-2 dash-row">
         <div class="card"><div class="card-head"><h2>Contas</h2></div>
-          ${acc.rows.length ? acc.rows.map((a) => `<div class="list-row"><div class="grow"><b>${esc(a.name)}</b> <span class="small muted">${esc(a.bank || (a.kind === 'trio' ? 'Trio' : ''))}</span><div>${status(a)}</div></div><b>${brl(a.balance)}</b>${admin ? `<button class="btn ghost sm" data-acc="${esc(a.id)}">Editar</button>` : ''}</div>`).join('')
+          ${acc.rows.length ? acc.rows.map((a) => `<div class="list-row"><div class="grow"><b>${esc(a.name)}</b> <span class="small muted">${esc(a.bank || (a.kind === 'trio' ? 'Trio' : ''))}</span><div>${status(a)}</div></div><b class="amt" title="${esc(brl(a.balance))}">${brl(a.balance)}</b>${admin ? `<button class="btn ghost sm" data-acc="${esc(a.id)}">Editar</button>` : ''}</div>`).join('')
             : empty('Cadastre a conta da Lottus na Trio para o saldo entrar sozinho, ou lance outra conta à mão.')}
           ${(acc.egress_ips || []).length ? `<p class="small muted" style="margin-top:10px">Na chave da Trio, libere os IPs: ${esc(acc.egress_ips.join(', '))}</p>` : ''}</div>
         <div class="card"><h2>Próximos 30 dias</h2>${cf.items.filter((x) => String(x.day) <= B.addDays(B.today(), 30)).slice(0, 14).map((x) =>
-          `<div class="list-row"><span class="small muted nowrap" style="width:64px">${date(x.day).slice(0, 5)}</span><span class="grow small">${esc(x.label)}${x.late ? ' <span class="tag danger">atrasada</span>' : ''}${x.ref === 'forecast' ? ' <span class="tag">previsão</span>' : ''}</span><b class="${x.kind === 'in' ? 'pos' : 'neg'}">${x.kind === 'in' ? '+' : '−'}${brl(x.amount)}</b></div>`).join('') || empty('Nada previsto.')}</div>
+          `<div class="list-row"><span class="small muted nowrap" style="width:64px">${date(x.day).slice(0, 5)}</span><span class="grow small">${esc(x.label)}${x.late ? ' <span class="tag danger">atrasada</span>' : ''}${x.ref === 'forecast' ? ' <span class="tag">previsão</span>' : ''}</span><b class="amt ${x.kind === 'in' ? 'pos' : 'neg'}">${x.kind === 'in' ? '+' : '−'}${brl(x.amount)}</b></div>`).join('') || empty('Nada previsto.')}</div>
       </div>`;
     B.columnChart(el.querySelector('#ch'), weeks, { name: 'Saldo previsto' });
     const sy = el.querySelector('#sync');

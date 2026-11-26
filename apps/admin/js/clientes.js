@@ -97,7 +97,7 @@
     let tab = 'resumo';
     const moreActs = mayWrite ? [{ id: 'note', label: 'Registrar nota' }, { id: 'task', label: 'Marcar tarefa' }, c.cancelled_at ? { id: 'react', label: 'Reativar cliente' } : { id: 'cancel', label: 'Marcar como cancelado', danger: true }] : [];
     el.innerHTML = `
-      <a class="small" href="#/clientes">‹ Clientes</a>
+      <a class="small tap" href="#/clientes">‹ Clientes</a>
       ${B.ui.pageHead({ title: c.name, sub: `${c.product} · ${c.plan} · cliente desde ${date(c.since)}`, primary: mayWrite ? { id: 'inv', label: 'Nova fatura' } : null, more: moreActs })}
       <div class="kpi4 kpi4-c">
         <div class="tile main"><span class="kpi-label">Mensal</span><span class="tile-value">${brl(c.mrr)}</span><span class="small muted">${statusTag(c.status)}</span></div>
@@ -120,7 +120,7 @@
           </dl>
           <div class="field" style="margin-top:12px"><label>Anotações fixas</label><textarea class="input" id="notes" rows="3" ${mayWrite ? '' : 'disabled'}>${esc(c.notes || '')}</textarea></div>
           ${mayWrite ? `<div class="row" style="gap:8px;margin-top:8px"><button class="btn secondary sm" id="savenotes">Salvar anotações</button></div>` : ''}
-          ${c.kind === 'funder' ? `<p class="small" style="margin-top:12px"><a href="#/parceiros/${esc(c.id)}">Abrir na gestão dos fundos ›</a></p>` : `<p class="small" style="margin-top:12px"><a href="#/planos/sign">Trocar plano ou isentar em Preços e planos ›</a></p>`}</div></div>`;
+          ${c.kind === 'funder' ? `<p class="small" style="margin-top:12px"><a class="tap" href="#/parceiros/${esc(c.id)}">Abrir na gestão dos fundos ›</a></p>` : `<p class="small" style="margin-top:12px"><a class="tap" href="#/planos/sign">Trocar plano ou isentar em Preços e planos ›</a></p>`}</div></div>`;
         B.columnChart(box.querySelector('#ch'), c.revenue.map((r) => { const [y, m] = r.month.split('-'); return { label: `${m}/${y.slice(2)}`, value: Number(r.paid), detail: `faturado ${brl(r.billed)}` }; }), { name: 'Recebido' });
         const o = box.querySelector('#owner');
         if (o) o.onchange = () => run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'owner', owner_id: o.value } }), 'Responsável salvo').catch(() => {});
@@ -173,13 +173,16 @@
       if (r) run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'note', text: r } }), 'Nota registrada').then(B.reload).catch(() => {});
       },
       task: () => B.openTask && B.openTask({ customer_kind: kind, customer_id: id, title: `Falar com ${c.name}` }),
-      inv: () => B.newInvoice && B.newInvoice({ customer_kind: kind, funder_id: kind === 'funder' ? id : null, sign_account_id: kind === 'sign' ? id : null, customer_name: c.legal_name || c.name, customer_doc: c.doc, customer_email: c.email }),
+      inv: () => { B._invReturn = `#/clientes/${kind}/${id}`; return B.newInvoice && B.newInvoice({ customer_kind: kind, funder_id: kind === 'funder' ? id : null, sign_account_id: kind === 'sign' ? id : null, customer_name: c.legal_name || c.name, customer_doc: c.doc, customer_email: c.email }); },
       cancel: async () => {
         const r = await confirmAction({ title: 'Marcar como cancelado', text: 'O cliente sai do MRR. Isso não apaga a conta nem bloqueia o acesso; para isso use a gestão do produto.', confirmLabel: 'Cancelar cliente', danger: true, note: true, noteLabel: 'Motivo' });
         if (r == null) return;
         run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'cancel', reason: r } }), 'Cliente cancelado').then(B.reload).catch(() => {});
       },
-      react: () => run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'reactivate' } }), 'Cliente reativado').then(B.reload).catch(() => {}),
+      react: async () => {
+        if ((await confirmAction({ title: 'Reativar cliente', text: `<b>${esc(c.name)}</b> volta a contar no MRR e sai da lista de cancelados. Confirma?`, confirmLabel: 'Reativar cliente' })) == null) return;
+        return run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'reactivate' } }), 'Cliente reativado').then(B.reload).catch(() => {});
+      },
     });
   }
 
