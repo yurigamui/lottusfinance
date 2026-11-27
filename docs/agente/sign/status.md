@@ -21,6 +21,7 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 | 1 Conta e identidade | 1.1 Entrar e criar conta | sim | sim | sim | **Aprovada com ressalvas** (24/11) | 1 |
 | 1 | 1.0 Shell e correções da 1.1 | sim | sim | sim | **Aprovada com ressalvas** (26/11; ciclo 2 pendente) | 1 |
 | 1 | 1.4 Perfil e conta (+ pacote 1.0-C2) | sim | sim | sim | **Aprovada com ressalvas** (26/11, ciclo 3; 2 reprovações antes: V-01 ícone quebrado, N-01 texto null) | 3 |
+| 1 | 1.5 Verificação de identidade | sim | sim | sim | **Aprovada com ressalvas** (27/11, ciclo 1; ciclo 2 pendente com a 1.3) | 1 |
 | 1 | 1.2 Recuperar senha | em curso | não | não | — | 0 |
 | 1 | 1.3 Onboarding | não | não | não | — | 0 |
 | 1 | 1.4 Perfil e conta | não | não | não | — | 0 |
@@ -31,8 +32,8 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 Autônomo: sem perguntas ao Yuri; produção só leitura; jurídico `[preencher]`. Em andamento: `ux-alinhamento.md` (designer) e Fichas das Partes 2 a 6 (idealizador).
 
 ## Próximo passo exato
-1. **1.5 Verificação de identidade** (migração do canal e-mail + correção de S-05: tentativa persistida; RN7, RN9, R2): micro-especificação (idealizador) → construir → verificar. Em seguida 1.3 Onboarding → 1.2 → 1.6.
-2. Lições da 1.4 aplicadas daqui em diante: testes de varredura de texto (`t-texto.cjs`) e helper `setKids` obrigatórios em toda tela nova; verificador inspeciona capturas.
+1. **1.3 Onboarding** (usa o formulário de perfil e o componente de verificação) + **pacote ciclo 2 da 1.5** (pendência C2-15) + sign_onboarding_done: micro-especificação (idealizador) → construir → verificar. Depois 1.2 Recuperar senha e 1.6 Segurança, e então a Parte 2.
+2. A Parte 1 só fecha (Fase 5) com 1.2 e 1.6.
 
 ## Bloqueios que dependem do Yuri
 Ver `pendencias.md` (J-01 a J-04, jurídico) e `docs/agente/depende-de-mim.md` (D-01 branch Supabase).

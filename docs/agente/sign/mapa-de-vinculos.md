@@ -15,3 +15,4 @@ Vínculos reais hoje (código lido, 24/11/2026). Preenchido por seção à medid
 | `#/conta/perfil` | abas Verificação e Segurança | `#/conta/verificacao`, `#/conta/seguranca` (hoje "Em construção") | Sim (menu, abas, Documentos) | 26/11 |
 | `#/conta/perfil` | "Verificar contato" | `#/conta/verificacao` | Sim | 26/11 |
 | shell | menu Documentos / Conta; avatar → Conta, Sair | `#/documentos`, `#/conta/perfil`, `#/entrar` | Sim | 26/11 |
+| `#/conta/verificacao` | Voltar ao perfil / Ir para meus documentos / Corrigir meu CPF | `#/conta/perfil`, `#/documentos`, `#/conta/perfil` | Sim | 27/11 |
