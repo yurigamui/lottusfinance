@@ -23,7 +23,7 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 | 1 | 1.4 Perfil e conta (+ pacote 1.0-C2) | sim | sim | sim | **Aprovada com ressalvas** (26/11, ciclo 3; 2 reprovações antes: V-01 ícone quebrado, N-01 texto null) | 3 |
 | 1 | 1.5 Verificação de identidade | sim | sim | sim | **Aprovada com ressalvas** (27/11, ciclo 1; ciclo 2 pendente com a 1.3) | 1 |
 | 1 | 1.3 Onboarding (+ ciclo 2 da 1.5) | sim | sim | sim | **Aprovada com ressalvas** (27/11, ciclo 1) | 1 |
-| 1 | 1.2 Recuperar senha | em curso | não | não | — | 0 |
+| 1 | 1.2 Recuperar senha (+ ciclo 2 da 1.3) | sim | sim | sim | **Aprovada com ressalvas** (27/11, ciclo 1; ciclo 2 pendente com a 1.6) | 1 | não | não | — | 0 |
 | 1 | 1.3 Onboarding | não | não | não | — | 0 |
 | 1 | 1.4 Perfil e conta | não | não | não | — | 0 |
 | 1 | 1.5 Verificação de identidade | não | não | não | — | 0 |
@@ -33,8 +33,8 @@ Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Se
 Autônomo: sem perguntas ao Yuri; produção só leitura; jurídico `[preencher]`. Em andamento: `ux-alinhamento.md` (designer) e Fichas das Partes 2 a 6 (idealizador).
 
 ## Próximo passo exato
-1. **1.2 Recuperar senha** (+ pacote C2-13 da 1.3): micro-especificação (idealizador) → construir → verificar. Depois **1.6 Segurança da conta**, e então a **Fase 5 (fechamento da Parte 1)**: jornada ponta a ponta, mapa de vínculos fechado, coerência entre seções, regressão geral.
-2. Em seguida a Parte 2 (Envio e acompanhamento), começando pela Ficha da Parte 2.
+1. **1.6 Segurança da conta** (troca de senha logada, MFA TOTP opcional, sair dos outros aparelhos) + **pacote C2-12** da 1.2: micro-especificação (idealizador) → construir → verificar.
+2. **Fase 5 (fechamento da Parte 1)**: jornada ponta a ponta com cada papel, Mapa de Vínculos fechado, coerência entre seções, volume realista, regressão geral, consolidação das pendências. Depois a **Ficha da Parte 2** (Envio e acompanhamento).
 
 ## Bloqueios que dependem do Yuri
 Ver `pendencias.md` (J-01 a J-04, jurídico) e `docs/agente/depende-de-mim.md` (D-01 branch Supabase).

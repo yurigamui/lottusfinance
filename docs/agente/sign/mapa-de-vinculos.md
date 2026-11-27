@@ -20,3 +20,5 @@ Vínculos reais hoje (código lido, 24/11/2026). Preenchido por seção à medid
 | shell | menu Documentos / Conta; avatar → Conta, Sair | `#/documentos`, `#/conta/perfil`, `#/entrar` | Sim | 26/11 |
 | `#/conta/verificacao` | Voltar ao perfil / Ir para meus documentos / Corrigir meu CPF | `#/conta/perfil`, `#/documentos`, `#/conta/perfil` | Sim | 27/11 |
 | `#/onboarding/1..3` | Salvar e continuar / Continuar / Concluir / Pular certificado / Voltar / Sair | passo seguinte, `#/documentos`, passo anterior, `#/entrar` | Sim | 27/11 |
+| `#/entrar` | Esqueci a senha | `#/recuperar` → e-mail → link → `#/nova-senha` → destino | Sim (Voltar ao Entrar) | 27/11 |
+| `#/nova-senha` | link vencido / Pedir novo link | `#/recuperar` | Sim | 27/11 |
