@@ -10,6 +10,8 @@ const os = require('os');
 const path = require('path');
 const EVID = process.env.EVID || path.join(ROOT, 'docs/agente/sign/evidencias-1-4');
 const sec = (n) => res.lines.push('# ' + n);
+// 1.5: os erros de CPF de sign_profile_save/sign_account_save voltam como {ok:false, error} (200) para a tentativa ser gravada; as demais continuam exceção (400)
+const E = (r) => (r.status === 400 ? r.msg : r.body && r.body.ok === false ? String(r.body.error) : '');
 const fim = (tmp) => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* sem limpeza */ } };
 const hasSeq = (plan, tabela) => new RegExp('Seq Scan on ' + tabela + '\\b').test(plan);
 const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.ceil(0.95 * s.length) - 1)]; };
@@ -34,7 +36,7 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     const me1 = JSON.stringify(r.body);
     check('AC-B1 sign_me de U1 não contém dado de U2 (nome, e-mail, CPF)', !me1.includes(U.U2.name) && !me1.includes(U.U2.email) && !me1.includes(U.U2.cpf));
     const r2 = await rpc('sign_profile_save', { p: { id: U.U2.id, name: 'Outro Nome Teste', cpf: U.U2.cpf } }, U.U1.email);
-    check('AC-B1 U1 tentando gravar o CPF de U2: cpf_locked (CPF de U1 já preenchido)', r2.status === 400 && /cpf_locked/.test(r2.msg), r2);
+    check('AC-B1 U1 tentando gravar o CPF de U2: cpf_locked (CPF de U1 já preenchido)', /cpf_locked/.test(E(r2)), r2);
     check('AC-B1 U2 intacto de novo', JSON.stringify(await snap(U.U2.id)) === JSON.stringify(u2));
     const fn = (await q(`select pronargs, proargnames from pg_proc where pronamespace = 'public'::regnamespace and proname = 'sign_profile_save'`))[0];
     check('AC-B1 sign_profile_save tem um único parâmetro (p jsonb): uid não é parâmetro', fn.pronargs === 1 && fn.proargnames[0] === 'p', fn);
@@ -69,7 +71,7 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
   {
     await restaurar(q);
     const r = await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: U.U2.cpf } }, U.U3.email);
-    check('AC-B3 U3 tenta o CPF de U2: cpf_in_use (400)', r.status === 400 && /cpf_in_use/.test(r.msg), r);
+    check('AC-B3 U3 tenta o CPF de U2: cpf_in_use (400)', /cpf_in_use/.test(E(r)), r);
     check('AC-B3 a mensagem não traz o nome nem o e-mail de U2', !/Bruno|Outro|teste\.example/i.test(JSON.stringify(r.body)), r.body);
     const p3 = await snap(U.U3.id);
     check('AC-B3 profiles de U3 intacto (nome e CPF nulos)', p3.full_name === null && p3.cpf === null, p3);
@@ -80,7 +82,7 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     await restaurar(q);
     for (const cpf of ['11111111111', '123', 'abc', '', '12345678900']) {
       const r = await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf } }, U.U3.email);
-      check(`AC-B4 CPF ${JSON.stringify(cpf)}: invalid_cpf`, r.status === 400 && /invalid_cpf/.test(r.msg), r);
+      check(`AC-B4 CPF ${JSON.stringify(cpf)}: invalid_cpf`, /invalid_cpf/.test(E(r)), r);
     }
     const r = await rpc('sign_profile_save', { p: { name: 'X', cpf: '123' } }, U.U3.email);
     check('AC-B4 nome inválido vem antes do CPF inválido: invalid_name', r.status === 400 && /invalid_name/.test(r.msg), r);
@@ -91,7 +93,7 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     const ok = await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: mask } }, U.U3.email);
     check(`AC-B4 CPF com máscara ${mask} grava só dígitos`, ok.status === 200 && ok.body.cpf === U.U3.cpfLivre && (await snap(U.U3.id)).cpf === U.U3.cpfLivre, ok);
     const dup = await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: '529.982.247-25' } }, U.U3.email);
-    check('AC-B4 o CPF do exemplo da especificação (de outra conta do seed) com U3 já preenchido: cpf_locked', dup.status === 400 && /cpf_locked/.test(dup.msg), dup);
+    check('AC-B4 o CPF do exemplo da especificação (de outra conta do seed) com U3 já preenchido: cpf_locked', /cpf_locked/.test(E(dup)), dup);
   }
 
   sec('AC-B5 nome');
@@ -128,7 +130,7 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     await restaurar(q);
     const a = await snap(U.U4.id);
     const r = await rpc('sign_profile_save', { p: { name: 'Dora Trocada Nome', cpf: U.U1.cpf, phone: '5500000000000', email: 'hack@teste.example' } }, U.U4.email);
-    check('AC-B7 U4 com CPF diferente: cpf_locked', r.status === 400 && /cpf_locked/.test(r.msg), r);
+    check('AC-B7 U4 com CPF diferente: cpf_locked', /cpf_locked/.test(E(r)), r);
     const b = await snap(U.U4.id);
     check('AC-B7 CPF, nome, e-mail e celular de U4 intactos (updated_at também)', JSON.stringify(a) === JSON.stringify(b), [a, b]);
     const ok = await rpc('sign_profile_save', { p: { name: 'Dora Nova Exemplo', cpf: U.U4.cpf, phone: '5500000000000', email: 'hack@teste.example' } }, U.U4.email);
@@ -153,9 +155,9 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     const env = (await q(`select count(*)::int n from public.sign_envelopes where owner = $1`, [U.U5.id]))[0].n;
     check('AC-B8 U5 de fato tem 1 envelope', env === 1, env);
     const r5 = await rpc('sign_profile_save', { p: { name: 'Edu Mudou Exemplo', cpf: U.U1.cpf } }, U.U5.email);
-    check('AC-B8 U5 salva com CPF diferente: cpf_locked', r5.status === 400 && /cpf_locked/.test(r5.msg), r5);
+    check('AC-B8 U5 salva com CPF diferente: cpf_locked', /cpf_locked/.test(E(r5)), r5);
     const r6 = await rpc('sign_profile_save', { p: { name: 'Fabi Mudou Exemplo', cpf: U.U1.cpf } }, U.U6.email);
-    check('AC-B8 U6 salva com CPF diferente: cpf_locked', r6.status === 400 && /cpf_locked/.test(r6.msg), r6);
+    check('AC-B8 U6 salva com CPF diferente: cpf_locked', /cpf_locked/.test(E(r6)), r6);
     await q(`update public.profiles set cpf = null where id = $1`, [U.U6.id]);
     const r6b = await rpc('sign_profile_save', { p: { name: 'Fabi Mudou Exemplo', cpf: U.U6.cpf } }, U.U6.email);
     check('AC-B8 U6 com CPF vazio no perfil: só aceita o CPF do próprio certificado', r6b.status === 200 && r6b.body.cpf === U.U6.cpf, r6b);
@@ -229,7 +231,7 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     const cnpj = await rpc('sign_account_save', { p: { name: 'Ana Outra Silva', doc: '11222333000181' } }, U.U1.email);
     check('AC-B11 doc com 14 dígitos (CNPJ) é ignorado, sem erro; o nome vale', cnpj.status === 200 && cnpj.body.account.doc === U.U1.cpf && (await snap(U.U1.id)).full_name === 'Ana Outra Silva', cnpj);
     const cl = await rpc('sign_account_save', { p: { name: 'Ana Outra Silva', doc: U.U2.cpf } }, U.U1.email);
-    check('AC-B11 doc com CPF diferente: cpf_locked (mesma regra R5)', cl.status === 400 && /cpf_locked/.test(cl.msg), cl);
+    check('AC-B11 doc com CPF diferente: cpf_locked (mesma regra R5)', /cpf_locked/.test(E(cl)), cl);
     const bad = await rpc('sign_account_save', { p: { name: 'Ana Outra Silva', doc: '123' } }, U.U1.email);
     check('AC-B11 doc inválido: doc_invalid', bad.status === 400 && /doc_invalid/.test(bad.msg), bad);
     const nome = await rpc('sign_account_save', { p: { name: 'Um' } }, U.U1.email);
@@ -246,10 +248,10 @@ const p95 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s
     await restaurar(q);
     await q(`update public.profiles set cpf = $2 where id = $1`, [U.U2.id, '982.636.303-04']); // Partners/Wealth gravando com máscara
     const r = await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: U.U2.cpf } }, U.U3.email);
-    check('A14-M1 CPF de outro perfil gravado COM máscara: cpf_in_use (comparação por dígitos)', r.status === 400 && /cpf_in_use/.test(r.msg), r);
+    check('A14-M1 CPF de outro perfil gravado COM máscara: cpf_in_use (comparação por dígitos)', /cpf_in_use/.test(E(r)), r);
     check('A14-M1 profiles de U3 intacto', (await snap(U.U3.id)).cpf === null);
     const r2 = await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: '982.636.303-04' } }, U.U3.email);
-    check('A14-M1 também com máscara no envio: cpf_in_use', r2.status === 400 && /cpf_in_use/.test(r2.msg), r2);
+    check('A14-M1 também com máscara no envio: cpf_in_use', /cpf_in_use/.test(E(r2)), r2);
     check('A14-M1 CPF livre continua gravando', (await rpc('sign_profile_save', { p: { name: 'Carla Teste Nome', cpf: U.U3.cpfLivre } }, U.U3.email)).status === 200);
     check('A14-M1 a consulta de Verificação 0 (cpf ~ \'\\D\') acha o perfil com máscara', (await q(`select count(*)::int n from public.profiles where cpf ~ '\\D'`))[0].n === 1);
     await restaurar(q);

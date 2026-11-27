@@ -1,6 +1,6 @@
 /* Lottus Sign: roteador por hash. Guarda de rota, retorno à origem (lista branca) e foco/título a cada rota. */
-import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261126c';
-import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261126c';
+import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261127a';
+import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261127a';
 
 export const WHITELIST = ['#/documentos', '#/envio/novo', '#/plano', '#/conta/perfil', '#/conta/verificacao', '#/conta/seguranca'];
 export const DE_KEY = 'lottus.sign.de';
@@ -18,7 +18,7 @@ const ROUTES = {
   '#/envio/novo': { view: 'envio' },
   '#/plano': { view: 'plano' },
   '#/conta/perfil': { view: 'perfil', gate: false },
-  '#/conta/verificacao': { view: 'conta', gate: false },
+  '#/conta/verificacao': { view: 'verificacao', gate: false },
   '#/conta/seguranca': { view: 'conta', gate: false },
 };
 

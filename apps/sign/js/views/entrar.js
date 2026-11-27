@@ -1,7 +1,7 @@
 /* Seção 1.1: Entrar e criar conta (e-mail e senha), confirmação de e-mail e reenvio. */
-import { h, mount, setKids, setTitle, focusEl, safeUrl, brandLogo, safeStore } from '../lib/ui.js?v=20261126c';
-import { normEmail, isEmail, normName, nameOk, passwordMissing, LIMITS } from '../lib/fmt.js?v=20261126c';
-import { classify } from '../lib/api.js?v=20261126c';
+import { h, mount, setKids, setTitle, focusEl, safeUrl, brandLogo, safeStore } from '../lib/ui.js?v=20261127a';
+import { normEmail, isEmail, normName, nameOk, passwordMissing, LIMITS } from '../lib/fmt.js?v=20261127a';
+import { classify } from '../lib/api.js?v=20261127a';
 
 const T = {
   login: 'E-mail ou senha incorretos.',

@@ -1,0 +1,9 @@
+Medido por t-verif-db.cjs em 2026-11-26 (Postgres 16 local, 10008 perfis, 30000 otps):
+sign_me, 100 sequenciais, ponta a ponta (HTTP + banco): p95 3.1 ms, mediana 2.3 ms
+sign_me, 100 sequenciais, só a transação no banco: p95 2.1 ms, mediana 1.3 ms
+sign_me, 10 rodadas x 10 paralelas, ponta a ponta: p95 29.0 ms, mediana 7.9 ms
+sign_phone_verify (código errado, grava tentativa), 100 usuários, ponta a ponta: p95 4.8 ms, mediana 2.5 ms
+sign_phone_verify (código errado), só o banco: p95 3.1 ms, mediana 1.5 ms
+sign_phone_verify (código certo, sucesso com sign_me), 100 usuários, ponta a ponta: p95 4.5 ms, mediana 3.2 ms
+sign_phone_verify (código certo), só o banco: p95 3.3 ms, mediana 2.2 ms
+sign_phone_send (e-mail), 50 usuários, ponta a ponta: p95 5.1 ms, mediana 2.6 ms

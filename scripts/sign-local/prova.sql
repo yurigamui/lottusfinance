@@ -115,16 +115,16 @@ select count(*) filter (where prev_hash is distinct from lag_hash) as elos_quebr
 \echo '== (f) telefone (OTP), contatos, plano'
 select set_config('request.jwt.claims', json_build_object('sub', 'd1000000-0000-4000-8000-000000000004', 'role', 'authenticated')::text, false) \g /dev/null
 set role authenticated;
-\echo '-- Davi: telefone invalido, depois valido (sign_phone_send)'
+\echo '-- Davi (1.5): canal sms nao existe mais; whatsapp desligado; e-mail envia o codigo para o e-mail da conta'
 select public.sign_phone_send('123', 'sms');
-select public.sign_phone_send('(11) 98888-7777', 'sms');
-select public.sign_phone_send('(11) 98888-7777', 'sms');
 select public.sign_phone_send('(11) 98888-7777', 'whatsapp');
+select public.sign_phone_send('', 'email');
+select public.sign_phone_send('', 'email');
 reset role;
 select (params ->> 'code') as otp from public.sign_outbox where user_id = 'd1000000-0000-4000-8000-000000000004' order by id desc limit 1 \gset
 set role authenticated;
 \echo '-- codigo errado, depois o certo (sign_phone_verify)'
-select public.sign_phone_verify('000000');
+select public.sign_phone_verify('000000');  -- 1.5: devolve {ok:false, error:otp_invalid, remaining:4}, sem excecao
 select (public.sign_phone_verify(:'otp') ->> 'phone_verified') as telefone_verificado;
 \echo '-- contatos'
 select public.sign_contact_save('{"name":"Contato Exemplo","email":"contato@exemplo.com.br","cpf":"390.533.447-05"}'::jsonb);

@@ -11,4 +11,7 @@ window.LOTTUS_CONFIG = {
   privacyVersion: '[preencher]',
   /* Suporte (seção 1.4, pendência E-01): e-mail a definir pelo Yuri. Vazio = o link "fale com o suporte" abre o e-mail sem destinatário. */
   supportEmail: '',
+  /* Seção 1.5: endereço da função de borda que valida o certificado digital (T-07; NÃO está no repositório). Vazio = desligado: a tela mostra
+     "Validação de certificado indisponível neste ambiente." e o envio do arquivo fica desligado. Precisa estar em um host liberado no connect-src do _headers. */
+  certEndpoint: '',
 };

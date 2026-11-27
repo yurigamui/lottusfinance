@@ -50,6 +50,7 @@ export function focusH1(root) { focusEl((root || document).querySelector('h1'));
 
 /* Link externo: só http(s). Qualquer outra coisa (javascript:, data:) vira ''. */
 export function safeUrl(u) {
+  if (u == null || String(u).trim() === '') return ''; /* P-01: vazio não vira a URL da própria página */
   try {
     const x = new URL(String(u || ''), location.href);
     return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : '';

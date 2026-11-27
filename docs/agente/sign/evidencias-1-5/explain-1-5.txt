@@ -1,0 +1,121 @@
+EXPLAIN (ANALYZE, BUFFERS) no Postgres local (banco "sign_dev15", 10008 perfis, 30000 otps, 30000 outbox, 20000 desafios). Gerado por t-verif-db.cjs.
+As funções PL/pgSQL são opacas ao EXPLAIN; cada consulta que elas executam é explicada com o uid de um usuário da carga.
+
+-- sign_identity por user_id FOR UPDATE (send, verify)
+select * from public.sign_identity where user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b' for update
+LockRows  (cost=0.29..8.31 rows=1 width=175) (actual time=0.041..0.044 rows=1 loops=1)
+  Buffers: shared hit=6
+  ->  Index Scan using sign_identity_pkey on sign_identity  (cost=0.29..8.30 rows=1 width=175) (actual time=0.034..0.036 rows=1 loops=1)
+        Index Cond: (user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid)
+        Buffers: shared hit=5
+Planning:
+  Buffers: shared hit=3
+Planning Time: 0.045 ms
+Execution Time: 0.056 ms
+
+-- sign_otps: último ativo do usuário (verify)
+select * from public.sign_otps where user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b' and purpose = 'phone_verify' and consumed_at is null order by created_at desc limit 1
+Limit  (cost=0.29..5.64 rows=1 width=104) (actual time=0.014..0.014 rows=1 loops=1)
+  Buffers: shared hit=3
+  ->  Index Scan using sign_otps_user_idx on sign_otps  (cost=0.29..16.34 rows=3 width=104) (actual time=0.013..0.013 rows=1 loops=1)
+        Index Cond: (user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid)
+        Filter: ((consumed_at IS NULL) AND (purpose = 'phone_verify'::text))
+        Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=91
+Planning Time: 0.247 ms
+Execution Time: 0.023 ms
+
+-- sign_otps: contagem da última hora (send, 3/h)
+select count(*) from public.sign_otps where user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b' and created_at > now() - interval '1 hour'
+Aggregate  (cost=8.31..8.32 rows=1 width=8) (actual time=0.005..0.006 rows=1 loops=1)
+  Buffers: shared hit=2
+  ->  Index Only Scan using sign_otps_user_idx on sign_otps  (cost=0.29..8.31 rows=1 width=0) (actual time=0.004..0.004 rows=0 loops=1)
+        Index Cond: ((user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid) AND (created_at > (now() - '01:00:00'::interval)))
+        Heap Fetches: 0
+        Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=3
+Planning Time: 0.048 ms
+Execution Time: 0.016 ms
+
+-- sign_otps: último envio (send, 30 s)
+select max(created_at) from public.sign_otps where user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b' and created_at > now() - interval '30 seconds'
+Aggregate  (cost=8.31..8.32 rows=1 width=8) (actual time=0.005..0.006 rows=1 loops=1)
+  Buffers: shared hit=2
+  ->  Index Only Scan using sign_otps_user_idx on sign_otps  (cost=0.29..8.31 rows=1 width=8) (actual time=0.004..0.004 rows=0 loops=1)
+        Index Cond: ((user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid) AND (created_at > (now() - '00:00:30'::interval)))
+        Heap Fetches: 0
+        Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=3
+Planning Time: 0.104 ms
+Execution Time: 0.018 ms
+
+-- sign_cpf_attempts: contagem da última hora (A14-M3)
+select count(*) from public.sign_cpf_attempts where user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b' and at > now() - interval '1 hour'
+Aggregate  (cost=8.31..8.32 rows=1 width=8) (actual time=0.023..0.023 rows=1 loops=1)
+  Buffers: shared hit=2
+  ->  Index Only Scan using sign_cpf_attempts_user_idx on sign_cpf_attempts  (cost=0.29..8.31 rows=1 width=0) (actual time=0.021..0.021 rows=0 loops=1)
+        Index Cond: ((user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid) AND (at > (now() - '01:00:00'::interval)))
+        Heap Fetches: 0
+        Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=42
+Planning Time: 0.163 ms
+Execution Time: 0.036 ms
+
+-- sign_cert_challenges: contagem da última hora (10/h)
+select count(*) from public.sign_cert_challenges where user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b' and created_at > now() - interval '1 hour'
+Aggregate  (cost=11.82..11.83 rows=1 width=8) (actual time=0.027..0.028 rows=1 loops=1)
+  Buffers: shared hit=3
+  ->  Bitmap Heap Scan on sign_cert_challenges  (cost=4.31..11.81 rows=2 width=0) (actual time=0.025..0.025 rows=2 loops=1)
+        Recheck Cond: ((user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid) AND (created_at > (now() - '01:00:00'::interval)))
+        Heap Blocks: exact=1
+        Buffers: shared hit=3
+        ->  Bitmap Index Scan on sign_cert_challenges_user_idx  (cost=0.00..4.31 rows=2 width=0) (actual time=0.016..0.016 rows=2 loops=1)
+              Index Cond: ((user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid) AND (created_at > (now() - '01:00:00'::interval)))
+              Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=39
+Planning Time: 0.168 ms
+Execution Time: 0.080 ms
+
+-- sign_cert_challenges: vínculo por nonce (_sign_cert_save)
+select * from public.sign_cert_challenges where nonce = md5('5429912f-0a0b-4305-bcd2-17a1a67dd43b1')
+Index Scan using sign_cert_challenges_pkey on sign_cert_challenges  (cost=0.41..8.43 rows=1 width=81) (actual time=0.019..0.019 rows=1 loops=1)
+  Index Cond: (nonce = '6b7f56cae5e120735251413d49f0d88a'::text)
+  Buffers: shared hit=4
+Planning:
+  Buffers: shared hit=14
+Planning Time: 0.380 ms
+Execution Time: 0.027 ms
+
+-- sign_outbox: última linha do usuário (sign_otp_delivery)
+select status, channel from public.sign_outbox where user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b' order by id desc limit 1
+Limit  (cost=15.68..15.68 rows=1 width=19) (actual time=0.030..0.031 rows=1 loops=1)
+  Buffers: shared hit=6
+  ->  Sort  (cost=15.68..15.69 rows=3 width=19) (actual time=0.030..0.030 rows=1 loops=1)
+        Sort Key: id DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=6
+        ->  Bitmap Heap Scan on sign_outbox  (cost=4.31..15.66 rows=3 width=19) (actual time=0.018..0.020 rows=3 loops=1)
+              Recheck Cond: (user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid)
+              Heap Blocks: exact=1
+              Buffers: shared hit=3
+              ->  Bitmap Index Scan on sign_outbox_user_idx  (cost=0.00..4.31 rows=3 width=0) (actual time=0.012..0.012 rows=3 loops=1)
+                    Index Cond: (user_id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid)
+                    Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=55
+Planning Time: 0.126 ms
+Execution Time: 0.042 ms
+
+-- profiles por id (sign_me)
+select * from public.profiles where id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'
+Index Scan using profiles_pkey on profiles  (cost=0.29..8.30 rows=1 width=90) (actual time=0.011..0.012 rows=1 loops=1)
+  Index Cond: (id = '5429912f-0a0b-4305-bcd2-17a1a67dd43b'::uuid)
+  Buffers: shared hit=3
+Planning Time: 0.024 ms
+Execution Time: 0.016 ms
+

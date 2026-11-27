@@ -99,16 +99,50 @@ export async function profileSave(payload) {
   let res;
   try { res = await sb.rpc('sign_profile_save', { p: payload }); } catch (e) { res = { error: e }; }
   if (res.error) throw rpcError(res.error, res.status);
+  failIfNotOk(res.data); /* 1.5: erros de CPF voltam como {ok:false, error} para a tentativa ficar gravada */
   meCache = { t: Date.now(), v: res.data || {} };
   return meCache.v;
 }
+
+/* 1.5: o servidor devolve {ok:false, error, remaining?, retry_after?} em vez de exceção nos casos esperados. Vira Error com code e dados. */
+function failIfNotOk(d) {
+  if (!d || d.ok !== false) return;
+  const err = new Error(String(d.error || 'error'));
+  err.code = String(d.error || '');
+  err.status = 200;
+  err.remaining = d.remaining;
+  err.retryAfter = d.retry_after;
+  throw err;
+}
+
+/* Verificação de contato (1.5). Devolvem o objeto do servidor (ok:true) ou lançam Error com code, remaining e retryAfter. */
+async function callRpc(fn, args) {
+  let res;
+  try { res = await sb.rpc(fn, args); } catch (e) { res = { error: e }; }
+  if (res.error) throw rpcError(res.error, res.status);
+  failIfNotOk(res.data);
+  return res.data || {};
+}
+export const phoneSend = (phone, channel) => callRpc('sign_phone_send', { p_phone: phone || '', p_channel: channel });
+export async function phoneVerify(code) {
+  const d = await callRpc('sign_phone_verify', { p_code: code });
+  meCache = { t: Date.now(), v: d };
+  return d;
+}
+export const certChallenge = () => callRpc('sign_cert_challenge', {});
+
+/* O sign_me em cache fica velho depois de uma verificação ou de um vínculo: a próxima leitura vai ao servidor. */
+export function forgetMe() { meCache = null; meFlight = null; }
+
+/* Token da sessão para chamar a função de borda do certificado (nunca é guardado fora do cliente do Supabase). */
+export async function accessToken() { const s = await getSession(); return s && s.access_token ? s.access_token : ''; }
 
 /* Rascunho do perfil guardado só em memória (nunca em storage) enquanto a sessão termina e o usuário entra de novo. */
 let draft = null;
 export const setDraft = (uid, data) => { draft = uid ? { uid, data } : null; };
 export const takeDraft = (uid) => { const d = draft && draft.uid === uid ? draft.data : null; draft = null; return d; };
 
-/* Classifica um erro em: naoconfirmado | sessao | limite | credenciais | senha | existe | nome | cpf | cpf_travado | cpf_usado | rede | geral */
+/* Classifica um erro em: naoconfirmado | sessao | limite | credenciais | senha | existe | nome | cpf | cpf_travado | cpf_usado | cpf_limite | entrada | rede | geral */
 export function classify(e) {
   if (!e) return null;
   const code = String(e.code || e.error_code || '');
@@ -119,6 +153,8 @@ export function classify(e) {
   if (/invalid_cpf/.test(msg)) return 'cpf';
   if (/cpf_locked/.test(msg)) return 'cpf_travado';
   if (/cpf_in_use/.test(msg)) return 'cpf_usado';
+  if (/too_many_attempts/.test(msg)) return 'cpf_limite';
+  if (/invalid_input/.test(msg)) return 'entrada';
   if (st === 401 || /^PGRST30\d$/.test(code) || /\bJWT\b|jwt expired/i.test(msg)) return 'sessao';
   if (st === 429 || /over_\w*rate_limit|rate limit|too many/i.test(code + ' ' + msg)) return 'limite';
   if (code === 'invalid_credentials' || /invalid login/i.test(msg)) return 'credenciais';

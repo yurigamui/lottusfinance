@@ -1,9 +1,9 @@
 /* Seção 1.4: Conta > Perfil (#/conta/perfil). Nome sempre editável; CPF só se preenche (nunca se troca por aqui: R5).
    Tudo por DOM e textContent: nome vindo do usuário nunca vira HTML. Nada de nome/CPF em storage (o rascunho fica só em memória). */
-import { h, icon, ICON, setKids, pageHead, abasConta, toast, focusEl } from '../lib/ui.js?v=20261126c';
-import { normName, INVISIVEL, LIMITS, onlyDigits, cpfOk, fmtCpf, maskCpf, maskPhone, isEmail } from '../lib/fmt.js?v=20261126c';
-import { classify } from '../lib/api.js?v=20261126c';
-import { levelOf, updateMe } from './shell.js?v=20261126c';
+import { h, icon, ICON, setKids, pageHead, abasConta, toast, focusEl } from '../lib/ui.js?v=20261127a';
+import { normName, INVISIVEL, LIMITS, onlyDigits, cpfOk, fmtCpf, maskCpf, maskPhone, isEmail } from '../lib/fmt.js?v=20261127a';
+import { classify } from '../lib/api.js?v=20261127a';
+import { levelOf, updateMe } from './shell.js?v=20261127a';
 
 const T = {
   sub: 'Seus dados, verificação e segurança.',
@@ -17,7 +17,8 @@ const T = {
   cpfInvalido: 'CPF inválido. Confira os números.',
   cpfAjuda: 'Só números. Depois do primeiro envio de documento, o CPF não poderá ser alterado por aqui.',
   cpfTravado: 'Para alterar o CPF, fale com o suporte.',
-  cpfUsado: 'Não foi possível salvar este CPF. Confira os números ou fale com o suporte.',
+  cpfUsado: 'Não foi possível usar este CPF. Confira o número ou fale com o suporte.',
+  cpfLimite: (mm) => `Muitas tentativas. Tente de novo em ${mm} minutos.`,
   incompleto: 'Complete seu perfil para enviar documentos.',
   dica: 'Sugestão do seu cadastro. Confira e clique em Salvar alterações.',
   salvarRede: 'Não foi possível salvar. Verifique sua conexão e tente de novo.',
@@ -32,7 +33,7 @@ const tag = (cls, ic, txt) => h('span', { class: cls }, icon(ICON[ic], 'ico'), t
 const nivelTag = (n) => tag(NIVEIS[n][0], NIVEIS[n][1], n);
 
 /* mailto do suporte: o endereço é [preencher] (pendência E-01); sem ele o link abre o e-mail com o destinatário em branco */
-function suporte(cfg, assunto, texto) {
+export function suporte(cfg, assunto, texto) {
   const to = cfg && isEmail(cfg.supportEmail) ? cfg.supportEmail : '';
   return h('a', { class: 'pf-link', href: 'mailto:' + to + '?subject=' + encodeURIComponent(assunto) }, texto);
 }
@@ -161,7 +162,7 @@ function drawForm(st, box) {
       if (st.dead) return;
       const k = classify(e);
       if (k === 'sessao') { ctx.sessionEnded(); return; }
-      if (k === 'nome') { setErr(name, nameMsg(name.input.value) || T.nomeInvalido); focusEl(name.input); } else if (k === 'cpf') { setErr(cpf, T.cpfInvalido); focusEl(cpfIn); } else if (k === 'cpf_travado') {
+      if (k === 'nome') { setErr(name, nameMsg(name.input.value) || T.nomeInvalido); focusEl(name.input); } else if (k === 'cpf') { setErr(cpf, T.cpfUsado); focusEl(cpfIn); } else if (k === 'cpf_limite') { setErr(cpf, T.cpfLimite(Math.max(1, Math.ceil((Number(e.retryAfter) || 60) / 60)))); focusEl(cpfIn); } else if (k === 'cpf_travado') {
         setErr(cpf, T.cpfTravado); await lockedNow(); } else if (k === 'cpf_usado') { setErr(cpf, T.cpfUsado); focusEl(cpfIn); } else if (k === 'naoconfirmado') {
         banner(T.confirme, h('button', { class: 'btn secondary sm', type: 'button', onclick: () => reenviar(ctx, msg) }, 'Reenviar e-mail')); focusEl(msg);
       } else { banner(k === 'rede' ? T.salvarRede : T.salvarGeral); focusEl(msg); }

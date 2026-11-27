@@ -10,6 +10,11 @@
 // Modos forçáveis (state.mode): delay (ms), down (derruba a conexão), rl429 {token, signup, resend}, revealExisting, autoConfirm,
 // meName, meNoName, meVerified, meCert, meCertVencido (conteúdo de sign_me, só no modo memória) e meDown (só sign_me cai).
 // Só no repasse: expired (401 JWT expired em toda RPC), rpcFail { fn: { status, body } }, rpcDrop { fn: true } (derruba a conexão), rpcDelay { fn: ms }.
+// 1.5: (a) fake.codeOf(email): lê do banco isolado o código de 6 dígitos que sign_phone_send gravou em sign_outbox (o e-mail real não existe aqui);
+//      (b) "função de borda" do certificado SIMULADA em /functions/v1/sign-cert-validate (a real, T-07, não existe no repositório): GET = ping;
+//          POST {nonce, signed_b64} lê o arquivo como JSON de campos do certificado e chama _sign_cert_save no banco isolado (o resultado
+//          do vínculo é do banco; a validação criptográfica NÃO é simulada). state.mode.certEdge: 'down' (derruba a conexão), 'timeout' (não responde),
+//          '404', '500' ou ausente (funciona). Só no repasse.
 // Dados fictícios: contas @teste.example.
 const http = require('http');
 
@@ -157,6 +162,18 @@ function create(opts = {}) {
         return u ? send(res, 200, userObj(u)) : authErr(res, 'invalid JWT', 401, 'bad_jwt');
       }
       if (p === '/auth/v1/logout') return send(res, 204);
+      if (p === '/functions/v1/sign-cert-validate') {
+        const m = state.mode.certEdge;
+        if (m === 'down') return req.socket.destroy();
+        if (m === 'timeout') return; /* nunca responde: o cliente desiste pelo próprio limite de tempo */
+        if (m === '404') return send(res, 404, { message: 'Function not found' });
+        if (m === '500') return send(res, 500, { message: 'boom' });
+        if (req.method === 'GET') return send(res, 200, { ok: true });
+        const claims = parse(tok); const u = claims && byId(claims.sub);
+        if (!u || !pool) return send(res, 401, { ok: false, error: 'unauthorized' });
+        let cert; try { cert = JSON.parse(Buffer.from(String(body.signed_b64 || ''), 'base64').toString('utf8')); } catch { return send(res, 200, { ok: false, error: 'cert_chain_invalid' }); }
+        try { await pool.query('select public._sign_cert_save($1::uuid, $2::jsonb)', [u.id, JSON.stringify({ ...cert, nonce: body.nonce })]); return send(res, 200, { ok: true }); } catch (e) { return send(res, 200, { ok: false, error: String(e.message) }); }
+      }
       if (pool && p.startsWith('/rest/v1/rpc/')) return await rpcPg(req, res, p.slice('/rest/v1/rpc/'.length), body, tok);
       if (p === '/rest/v1/rpc/sign_me') {
         const c = parse(tok);
@@ -186,6 +203,8 @@ function create(opts = {}) {
   }
   const start = async () => { if (pool) await loadUsers(); return new Promise((ok) => server.listen(0, '127.0.0.1', () => ok(server.address().port))); };
   const query = (sql, params) => pool.query(sql, params);
-  return { state, server, start, seed, mint, query, loadUsers, stop: () => { server.close(); if (pool) pool.end().catch(() => {}); } };
+  /* o código mais recente que o banco gravou para o usuário (só enquanto o envio está 'queued', R2) */
+  const codeOf = async (email) => ((await pool.query(`select o.params ->> 'code' as c from public.sign_outbox o join auth.users u on u.id = o.user_id where lower(u.email) = lower($1) order by o.id desc limit 1`, [email])).rows[0] || {}).c;
+  return { state, server, start, seed, mint, query, codeOf, loadUsers, stop: () => { server.close(); if (pool) pool.end().catch(() => {}); } };
 }
 module.exports = { create, rpcCount };

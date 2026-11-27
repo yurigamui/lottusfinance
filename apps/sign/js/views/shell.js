@@ -1,5 +1,5 @@
 /* Seção 1.0: esqueleto da área logada (menu, barra superior, aviso e #view). Montado por DOM; texto do usuário só por textContent. */
-import { h, mount, setKids, icon, ICON, focusH1 } from '../lib/ui.js?v=20261126c';
+import { h, mount, setKids, icon, ICON, focusH1 } from '../lib/ui.js?v=20261127a';
 
 /* Itens do menu. Só entra quem tem built:true; as seções futuras ligam o seu item sem mudar a estrutura. */
 export const NAV = [
@@ -21,9 +21,13 @@ export function levelOf(me) {
   return 'Simples';
 }
 
+/* P-02: caracteres invisíveis (U+200B etc.) não contam como nome; nome só com eles cai no e-mail */
+const INVISIVEIS = /[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\u00AD\u180E\uFEFF]/g;
+export const cleanName = (s) => String(s || '').replace(INVISIVEIS, '').trim();
+
 /* 1ª letra da 1ª e da última palavra; sem nome, 1ª letra do e-mail. */
 export function initialsOf(name, email) {
-  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  const words = cleanName(name).split(/\s+/).filter(Boolean);
   const first = (w) => Array.from(w)[0].toLocaleUpperCase('pt-BR');
   if (words.length >= 2) return first(words[0]) + first(words[words.length - 1]);
   if (words.length === 1) return first(words[0]);
@@ -75,7 +79,7 @@ function setMenu(st, open) {
 }
 
 function paintMe(st, me) {
-  const name = String(me.name || '').trim();
+  const name = cleanName(me.name);
   const email = String(me.email || st.email || '');
   st.orgName.textContent = name || email;
   st.orgName.title = name || email; /* V-07: o nome é cortado em 2 linhas na vista; o inteiro fica no title */
