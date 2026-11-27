@@ -130,8 +130,8 @@
       const fmtIn = (n) => (n == null ? '' : String(n).replace('.', ','));
       const pl = product === 'partners' && c && c.usage != null ? num(c.usage) : null;
       const contractFields = product === 'partners' ? `<div data-contract hidden class="stack">
-        ${field('pf-rate', 'Taxa (% ao ano sobre o patrimônio)', '<input class="input" id="pf-rate" inputmode="decimal" autocomplete="off" placeholder="Ex.: 0,10" value="${fmtIn(rate0)}">')}
-        ${field('pf-min', 'Mensalidade mínima (R$)', '<input class="input" id="pf-min" inputmode="decimal" autocomplete="off" placeholder="Ex.: 500,00" value="${fmtIn(min0)}">')}</div>` : '';
+        ${field('pf-rate', 'Taxa (% ao ano sobre o patrimônio)', `<input class="input" id="pf-rate" inputmode="decimal" autocomplete="off" placeholder="Ex.: 0,10" value="${fmtIn(rate0)}">`)}
+        ${field('pf-min', 'Mensalidade mínima (R$)', `<input class="input" id="pf-min" inputmode="decimal" autocomplete="off" placeholder="Ex.: 500,00" value="${fmtIn(min0)}">`)}</div>` : '';
       const el = wizard({
         title: 'Trocar plano', subtitle: esc(c ? c.name : ''),
         form: `${field('pf-plan', 'Novo plano', `<select class="input" id="pf-plan"><option value="">Escolha um plano…</option>${opts.map((p) => `<option value="${esc(p.code)}"${p.code === cur && !(curContract && p.code === 'contract') ? ' disabled' : ''}>${esc(p.label)}${p.code === cur ? ' (atual)' : ''}</option>`).join('')}</select>`)}
