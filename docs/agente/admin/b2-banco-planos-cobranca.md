@@ -12,7 +12,7 @@
 ## Cobrança automática hoje (pg_cron)
 - Automático: `lottus-platform-fee` (dia 1, calcula `platform_fees` do mês anterior), `lottus-billing-watch` (marca fundo acima da faixa grátis), `lottus-bill-reminders` (régua: 3 dias antes, no dia, +3, +7, +15; só para organizações com `remind_enabled`), `lottus-charge-reminders`, `lottus-mrr-snapshot`, `wealth-billing-close`, `wealth-billing-charge`, `wealth-billing-notices`, `wealth-overdue`.
 - **Manual**: transformar `platform_fees` em fatura (`bo_inv_generate`, botão, nível aprovador); enviar fatura (`bo_inv_send`); baixar pagamento (`bo_inv_pay`). Mensalidade do Sign: nenhum job gera fatura (`bo_subscriptions` só calcula MRR).
-- `bill_invoices` e `lottus_bill_invoices`: colunas idênticas, 0 linhas nas duas (tabelas gêmeas; remover uma só com OK do Yuri).
+- `bill_invoices` é a tabela e `lottus_bill_invoices` é uma VIEW sobre ela (conferido em 27/11): não são gêmeas; a migração grava na tabela, como `bo_inv_generate`.
 - Segurança: todas as `bo_*` consultadas existem, `SECURITY DEFINER`, `search_path=''`, `_staff(nível)` dentro da função, sem `anon`. `w_admin_*` só service_role (correto; falta wrapper `bo_w_*`).
 
 ## Lacunas para o pedido (ordem de prioridade)
