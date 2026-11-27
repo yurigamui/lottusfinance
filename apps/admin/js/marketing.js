@@ -7,7 +7,7 @@
 
   const CHANNEL = { email: 'E-mail', instagram: 'Instagram', linkedin: 'LinkedIn', whatsapp: 'WhatsApp', anuncio: 'Anúncio pago', evento: 'Evento', outro: 'Outro' };
   const STATUS = { rascunho: ['Rascunho', ''], em_andamento: ['No ar', 'success'], pausada: ['Pausada', 'warning'], concluida: ['Concluída', 'brand'] };
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => B.today();
   const int = (v) => Math.max(0, Math.round(Number(String(v || '').replace(/\./g, '').replace(',', '.')) || 0));
   const dec = (v) => Number(String(v || '').replace(/\./g, '').replace(',', '.')) || 0;
   const n = (v) => Number(v || 0).toLocaleString('pt-BR');
@@ -20,26 +20,31 @@
     const list = await rpc('bo_mkt_campaigns');
     const tot = list.reduce((t, c) => ({ reach: t.reach + Number(c.reach), clicks: t.clicks + Number(c.clicks), leads: t.leads + Number(c.leads), spend: t.spend + Number(c.spend) }), { reach: 0, clicks: 0, leads: 0, spend: 0 });
     el.innerHTML = `
-      ${head('Campanhas', 'Planeje, envie e acompanhe o que a Lottus faz para ser encontrada: e-mail, redes sociais, anúncios e eventos.', mayWrite ? '<button class="btn" id="new">Nova campanha</button>' : '')}
-      <div class="kpi4">
+      ${B.ui.pageHead({ title: 'Campanhas', sub: 'Planeje, envie e acompanhe o que a Lottus faz para ser encontrada: e-mail, redes sociais, anúncios e eventos.', primary: mayWrite ? { id: 'new', label: 'Nova campanha' } : null })}
+      <div class="kpi4 kpi4-c">
         <div class="tile main"><span class="kpi-label">Alcance total</span><span class="tile-value">${n(tot.reach)}</span><span class="small muted">pessoas e e-mails atingidos</span></div>
         <div class="tile"><span class="kpi-label">Cliques</span><span class="tile-value">${n(tot.clicks)}</span><span class="small muted">${tot.reach ? ((tot.clicks / tot.reach) * 100).toFixed(1).replace('.', ',') + '% do alcance' : 'sem dados'}</span></div>
         <div class="tile"><span class="kpi-label">Leads gerados</span><span class="tile-value">${n(tot.leads)}</span><span class="small muted">${tot.leads && tot.spend ? 'custo por lead ' + brl(tot.spend / tot.leads) : 'lançados nas campanhas'}</span></div>
         <div class="tile"><span class="kpi-label">Investido</span><span class="tile-value">${brl(tot.spend)}</span><span class="small muted">${list.length} campanha${list.length === 1 ? '' : 's'}</span></div>
       </div>
-      ${list.length ? `<div class="camp-grid">${list.map((c) => {
+      <div id="camps"></div>`;
+    const campsHost = el.querySelector('#camps');
+    const cardOf = (c) => {
         const [sl, st] = STATUS[c.status] || [c.status, ''];
-        return `<button class="card camp" data-id="${esc(c.id)}">
-          <div class="row between"><span class="tag">${esc(CHANNEL[c.channel] || c.channel)}</span><span class="tag ${st}">${esc(sl)}</span></div>
+        return `<div class="card camp"><button type="button" class="camp-open" data-id="${esc(c.id)}" aria-label="Abrir a campanha ${esc(c.name)}">
+          <span class="row between"><span class="tag">${esc(CHANNEL[c.channel] || c.channel)}</span><span class="tag ${st}">${esc(sl)}</span></span>
           <h3>${esc(c.name)}</h3>
-          <div class="small muted">${c.starts_on ? date(c.starts_on) : 'sem data'}${c.ends_on ? ' a ' + date(c.ends_on) : ''}${Number(c.budget) ? ' · orçamento ' + brl(c.budget) : ''}</div>
-          <div class="camp-nums"><div><b>${n(c.reach)}</b><span>alcance</span></div><div><b>${n(c.clicks)}</b><span>cliques</span></div><div><b>${n(c.leads)}</b><span>leads</span></div><div><b>${brl(c.spend)}</b><span>gasto</span></div></div>
+          <span class="camp-one"><b>${n(c.reach)}</b><span>alcance</span></span>
+        </button>
+        ${B.ui.more('Ver mais', `<div class="small muted">${c.starts_on ? date(c.starts_on) : 'sem data'}${c.ends_on ? ' a ' + date(c.ends_on) : ''}${Number(c.budget) ? ' · orçamento ' + brl(c.budget) : ''}</div>
+          <div class="camp-nums"><div><b>${n(c.clicks)}</b><span>cliques</span></div><div><b>${n(c.leads)}</b><span>leads</span></div><div><b>${brl(c.spend)}</b><span>gasto</span></div></div>
           ${c.scheduled_at && !c.sent_at ? `<div class="small"><span class="tag warning">Envio agendado</span> ${dateTime(c.scheduled_at)}</div>` : ''}
-          ${c.channel === 'email' && c.sent_count ? `<div class="small muted">${n(c.sent_count)} enviados · ${n(c.delivered)} entregues · ${n(c.opened)} abertos${Number(c.failed) ? ' · ' + n(c.failed) + ' com problema' : ''}</div>` : ''}
-        </button>`;
-      }).join('')}</div>` : `<div class="card">${empty('Nenhuma campanha ainda. Crie a primeira para começar a medir o alcance.')}</div>`}`;
-    if (mayWrite) { el.querySelector('#new').onclick = () => openCampaign(null); if (arg === 'new') openCampaign(null); }
-    el.querySelectorAll('.camp').forEach((b) => (b.onclick = () => openCampaign(list.find((c) => c.id === b.dataset.id))));
+          ${c.channel === 'email' && c.sent_count ? `<div class="small muted">${n(c.sent_count)} enviados · ${n(c.delivered)} entregues · ${n(c.opened)} abertos${Number(c.failed) ? ' · ' + n(c.failed) + ' com problema' : ''}</div>` : ''}`)}</div>`;
+    };
+    if (!list.length) campsHost.innerHTML = `<div class="card">${empty('Nenhuma campanha ainda. Crie a primeira para começar a medir o alcance.')}</div>`;
+    else B.showMore(campsHost, list, cardOf, { size: 12, wrap: ['<div class="camp-grid">', '</div>'], label: 'Ver mais campanhas' });
+    if (mayWrite) { B.ui.onPage(el, { new: () => openCampaign(null) }); if (arg === 'new') openCampaign(null); }
+    campsHost.onclick = (e) => { const b = e.target.closest('.camp-open'); if (b) openCampaign(list.find((c) => c.id === b.dataset.id)); };
 
     async function openCampaign(c) {
       const v = c || { channel: 'email', status: 'rascunho', audience_tags: [], budget: 0 };

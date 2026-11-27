@@ -10,14 +10,13 @@
   const n = (v) => Number(v || 0).toLocaleString('pt-BR');
   const pct = (a, b) => (Number(b) ? ((Number(a) / Number(b)) * 100).toFixed(1).replace('.', ',') + '%' : '—');
   const opts = (map, v) => Object.entries(map).map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${esc(Array.isArray(l) ? l[0] : l)}</option>`).join('');
-  const iso = (d) => d.toISOString().slice(0, 10);
 
   /* ------------------------------------------------------------- resultados */
   B.views.resultados = async (el, [per]) => {
     const PER = [['mes', 'Este mês'], ['30', '30 dias'], ['90', '90 dias'], ['ano', 'Este ano']];
     const p = PER.some(([k]) => k === per) ? per : 'mes';
-    const now = new Date(), to = iso(now);
-    const from = p === 'mes' ? iso(new Date(now.getFullYear(), now.getMonth(), 1)) : p === 'ano' ? `${now.getFullYear()}-01-01` : iso(new Date(Date.now() - Number(p) * 864e5));
+    const to = B.today();
+    const from = p === 'mes' ? B.monthStart(to) : p === 'ano' ? `${to.slice(0, 4)}-01-01` : B.addDays(to, -Number(p));
     const [r, integ] = await Promise.all([rpc('bo_mkt_results', { p_from: from, p_to: to }), rpc('bo_integrations').catch(() => ({ social: {} }))]);
     const rows = r.channels.filter((c) => Number(c.reach) || Number(c.leads) || Number(c.spend) || Number(c.customers));
     const T = r.channels.reduce((t, c) => ({ reach: t.reach + Number(c.reach), clicks: t.clicks + Number(c.clicks), leads: t.leads + Number(c.leads), customers: t.customers + Number(c.customers), spend: t.spend + Number(c.spend) }), { reach: 0, clicks: 0, leads: 0, customers: 0, spend: 0 });
@@ -35,12 +34,12 @@
         <thead><tr><th>Canal</th><th class="num">Alcance</th><th class="num">Cliques</th><th class="num">Leads</th><th class="num">Clientes</th><th class="num">Gasto</th><th class="num">Custo por lead</th></tr></thead>
         <tbody>${rows.map((c) => `<tr><td><b>${esc(CH[c.channel] || c.channel)}</b></td><td class="num">${n(c.reach)}</td><td class="num">${n(c.clicks)}</td><td class="num">${n(c.leads)}</td><td class="num">${n(c.customers)}</td><td class="num">${brl(c.spend)}</td><td class="num">${Number(c.leads) && Number(c.spend) ? brl(c.spend / c.leads) : '—'}</td></tr>`).join('')}</tbody></table></div>` : empty('Sem resultados no período. Conecte o Instagram e o LinkedIn em Configurações › Integrações ou lance resultados nas campanhas.')}</div>
       <div class="grid-2 dash-row">
-        <div class="card"><div class="card-head"><h2>Redes sociais</h2><a class="small" href="#/integracoes">integrações</a></div>
+        <div class="card"><div class="card-head"><h2>Redes sociais</h2><a class="small tap" href="#/integracoes">integrações</a></div>
           ${['instagram', 'linkedin'].map((k) => { const s = soc[k]; return `<div class="list-row"><div class="grow"><b>${CH[k]}</b> ${s && s.account_name ? `<span class="small muted">${esc(s.account_name)}</span>` : ''}<div class="small muted">${s ? (s.status === 'connected' ? 'conectado' + (s.last_sync_at ? ' · atualizado ' + B.ago(s.last_sync_at) : '') : s.status === 'error' ? 'erro: ' + esc(s.last_error || '') : s.status === 'off' ? 'desligado' : 'conectando') : 'não conectado'}</div></div>${followers(k) != null ? `<b>${n(followers(k))}</b><span class="small muted">seguidores</span>` : ''}</div>`; }).join('')}
           <div id="socch" style="margin-top:12px"></div></div>
         <div class="card"><h2>E-mails de campanha</h2>
           <div class="conc">${[['Enviados', r.emails.sent], ['Entregues', r.emails.delivered], ['Abertos', r.emails.opened], ['Clicaram', r.emails.clicked]].map(([l, v]) => `<div class="conc-row"><span class="conc-name">${l}</span><span class="conc-val">${n(v)} <span class="muted">· ${pct(v, r.emails.sent)}</span></span><div class="meter"><span style="width:${Number(r.emails.sent) ? Math.max(2, (v / r.emails.sent) * 100).toFixed(1) : 0}%"></span></div></div>`).join('')}</div>
-          ${r.top_links.length ? `<h3 style="margin:16px 0 6px">Links mais clicados</h3>${r.top_links.map((x) => `<div class="list-row small"><span class="grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.url)}</span><b>${n(x.clicks)}</b></div>`).join('')}` : ''}</div>
+          ${r.top_links.length ? `<h3 style="margin:16px 0 6px">Links mais clicados</h3>${r.top_links.map((x) => `<div class="list-row small"><span class="grow" title="${esc(x.url)}" style="overflow-wrap:anywhere">${esc(x.url)}</span><b>${n(x.clicks)}</b></div>`).join('')}` : ''}</div>
       </div>
       <div class="card"><h2>De onde vieram os leads</h2>${r.sources.length ? `<div class="conc">${r.sources.map((s) => `<div class="conc-row"><span class="conc-name">${esc(s.source)}</span><span class="conc-val">${n(s.leads)} lead(s) <span class="muted">· ${n(s.customers)} cliente(s)</span></span><div class="meter"><span style="width:${Math.max(3, (s.leads / Math.max(...r.sources.map((x) => x.leads))) * 100).toFixed(1)}%"></span></div></div>`).join('')}</div>` : empty('Nenhum lead no período.')}</div>`;
     onTabs(el.querySelector('.page-head'), (k) => (location.hash = `#/resultados/${k}`));
@@ -50,8 +49,8 @@
 
   /* ------------------------------------------------------------- calendário */
   B.views.calendario = async (el, [arg], me) => {
-    const now = new Date();
-    let ym = /^\d{4}-\d{2}$/.test(arg || '') ? arg : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const tIso = B.today();
+    let ym = /^\d{4}-\d{2}$/.test(arg || '') && Number(arg.slice(5)) >= 1 && Number(arg.slice(5)) <= 12 ? arg : tIso.slice(0, 7);
     const [y, m] = ym.split('-').map(Number);
     const [data, camps] = await Promise.all([rpc('bo_mkt_content', { p_month: `${ym}-01` }), rpc('bo_mkt_campaigns').catch(() => [])]);
     const first = new Date(y, m - 1, 1), daysIn = new Date(y, m, 0).getDate(), lead = (first.getDay() + 6) % 7;
@@ -67,7 +66,7 @@
         <div class="row small" style="gap:12px">${Object.entries(ST).map(([k, [l, c]]) => `<span><span class="tag ${c}">${l}</span> ${cnt(k)}</span>`).join('')}</div></div>
       <div class="card flush"><div class="cal"><div class="cal-head">${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map((d) => `<div>${d}</div>`).join('')}</div>
         <div class="cal-grid">${Array.from({ length: lead }, () => '<div class="cal-day off"></div>').join('')}${Array.from({ length: daysIn }, (_, i) => {
-          const d = i + 1, isToday = y === now.getFullYear() && m === now.getMonth() + 1 && d === now.getDate();
+          const d = i + 1, isToday = `${ym}-${String(d).padStart(2, '0')}` === tIso;
           return `<div class="cal-day ${isToday ? 'today' : ''}" data-day="${ym}-${String(d).padStart(2, '0')}"><span class="cal-n">${d}</span>${byDay(d).map(chip).join('')}</div>`;
         }).join('')}</div></div></div>
       ${data.rows.some((c) => !c.publish_on) ? `<div class="card" style="margin-top:16px"><h2>Sem data (banco de ideias)</h2><div class="row" style="gap:6px;flex-wrap:wrap">${data.rows.filter((c) => !c.publish_on).map(chip).join('')}</div></div>` : ''}`;

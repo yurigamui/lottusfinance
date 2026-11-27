@@ -6,11 +6,16 @@
   const { head } = B.ui;
   const fail = (e) => B.toast(B.message(e), true);
 
-  B.views.mensageria = async (el) => {
+  B.views.mensageria = async (el, _p, me, keepTab) => {
+    // Só administrador: confere antes de qualquer chamada ao banco
+    if (!B.ui.can(me || B.me, 'admin')) return B.ui.denied(el, me || B.me, 'A tela de Mensageria (Sign)', 'administradores');
     const [c, roots] = await Promise.all([rpc('sign_messaging_get'), rpc('sign_roots_list')]);
     const sw = (name, on, label, help) => `<label class="switch-row"><input type="checkbox" name="${name}" ${on ? 'checked' : ''}><span class="switch" aria-hidden="true"></span><span><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span></label>`;
+    let tab = keepTab === 'certs' ? 'certs' : 'canais';
     el.innerHTML = `${head('Mensageria do Lottus Sign', 'Como o código de verificação chega ao celular e quais certificados digitais são aceitos.')}
+      <div class="u-mb16" id="mtabs">${B.ui.tabs([['canais', 'Canais'], ['certs', `Certificados (${roots.length})`]], tab)}</div>
       <div class="stack">
+        <div id="mp-canais" role="tabpanel" ${tab === 'canais' ? '' : 'hidden'}>
         <form class="card stack" id="mf" novalidate>
           <div><h2>Canais de envio do código</h2><p class="muted small u-m4t">O código de 6 dígitos vale por 10 minutos. O e-mail continua sempre disponível para avisos.</p></div>
           ${sw('sms_enabled', c.sms_enabled, 'SMS', 'Enviado pelo TextBee (os segredos TEXTBEE_API_KEY e TEXTBEE_DEVICE_ID já ficam nas funções).')}
@@ -27,10 +32,10 @@
           <div class="note-box small">O modelo precisa ser de categoria “Autenticação”, aprovado na Meta, com uma variável no corpo (o código) e o botão de copiar código. O token fica no cofre do banco e nunca volta para a tela.</div>
           <div class="error-box" id="me" hidden></div>
           <div><button class="btn" type="submit">Salvar</button></div>
-        </form>
-        <div class="card stack">
+        </form></div>
+        <div class="card stack" id="mp-certs" role="tabpanel" ${tab === 'certs' ? '' : 'hidden'}>
           <div><h2>Certificados digitais aceitos (raízes ICP-Brasil)</h2><p class="muted small u-m4t">Para um certificado A1 valer como verificação de identidade, a cadeia dele precisa chegar a uma destas raízes. Cole o certificado raiz (e, se quiser, as autoridades intermediárias) em formato PEM, baixado do site oficial do ITI (gov.br/iti). Sem raízes cadastradas, nenhum certificado é aceito.</p></div>
-          ${roots.length ? roots.map((r) => `<div class="list-row"><div class="grow"><b>${esc(r.name)}</b><div class="small muted mono">${esc(r.sha256)}</div></div><span class="tag ${r.active ? 'success' : ''}">${r.active ? 'Ativa' : 'Desativada'}</span><button class="btn ghost sm" data-tg="${esc(r.id)}" data-on="${r.active ? 0 : 1}">${r.active ? 'Desativar' : 'Ativar'}</button></div>`).join('') : '<p class="small muted u-m0">Nenhuma raiz cadastrada.</p>'}
+          <div id="rlist"></div>
           <form id="rf" class="stack" novalidate>
             <div class="field"><label>Nome</label><input class="input" name="name" maxlength="120" placeholder="Ex.: AC Raiz ICP-Brasil v10"></div>
             <div class="field"><label>Certificado (PEM)</label><textarea class="input mono" name="pem" rows="6" placeholder="-----BEGIN CERTIFICATE-----&#10;…&#10;-----END CERTIFICATE-----"></textarea></div>
@@ -38,7 +43,22 @@
             <div><button class="btn secondary" type="submit">Adicionar raiz</button></div>
           </form>
         </div></div>`;
-    const reload = () => B.views.mensageria(el);
+    const reload = () => B.views.mensageria(el, [], me, tab);
+    const rl = el.querySelector('#rlist');
+    rl.innerHTML = B.ui.table({
+      rows: roots, pageSize: 10, cardTitle: 'name', searchLabel: 'Buscar certificado', emptyText: 'Nenhuma raiz cadastrada.',
+      columns: [
+        { key: 'name', label: 'Nome', searchText: (r) => `${r.name} ${r.sha256}`, render: (r) => `<b>${esc(r.name)}</b><div class="small muted mono">${esc(r.sha256)}</div>` },
+        { key: 'active', label: 'Situação', searchText: () => '', render: (r) => `<span class="tag ${r.active ? 'success' : ''}">${r.active ? 'Ativa' : 'Desativada'}</span>` },
+        { key: 'id', label: 'Ações', searchText: () => '', render: (r) => `<button type="button" class="btn ghost sm" data-tg="${esc(r.id)}" data-on="${r.active ? 0 : 1}" aria-label="${r.active ? 'Desativar' : 'Ativar'} ${esc(r.name)}">${r.active ? 'Desativar' : 'Ativar'}</button>` },
+      ],
+    });
+    B.ui.onTable(rl);
+    B.ui.onTabs(el.querySelector('#mtabs'), (k) => {
+      tab = k;
+      el.querySelectorAll('#mtabs [data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === k); b.setAttribute('aria-selected', String(b.dataset.tab === k)); b.tabIndex = b.dataset.tab === k ? 0 : -1; });
+      el.querySelector('#mp-canais').hidden = k !== 'canais'; el.querySelector('#mp-certs').hidden = k !== 'certs';
+    });
     const f = el.querySelector('#mf');
     f.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -56,6 +76,10 @@
       try { await run(rf.querySelector('[type=submit]'), () => rpc('sign_root_add', { p_name: rf.name.value.trim(), p_pem: rf.pem.value }), 'Raiz adicionada'); reload(); }
       catch (x) { err.hidden = false; err.textContent = 'Certificado inválido. Cole o PEM completo.'; }
     });
-    el.querySelectorAll('[data-tg]').forEach((b) => (b.onclick = async () => { try { await run(b, () => rpc('sign_root_toggle', { p_id: b.dataset.tg, p_active: b.dataset.on === '1' }), 'Atualizado'); reload(); } catch (x) { fail(x); } }));
+    rl.onclick = async (e) => {
+      const b = e.target.closest('[data-tg]');
+      if (!b || !rl.contains(b)) return;
+      try { await run(b, () => rpc('sign_root_toggle', { p_id: b.dataset.tg, p_active: b.dataset.on === '1' }), 'Atualizado'); reload(); } catch (x) { fail(x); }
+    };
   };
 })();

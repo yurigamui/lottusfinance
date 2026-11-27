@@ -22,13 +22,25 @@
         <div class="tile ${pending.length ? 'warning-tile' : ''}"><span class="kpi-label">Cadastros a liberar</span><span class="tile-value">${pending.length}</span><span class="small muted">pelo cadastro aberto</span></div>
         <div class="tile ${rows.filter((r) => r.active && stale(r)).length ? 'danger' : ''}"><span class="kpi-label">Sem acesso há 30 dias</span><span class="tile-value">${rows.filter((r) => r.active && stale(r)).length}</span><span class="small muted">risco de cancelar</span></div>
       </div>
-      <div class="card flush"><div class="table-wrap">${rows.length ? `<table><thead><tr><th>Veículo</th><th class="num">PL</th><th>Uso do limite grátis</th><th>Pessoas</th><th>Conta Trio</th><th>Último acesso</th><th></th></tr></thead><tbody>
-        ${rows.map((r) => { const share = free ? Math.min(100, (Number(r.pl) / free) * 100) : 0; const t = TRIO[r.trio_status];
-          return `<tr><td><b>${esc(r.name)}</b><div class="small muted">${r.kind === 'fidc' ? 'FIDC' : 'Securitizadora'} · ${r.origin === 'self' ? 'cadastro aberto' : 'convite'}${!r.active ? ' · inativo' : ''}${r.origin === 'self' && !r.routing ? ' · <b>aguarda liberação</b>' : ''}</div></td>
-            <td class="num">${B.brlCompact(r.pl)}</td><td style="min-width:140px">${r.origin === 'self' ? `<div class="meter" role="img" aria-label="${share.toFixed(0)}% do limite"><span style="width:${Math.max(2, share).toFixed(0)}%"></span></div><span class="small muted">${Number(r.pl) > free ? 'acima do grátis' : share.toFixed(0) + '% do grátis'}</span>` : '<span class="small muted">contrato</span>'}</td>
-            <td>${n(r.members)}</td><td>${t ? `<span class="tag ${t[1]}">${t[0]}</span>` : '<span class="small muted">não usa</span>'}</td>
-            <td class="small ${stale(r) ? 'late' : 'muted'}">${r.last_access ? ago(r.last_access) : 'nunca'}</td>
-            <td class="num nowrap"><a class="btn ghost sm" href="#/clientes/funder/${esc(r.id)}">Ficha</a> <a class="btn secondary sm" href="#/parceiros/${esc(r.id)}">Gerenciar</a></td></tr>`; }).join('')}</tbody></table>` : empty('Nenhum veículo cadastrado.')}</div></div>`;
+      <div id="list"></div>`;
+    const host = el.querySelector('#list');
+    host.innerHTML = B.ui.table({
+      rows, pageSize: 25, cardTitle: 'name', searchLabel: 'Buscar veículo', emptyText: 'Nenhum veículo cadastrado.',
+      rowHref: (r) => `#/clientes/funder/${r.id}`,
+      columns: [
+        { key: 'name', label: 'Veículo', searchText: (r) => `${r.name} ${r.kind === 'fidc' ? 'FIDC' : 'Securitizadora'}`, render: (r) => `<b>${esc(r.name)}</b><div class="small muted">${r.kind === 'fidc' ? 'FIDC' : 'Securitizadora'} · ${r.origin === 'self' ? 'cadastro aberto' : 'convite'}</div>` },
+        { key: 'pl', label: 'PL', num: true, searchText: () => '', render: (r) => B.brlCompact(r.pl) },
+        { key: 'active', label: 'Situação', searchText: () => '', render: (r) => {
+          const share = free ? Math.min(100, (Number(r.pl) / free) * 100) : 0; const t = TRIO[r.trio_status];
+          const tag = !r.active ? '<span class="tag">Inativo</span>' : r.origin === 'self' && !r.routing ? '<span class="tag warning">Aguarda liberação</span>' : '<span class="tag success">Ativo</span>';
+          return `${tag}<details class="row-more"><summary>Ver mais</summary><dl class="kv">
+            <dt>Limite grátis</dt><dd>${r.origin === 'self' ? `<div class="meter" role="img" aria-label="${share.toFixed(0)}% do limite"><span style="width:${Math.max(2, share).toFixed(0)}%"></span></div>${Number(r.pl) > free ? 'acima do grátis' : share.toFixed(0) + '% do grátis'}` : 'contrato'}</dd>
+            <dt>Pessoas</dt><dd>${n(r.members)}</dd><dt>Conta Trio</dt><dd>${t ? esc(t[0]) : 'não usa'}</dd>
+            <dt>Último acesso</dt><dd class="${stale(r) ? 'late' : ''}">${r.last_access ? esc(ago(r.last_access)) : 'nunca'}</dd></dl></details>`; } },
+        { key: 'id', label: 'Abrir', searchText: () => '', render: (r) => `<a class="btn secondary sm" href="#/parceiros/${esc(r.id)}" aria-label="Gerenciar ${esc(r.name)}">Gerenciar</a>` },
+      ],
+    });
+    B.ui.onTable(host);
   };
 
   /* ------------------------------------------------------------------- Sign */
@@ -44,11 +56,13 @@
         <div class="tile ${Number(d.failures.total) ? 'danger' : ''}"><span class="kpi-label">Falhas de envio (30 d)</span><span class="tile-value">${n(d.failures.total)}</span><span class="small muted">${n(d.failures.email)} do Sign</span></div>
       </div>
       <div class="card dash-row"><h2>Documentos enviados por mês</h2><div id="ch"></div></div>
-      <div class="card"><h2>Perto do limite do plano</h2>${d.near_limit.length ? d.near_limit.map((a) => `<div class="list-row"><div class="grow"><b>${esc(a.name)}</b> <span class="small muted">${esc(a.plan)}</span>
+      <div class="card"><h2>Perto do limite do plano</h2><div id="near"></div></div>`;
+    const near = el.querySelector('#near');
+    if (!d.near_limit.length) near.innerHTML = empty('Ninguém perto do limite.');
+    else B.showMore(near, d.near_limit, (a) => `<div class="list-row"><div class="grow td-wrap"><b>${esc(a.name)}</b> <span class="small muted">${esc(a.plan)}</span>
         <div class="meter" style="max-width:320px"><span style="width:${Math.min(100, (a.used / a.included) * 100).toFixed(0)}%"></span></div><span class="small muted">${n(a.used)} de ${n(a.included)} documentos</span></div>
-        <a class="btn secondary sm" href="#/clientes/sign/${esc(a.id)}">Ficha</a> <button class="btn sm" data-task="${esc(a.id)}" data-name="${esc(a.name)}">Oferecer upgrade</button></div>`).join('') : empty('Ninguém perto do limite.')}</div>`;
+        <a class="btn secondary sm" href="#/clientes/sign/${esc(a.id)}" aria-label="Abrir a ficha de ${esc(a.name)}">Ficha</a></div>`, { size: 5, all: true, wrap: ['<div class="near-list">', '</div>'], label: 'Ver todas' });
     B.columnChart(el.querySelector('#ch'), d.months.map((m, i) => { const [y, mo] = m.month.split('-').map(Number); return { label: MONTH[mo - 1] + (mo === 1 || i === 0 ? '/' + String(y).slice(2) : ''), value: m.docs, detail: `${n(m.completed)} concluídos` }; }), { name: 'Documentos', format: n });
-    el.querySelectorAll('[data-task]').forEach((b) => (b.onclick = () => B.openTask({ customer_kind: 'sign', customer_id: b.dataset.task, kind: 'ligar', title: `Oferecer upgrade de plano a ${b.dataset.name}` })));
   };
 
   /* --------------------------------------------------------------- Empresa */

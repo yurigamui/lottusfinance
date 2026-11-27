@@ -51,31 +51,31 @@
     const runway = w.runway == null ? (Number(w.balance) > 0 ? 'receita cobre as despesas' : 'sem dados de caixa') : `fôlego de ${String(w.runway).replace('.', ',')} meses`;
     const stagesMax = Math.max(1, ...STAGES.map(([k]) => Number(((d.stages || {})[k] || {}).count || 0)));
 
-    el.innerHTML = `
-      ${head(`Olá, ${esc(me.name.split(' ')[0])}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+    el.innerHTML = `<div class="v-painel">
+      ${head(`Olá, ${esc(me.name.split(' ')[0])}`, new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: B.TZ }),
         `<div class="row" style="gap:8px">${tabs(PERIODS, months)}${can(me, 'admin') ? '<button class="btn secondary sm" id="goals">Metas</button>' : ''}</div>`)}
       ${todo.length ? `<div class="card today"><h2>Hoje</h2><div class="queue">${todo.map(([, txt, href, act, hot]) =>
         `<a class="queue-row" href="#/${href}"><span class="dot ${hot ? 'hot' : ''}" aria-hidden="true"></span><span class="queue-label">${esc(txt)}</span><span class="btn secondary sm">${esc(act)}</span></a>`).join('')}</div></div>` : ''}
-      <div class="kpi4">
+      <div class="kpi4 kpi4-c">
         ${tile('MRR (receita recorrente)', brl(w.mrr), `${brl(w.mrr_partners)} Partners · ${brl(w.mrr_sign)} Sign`, 'assinaturas', 'main hero', delta(w.mrr, w.mrr_prev) + goalBar(Number(w.mrr), Number(goals.revenue_month)))}
         ${tile('Recebido no mês', brl(w.received_month), `${brl(w.received_prev)} no mês anterior`, 'faturas/paid')}
         ${tile('A receber', brl(w.open_amount), `${brl(w.in_30d)} vence em 30 dias`, 'faturas/open')}
-        ${tile(Number(w.overdue_count) ? '! Em atraso' : 'Em atraso', brl(w.overdue_amount), Number(w.overdue_count) ? plural(w.overdue_count, 'fatura', 'faturas') : 'tudo em dia', 'faturas/overdue', Number(w.overdue_count) ? 'danger' : '')}
+        ${tile(Number(w.overdue_count) ? '! Em atraso' : 'Em atraso', brl(w.overdue_amount), Number(w.overdue_count) ? plural(w.overdue_count, 'fatura', 'faturas') : 'tudo em dia', 'faturas/overdue', Number(w.overdue_count) ? 'late danger' : 'late')}
       </div>
-      <div class="kpi4">
+      ${B.ui.more('Ver mais indicadores (caixa, saídas, clientes, leads e metas)', `<div class="kpi4 kpi4-c">
         ${tile('Caixa hoje', brl(w.balance), Number(w.accounts) ? runway : 'cadastre as contas em Fluxo de caixa', 'caixa', Number(w.cash_min) && Number(w.balance) < Number(w.cash_min) ? 'danger' : '')}
         ${tile('Saídas em 30 dias', brl(w.out_30d), `entradas previstas ${brl(w.in_30d)}`, 'caixa')}
         ${tile('Clientes pagantes', nf(w.customers), `${plural(w.new_customers, 'novo', 'novos')} · ${plural(w.lost_customers, 'perdido', 'perdidos')} no mês`, 'clientes')}
         ${tile('Leads novos (30 d)', nf(w.leads_30d), `${nf(w.leads_open)} abertos · ${brl(w.pipeline)}/mês no funil`, 'funil', '', goalBar(Number(w.leads_30d), Number(goals.leads_month), nf))}
-      </div>
-      <div class="card dash-row"><div class="card-head"><h2>Evolução</h2>${tabs(METRICS.map(([k, l]) => [k, l]), metric).replace('class="tabs"', 'class="tabs" id="mt"')}</div><div id="ch"></div></div>
-      <div class="grid-2 dash-row">
-        <div class="card"><div class="card-head"><h2>Funil comercial</h2><a class="small" href="#/funil">abrir funil</a></div>
+      </div>`)}
+      <div class="card dash-row dash-tabs"><div id="dt">${tabs([['rev', 'Receita'], ['funnel', 'Funil'], ['mkt', 'Marketing']], 'rev')}</div>
+        <div id="dp-rev" role="tabpanel"><div class="card-head"><h2>Evolução</h2>${tabs(METRICS.map(([k, l]) => [k, l]), metric).replace('class="tabs"', 'class="tabs" id="mt"')}</div><div id="ch"></div></div>
+        <div id="dp-funnel" role="tabpanel" hidden><div class="card-head"><h2>Funil comercial</h2><a class="small" href="#/funil">abrir funil</a></div>
           <div class="conc">${STAGES.map(([k, l]) => { const s = (d.stages || {})[k] || {}; const v = Number(s.count || 0); return `<div class="conc-row"><span class="conc-name">${l}</span><span class="conc-val">${nf(v)}${Number(s.value) ? ` <span class="muted">· ${brl(s.value)}/mês</span>` : ''}</span><div class="meter"><span style="width:${Math.max(v ? 3 : 0, (v / stagesMax) * 100).toFixed(1)}%"></span></div></div>`; }).join('')}</div></div>
-        <div class="card"><div class="card-head"><h2>Campanhas com mais alcance</h2><a class="small" href="#/resultados">ver resultados</a></div>
-          ${(d.top_campaigns || []).length ? `<div class="conc">${d.top_campaigns.map((c) => `<div class="conc-row"><span class="conc-name">${esc(c.name)} <span class="small muted">${esc(CHANNEL[c.channel] || '')}</span></span><span class="conc-val">${nf(c.reach)} <span class="muted">· ${nf(c.leads)} leads</span></span></div>`).join('')}</div>` : empty('Nenhuma campanha ainda.')}
-          <p class="small muted" style="margin-top:12px">Alcance nos últimos 30 dias: <b>${nf(w.reach_30d)}</b> · ${nf(w.contacts_active)} contatos ativos na base.</p></div>
-      </div>`;
+        <div id="dp-mkt" role="tabpanel" hidden><div class="card-head"><h2>Campanhas com mais alcance</h2><a class="small tap" href="#/resultados">ver resultados</a></div>
+          ${(d.top_campaigns || []).length ? `<div class="conc">${d.top_campaigns.map((c) => `<div class="conc-row"><span class="conc-name" title="${esc(c.name)}">${esc(c.name)} <span class="small muted">${esc(CHANNEL[c.channel] || '')}</span></span><span class="conc-val">${nf(c.reach)} <span class="muted">· ${nf(c.leads)} leads</span></span></div>`).join('')}</div>` : empty('Nenhuma campanha ainda.')}
+          <p class="small muted u-m4t">Alcance nos últimos 30 dias: <b>${nf(w.reach_30d)}</b> · ${nf(w.contacts_active)} contatos ativos na base.</p></div>
+      </div></div>`;
 
     onTabs(el.querySelector('.page-head'), (k) => { try { localStorage.setItem(KEY, k); } catch { /* ok */ } location.hash = `#/painel/${k}`; });
     const chart = () => {
@@ -84,6 +84,11 @@
     };
     onTabs(el.querySelector('#mt'), (k) => { metric = k; try { localStorage.setItem(MKEY, k); } catch { /* ok */ } el.querySelectorAll('#mt [data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === k); b.setAttribute('aria-selected', String(b.dataset.tab === k)); }); chart(); });
     if (B.columnChart) chart();
+    onTabs(el.querySelector('#dt'), (k) => {
+      el.querySelectorAll('#dt [data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === k); b.setAttribute('aria-selected', String(b.dataset.tab === k)); b.tabIndex = b.dataset.tab === k ? 0 : -1; });
+      ['rev', 'funnel', 'mkt'].forEach((x) => { el.querySelector('#dp-' + x).hidden = x !== k; });
+      if (k === 'rev' && B.columnChart) chart();
+    });
 
     const gb = el.querySelector('#goals');
     if (gb) gb.onclick = () => {

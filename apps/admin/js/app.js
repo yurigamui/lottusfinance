@@ -1,7 +1,7 @@
 /* Lottus · Backoffice — login com segundo fator, menu e rotas */
 (function () {
   'use strict';
-  const { sb, rpc, esc, message, LEVEL } = window.BO;
+  const { sb, rpc, esc, message, LEVEL, safeUrl } = window.BO;
   const app = document.getElementById('app');
   let me = null;
 
@@ -48,6 +48,9 @@
     produtos: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
     bell: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
     plus: 'M12 5v14M5 12h14',
+    search: 'M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z',
+    menu: 'M4 7h16M4 12h16M4 17h16',
+    close: 'M6 18L18 6M6 6l12 12',
     juridico: 'M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 006 0zm12 0l-3 7a3 3 0 006 0z',
     sun: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
     moon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
@@ -99,8 +102,10 @@
     ] },
   ];
   const groupOf = (v) => NAV_GROUPS.find((g) => g.tabs && g.items.some((x) => x.id === v));
-  // Páginas que continuam abrindo por link, fora do menu
-  const EXTRA_TITLES = [['representantes', 'Representantes']];
+  // Título de toda rota carregada que não está no menu (rota de apoio #/_base, só administrador)
+  const EXTRA_TITLES = [['_base', 'Base visual (exemplo)']];
+  // Módulos antigos que continuam no repositório, mas não fazem parte do produto novo: abrem "Página não encontrada"
+  const LEGACY = new Set(['empresas', 'credito', 'identidade', 'documentos', 'sacados', 'contratos', 'representantes', 'crm']);
   const NAV = NAV_GROUPS.flatMap((g) => g.items);
   // Representante de parceiro: só as cessões para aceite
   const PARTNER_GROUPS = [{ id: 'assinar', label: 'Operações', items: [{ id: 'assinar', label: 'Operações', count: 'sign' }] }];
@@ -391,7 +396,7 @@
     if (cs) cs.onclick = () => (window.BO.copy ? window.BO.copy(cs.dataset.copySecret) : navigator.clipboard.writeText(cs.dataset.copySecret));
     const otp = wireOtp(form, () => form.requestSubmit());
     otp.focus();
-    document.getElementById('cancel').onclick = signOut;
+    document.getElementById('cancel').onclick = () => signOut();
     let busy = false;
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -413,7 +418,23 @@
     });
   }
 
-  async function signOut() {
+  /* Destino guardado quando a sessão expira (só nesta aba): volta para ele depois do login e do segundo fator */
+  const RETURN_KEY = 'lottus.bo.returnTo';
+  const HASH_OK = /^#\/[A-Za-z0-9_-][A-Za-z0-9_\-./%]*$/;
+  const hashOk = (h) => typeof h === 'string' && h.length <= 200 && HASH_OK.test(h);
+  const saveReturn = () => { try { if (hashOk(location.hash)) sessionStorage.setItem(RETURN_KEY, location.hash); } catch { /* sem armazenamento */ } };
+  const clearReturn = () => { try { sessionStorage.removeItem(RETURN_KEY); } catch { /* ok */ } };
+  const takeReturn = () => {
+    try { const h = sessionStorage.getItem(RETURN_KEY); sessionStorage.removeItem(RETURN_KEY); return hashOk(h) ? h : null; } catch { return null; }
+  };
+
+  /** expired = true: a sessão caiu (expirou, inatividade); guarda a tela para voltar. Sair pelo botão apaga o destino. */
+  async function signOut(expired) {
+    if (expired === true) saveReturn(); else clearReturn();
+    setDrawer(false, false);
+    window.BO.closeModal();
+    stopTabObserver();
+    gsReset();
     await sb.auth.signOut();
     me = null;
     location.hash = '';
@@ -422,7 +443,8 @@
 
   /* ------------------------------------------------------------ estrutura */
   let counts = {};
-  // Menu: um botão por seção; ao passar o mouse (ou focar), abre ao lado as opções da seção
+  // Menu: um botão por seção. No desktop abre ao lado (passar o mouse ou focar) e, a partir de 1024 px, mostra o nome sob o ícone.
+  // No celular e no tablet (até 768 px) vira a gaveta do botão "Menu", com todos os grupos e itens por extenso.
   function navHtml(active) {
     const badge = (c) => (c ? `<span class="nav-count">${c > 99 ? '99+' : c}</span>` : '');
     return navGroups()
@@ -431,25 +453,26 @@
       .map((g) => {
         const on = g.items.some((n) => n.id === active);
         const total = g.items.reduce((t, n) => t + (n.count ? counts[n.count] || 0 : 0), 0);
-        const single = g.items.length === 1 || !!g.tabs;
-        const fly = `<div class="flyout" role="menu" aria-label="${esc(g.label)}">
+        const single = g.items.length === 1;
+        const gIcon = g.id === 'assinar' ? 'assinar' : g.id;
+        const fly = `<div class="flyout" role="group" aria-label="${esc(g.label)}">
             <div class="flyout-title">${esc(g.label)}</div>
-            ${single ? '' : g.items.map((n) => {
+            ${g.items.map((n) => {
               const c = n.count ? counts[n.count] : 0;
-              return `<a href="#/${n.id}" role="menuitem" class="fly-item ${active === n.id ? 'active' : ''}"${active === n.id ? ' aria-current="page"' : ''}>
-                ${icon(n.id)}<span>${esc(n.label)}</span>${badge(c)}</a>`;
+              return `<a href="#/${n.id}" class="fly-item ${active === n.id ? 'active' : ''}"${active === n.id ? ' aria-current="page"' : ''}>
+                ${single ? icon(gIcon) : ''}<span>${esc(n.label)}</span>${badge(c)}</a>`;
             }).join('')}
           </div>`;
         return `<div class="nav-sec ${on ? 'on' : ''}${single ? ' single' : ''}" data-group="${g.id}">
-          <a href="#/${g.items[0].id}" class="nav-btn ${on ? 'active' : ''}" aria-label="${esc(g.label)}${total ? ` (${total})` : ''}" aria-haspopup="${single ? 'false' : 'true'}"${single && on ? ' aria-current="page"' : ''}>
-            ${icon(g.id === 'assinar' ? 'assinar' : g.id)}${badge(total)}</a>
+          <a href="#/${g.items[0].id}" class="nav-btn ${on ? 'active' : ''}" title="${esc(g.label)}" aria-label="${esc(g.label)}${total ? ` (${total})` : ''}"${single && on ? ' aria-current="page"' : ''}>
+            ${icon(gIcon)}<span class="nav-label" aria-hidden="true">${esc(g.label)}</span>${badge(total)}</a>
           ${fly}
         </div>`;
       })
       .join('');
   }
 
-  // Toque (celular/tablet): o primeiro toque abre as opções, o segundo segue o link
+  // Toque (tablet): o primeiro toque abre as opções, o segundo segue o link
   function wireNav(nav) {
     nav.querySelectorAll('.nav-sec:not(.single) > .nav-btn').forEach((b) => {
       b.addEventListener('click', (e) => {
@@ -469,35 +492,227 @@
   function paintNav(view) {
     const nav = document.getElementById('nav');
     if (!nav) return;
-    nav.innerHTML = navHtml(view);
+    const html = navHtml(view);
+    if (nav.dataset.sig === html) return; // nada mudou: não refaz (mantém o foco e evita piscar)
+    const drawer = document.getElementById('drawer');
+    const keep = drawerOpen && drawer && drawer.contains(document.activeElement) ? document.activeElement.getAttribute('href') : null;
+    nav.dataset.sig = html;
+    nav.innerHTML = html;
     wireNav(nav);
+    if (keep) { const n = [...nav.querySelectorAll('.fly-item')].find((a) => a.getAttribute('href') === keep); if (n) n.focus(); }
+  }
+
+  /* ----------------------------------------------- gaveta do menu (≤ 768 px) */
+  let drawerOpen = false;
+  const narrow = window.matchMedia('(max-width: 768px)');
+  const drawerFocusables = () => [...document.querySelectorAll('#drawer a[href], #drawer button')].filter((e) => !e.disabled && e.offsetParent !== null && e.getBoundingClientRect().width > 0);
+  /** restore: devolve o foco ao botão "Menu" ao fechar */
+  function setDrawer(open, restore = true) {
+    const shell = document.getElementById('shell'), btn = document.getElementById('menu-open'), drawer = document.getElementById('drawer'), bd = document.getElementById('nav-backdrop');
+    if (!shell || !btn || !drawer || open === drawerOpen) { if (!open) drawerOpen = false; return; }
+    drawerOpen = open;
+    shell.classList.toggle('nav-open', open);
+    document.documentElement.classList.toggle('nav-lock', open);
+    btn.setAttribute('aria-expanded', String(open));
+    bd.hidden = !open;
+    const frame = shell.querySelector('.frame');
+    if (frame) frame.inert = open;
+    if (open) {
+      drawer.setAttribute('role', 'dialog'); drawer.setAttribute('aria-modal', 'true'); drawer.setAttribute('aria-label', 'Menu principal');
+      const first = drawer.querySelector('.fly-item.active') || drawer.querySelector('.nav-close');
+      // a gaveta sai de visibility:hidden na mesma pintura: espera um quadro para o foco valer
+      requestAnimationFrame(() => { if (drawerOpen && first) first.focus(); });
+    } else {
+      drawer.removeAttribute('role'); drawer.removeAttribute('aria-modal'); drawer.removeAttribute('aria-label');
+      if (restore) btn.focus();
+    }
+  }
+  document.addEventListener('keydown', (e) => {
+    if (!drawerOpen) return;
+    if (e.key === 'Escape') { e.preventDefault(); setDrawer(false); return; }
+    if (e.key !== 'Tab') return;
+    const f = drawerFocusables();
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1], act = document.activeElement;
+    if (!document.getElementById('drawer').contains(act)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && act === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && act === last) { e.preventDefault(); first.focus(); }
+  });
+  const onNarrow = () => { if (!narrow.matches && drawerOpen) setDrawer(false, false); };
+  if (narrow.addEventListener) narrow.addEventListener('change', onNarrow); else if (narrow.addListener) narrow.addListener(onNarrow);
+
+  /* ------------------------------------------- popups do topo e busca global */
+  // Os ouvintes de document abaixo são registrados uma única vez (não a cada login): olham os elementos pelo id na hora do evento
+  const POPS = [['newbtn', 'newmenu'], ['bell', 'notif'], ['avatar', 'profile-menu']];
+  function closePops(focusBack) {
+    POPS.forEach(([bid, mid]) => {
+      const b = document.getElementById(bid), m = document.getElementById(mid);
+      if (!b || !m || m.hidden) return;
+      m.hidden = true; b.setAttribute('aria-expanded', 'false');
+      if (focusBack) b.focus();
+    });
+  }
+  let shellBound = false;
+  function bindShellGlobals() {
+    if (shellBound) return;
+    shellBound = true;
+    document.addEventListener('click', (e) => {
+      POPS.forEach(([bid, mid]) => {
+        const b = document.getElementById(bid), m = document.getElementById(mid);
+        if (b && m && !m.hidden && !m.contains(e.target) && !b.contains(e.target)) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); }
+      });
+      const gs = document.getElementById('gs'), gl = document.getElementById('gl');
+      if (gs && gl && !gs.contains(e.target)) gl.hidden = true;
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || drawerOpen) return;
+      if (POPS.some(([, mid]) => { const m = document.getElementById(mid); return m && !m.hidden; })) { e.preventDefault(); closePops(true); }
+    });
+  }
+
+  // Busca global: espera 250 ms, mínimo de 2 letras, descarta resposta fora de ordem e guarda por 30 s o que já baixou
+  const GS = { seq: 0, timer: 0, cache: new Map(), TTL: 30000 };
+  function gsReset() { GS.seq++; clearTimeout(GS.timer); GS.cache.clear(); }
+  function gsCached(key, fn) {
+    const now = Date.now(), c = GS.cache.get(key);
+    if (c && now - c.t < GS.TTL) return c.p;
+    const e = { t: now, p: fn() };
+    GS.cache.set(key, e);
+    e.p.catch(() => { if (GS.cache.get(key) === e) GS.cache.delete(key); });
+    if (GS.cache.size > 40) GS.cache.delete(GS.cache.keys().next().value);
+    return e.p;
+  }
+  const gsMobile = () => window.matchMedia('(max-width: 700px)').matches;
+  // Fatura e contato não têm ficha: a lista abre já filtrada pelo que foi achado
+  function applyGlobalQuery(view) {
+    const p = window.BO._gq;
+    if (!p || p.v !== view || Date.now() - p.t > 10000) return;
+    const input = document.querySelector('#view #q');
+    if (!input) return;
+    window.BO._gq = null;
+    input.value = p.q;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function wireSearch() {
+    const gs = document.getElementById('gs');
+    if (!gs) return;
+    const gq = document.getElementById('gq'), gl = document.getElementById('gl'), btn = document.getElementById('gsbtn');
+    const setOpen = (open, focusBtn) => {
+      gs.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) gq.focus();
+      else { GS.seq++; clearTimeout(GS.timer); gl.hidden = true; if (focusBtn) btn.focus(); }
+    };
+    btn.onclick = () => setOpen(!gs.classList.contains('open'));
+    document.getElementById('gsclose').onclick = () => setOpen(false, true);
+    gs.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault(); e.stopPropagation();
+      if (gsMobile()) setOpen(false, true);
+      else { gq.value = ''; gl.hidden = true; GS.seq++; clearTimeout(GS.timer); }
+    });
+    gl.addEventListener('click', (e) => {
+      const a = e.target.closest('a');
+      if (!a) return;
+      if (a.dataset.gq) {
+        window.BO._gq = { v: a.dataset.gv, q: a.dataset.gq, t: Date.now() };
+        if (a.getAttribute('href') === location.hash) applyGlobalQuery(a.dataset.gv);
+      }
+      gq.value = '';
+      if (gsMobile()) setOpen(false, false); else { gl.hidden = true; GS.seq++; }
+    });
+    const msg = (t) => { gl.innerHTML = `<div class="small muted gs-msg">${esc(t)}</div>`; gl.hidden = false; };
+    async function run(v, mine) {
+      msg('Buscando…');
+      const lv = v.toLowerCase(), digits = v.replace(/\D/g, '');
+      const get = (key, fn) => gsCached(key, fn).then((x) => x, () => null);
+      const [cusAll, inv, con, leadsAll] = await Promise.all([
+        get('cus', () => rpc('bo_customers').then((r) => r.rows)),
+        get(`inv:${lv}`, () => rpc('bo_inv_list', { p_status: 'all', p_search: v })),
+        get(`con:${lv}`, () => rpc('bo_mkt_contacts', { p_search: v, p_tag: null, p_status: null }).then((r) => r.rows)),
+        get('leads', () => rpc('bo_crm_list')),
+      ]);
+      if (mine !== GS.seq) return; // chegou depois de a pessoa digitar de novo: descarta
+      if ([cusAll, inv, con, leadsAll].every((x) => x === null)) { msg('Não foi possível buscar agora. Tente de novo em instantes.'); return; }
+      const cus = (cusAll || []).filter((c) => `${c.name} ${c.legal_name || ''} ${c.doc || ''} ${c.email || ''}`.toLowerCase().includes(lv) || (digits.length > 3 && String(c.doc || '').includes(digits)));
+      const leads = (leadsAll || []).filter((l) => `${l.name} ${l.email || ''} ${l.doc || ''}`.toLowerCase().includes(lv));
+      const enc = encodeURIComponent;
+      const items = [].concat(
+        cus.slice(0, 3).map((c) => ({ h: `clientes/${enc(c.kind)}/${enc(c.id)}`, t: c.name, k: `Cliente · ${c.product}` })),
+        (inv || []).slice(0, 3).map((i) => ({ h: 'faturas/all', t: `${i.number} · ${i.customer_name}`, k: 'Fatura', q: String(i.number || ''), v: 'faturas' })),
+        leads.slice(0, 3).map((l) => ({ h: `funil/${enc(l.id)}`, t: l.name, k: 'Lead' })),
+        (con || []).slice(0, 3).map((c) => ({ h: 'contatos', t: c.name || c.email, k: 'Contato', q: String(c.email || c.name || ''), v: 'contatos' })));
+      const partial = [cusAll, inv, con, leadsAll].some((x) => x === null) ? '<div class="small muted gs-msg gs-partial">Algumas fontes não responderam.</div>' : '';
+      gl.innerHTML = (items.length
+        ? items.map((x) => `<a href="#/${esc(x.h)}"${x.q ? ` data-gq="${esc(x.q)}" data-gv="${esc(x.v)}"` : ''}><b>${esc(x.t)}</b><span class="small muted">${esc(x.k)}</span></a>`).join('')
+        : `<div class="small muted gs-msg">Nada encontrado para “${esc(v)}”.</div>`) + partial;
+      gl.hidden = false;
+    }
+    gq.oninput = () => {
+      clearTimeout(GS.timer);
+      const mine = ++GS.seq; // invalida qualquer busca em andamento
+      const v = gq.value.trim();
+      if (v.length < 2) { gl.hidden = true; return; }
+      GS.timer = setTimeout(() => run(v, mine), 250);
+    };
+  }
+
+  // Foco no título da tela nova depois de navegar pela gaveta (B-02)
+  let focusAfterNav = false;
+  function focusHeading() {
+    focusAfterNav = false;
+    const h = document.querySelector('#view h1');
+    window.scrollTo(0, 0);
+    if (!h) return;
+    h.setAttribute('tabindex', '-1');
+    h.focus({ preventScroll: true });
+  }
+
+  // "Novo" do topo: só o que o nível da pessoa pode criar (as telas conferem de novo)
+  const NEW_ITEMS = [['faturas', 'Fatura', 'approver'], ['pagar', 'Conta a pagar', 'approver'], ['funil', 'Lead', 'analyst'], ['tarefas', 'Tarefa', 'analyst'],
+    ['contatos', 'Contato', 'approver'], ['campanhas', 'Campanha', 'approver'], ['calendario', 'Peça de conteúdo', 'analyst']];
+  const RANK = { analyst: 1, approver: 2, admin: 3 };
+
+  let tabObs = null, tabRaf = 0;
+  function stopTabObserver() {
+    if (tabObs) { tabObs.disconnect(); tabObs = null; }
+    if (tabRaf) { cancelAnimationFrame(tabRaf); tabRaf = 0; }
   }
 
   function startShell() {
     window.BO.me = me;
+    const newItems = me.partner ? [] : NEW_ITEMS.filter(([, , lv]) => (RANK[me.level] || 0) >= RANK[lv]);
     const initials = me.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
     const theme = getTheme();
     app.innerHTML = `
-      <div class="shell">
+      <div class="shell" id="shell">
         <aside class="sidenav">
           <a href="#/${me.partner ? 'assinar' : 'painel'}" class="sidenav-mark" aria-label="Lottus, início"></a>
-          <nav class="sidenav-items" id="nav" aria-label="Menu"></nav>
+          <button type="button" class="menu-open" id="menu-open" aria-expanded="false" aria-controls="drawer">${icon('menu')}<span>Menu</span></button>
+          <div class="nav-backdrop" id="nav-backdrop" hidden></div>
+          <div class="drawer" id="drawer">
+            <button type="button" class="nav-close" id="nav-close">${icon('close')}<span>Fechar</span></button>
+            <nav class="sidenav-items" id="nav" aria-label="Menu"></nav>
+          </div>
         </aside>
         <main class="frame">
           <div class="surface">
             <header class="topbar">
               <div class="org">
                 ${me.partner ? `<div class="org-mark">${esc((me.funder.trade_name || me.funder.legal_name || 'P').trim()[0].toUpperCase())}</div>` : '<div class="org-mark logo"></div>'}
-                <div><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
+                <div class="org-txt"><div class="org-name">${me.partner ? esc(me.funder.legal_name) : 'Lottus Finance'}</div><div class="org-sub" id="crumb">${me.partner ? 'Lottus Partners' : 'Admin'}</div></div>
               </div>
               <div class="topbar-right">
-                ${me.partner ? '' : `<div class="gsearch"><input class="input search" id="gq" type="search" placeholder="Buscar contato, lead ou fatura" aria-label="Busca" autocomplete="off"><div class="gs-list" id="gl" hidden></div></div>`}
-                ${me.partner ? '' : `<div class="tb-pop"><button class="btn sm" id="newbtn" aria-haspopup="true" aria-expanded="false">${icon('plus', 'ico sm')} Novo</button>
-                  <div class="menu" id="newmenu" hidden>
-                    <a class="menu-item" href="#/faturas/new">Fatura</a><a class="menu-item" href="#/pagar/new">Conta a pagar</a>
-                    <a class="menu-item" href="#/funil/new">Lead</a><a class="menu-item" href="#/tarefas/new">Tarefa</a>
-                    <a class="menu-item" href="#/contatos/new">Contato</a><a class="menu-item" href="#/campanhas/new">Campanha</a><a class="menu-item" href="#/calendario/new">Peça de conteúdo</a></div></div>
-                <div class="tb-pop"><button class="icon-btn" id="bell" aria-haspopup="true" aria-expanded="false" aria-label="Notificações">${icon('bell')}<span class="nav-count" id="bellc" hidden></span></button>
+                ${me.partner ? '' : `<div class="gsearch" id="gs">
+                  <button type="button" class="icon-btn gs-open" id="gsbtn" aria-label="Buscar" aria-expanded="false" aria-controls="gs-panel">${icon('search')}</button>
+                  <div class="gs-panel" id="gs-panel">
+                    <input class="input search" id="gq" type="search" placeholder="Buscar contato, lead ou fatura" aria-label="Busca" autocomplete="off">
+                    <button type="button" class="icon-btn gs-close" id="gsclose" aria-label="Fechar busca">${icon('close')}</button>
+                    <div class="gs-list" id="gl" hidden aria-live="polite"></div>
+                  </div></div>`}
+                ${me.partner || !newItems.length ? '' : `<div class="tb-pop"><button class="btn sm" id="newbtn" aria-haspopup="true" aria-expanded="false" aria-label="Novo">${icon('plus', 'ico sm')}<span class="tb-lbl">Novo</span></button>
+                  <div class="menu" id="newmenu" hidden>${newItems.map(([v, l]) => `<a class="menu-item" href="#/${v}/new">${esc(l)}</a>`).join('')}</div></div>`}
+                ${me.partner ? '' : `                <div class="tb-pop"><button class="icon-btn" id="bell" aria-haspopup="true" aria-expanded="false" aria-label="Notificações">${icon('bell')}<span class="nav-count" id="bellc" hidden></span></button>
                   <div class="menu notif" id="notif" hidden></div></div>`}
                 <div class="profile">
                   <button class="avatar" id="avatar" aria-haspopup="true" aria-expanded="false" aria-label="Perfil">${esc(initials)}</button>
@@ -513,13 +728,23 @@
           </div>
         </main>
       </div>`;
-    document.getElementById('logout').onclick = signOut;
+    document.getElementById('logout').onclick = () => signOut();
+    drawerOpen = false;
+    document.getElementById('menu-open').onclick = () => setDrawer(!drawerOpen);
+    document.getElementById('nav-close').onclick = () => setDrawer(false);
+    document.getElementById('nav-backdrop').onclick = () => setDrawer(false);
+    document.getElementById('drawer').addEventListener('click', (e) => {
+      const a = e.target.closest('a[href]');
+      if (!a) return;
+      // o foco vai ao título da tela nova (não volta ao botão "Menu")
+      setDrawer(false, false);
+      if (a.getAttribute('href') === location.hash) focusHeading(); else focusAfterNav = true;
+    });
     const pop = (btnId, menuId, onOpen) => {
       const b = document.getElementById(btnId), m = document.getElementById(menuId);
       if (!b) return;
-      b.onclick = (e) => { e.stopPropagation(); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); if (!m.hidden && onOpen) onOpen(m); };
-      m.addEventListener('click', (e) => { if (e.target.closest('a')) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } });
-      document.addEventListener('click', (e) => { if (!m.hidden && !m.contains(e.target) && e.target !== b) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } });
+      b.onclick = (e) => { e.stopPropagation(); const open = m.hidden; closePops(); m.hidden = !open; b.setAttribute('aria-expanded', String(open)); if (open && onOpen) onOpen(m); };
+      m.addEventListener('click', (e) => { if (e.target.closest('a')) closePops(); });
     };
     pop('newbtn', 'newmenu');
     pop('bell', 'notif', async (m) => {
@@ -527,40 +752,23 @@
       try {
         const n = await rpc('bo_notifications', { p_seen: true });
         document.getElementById('bellc').hidden = true;
-        m.innerHTML = `<div class="menu-head"><div class="menu-name">Notificações</div></div>${n.rows.length ? n.rows.map((x) => `<a class="menu-item notif-row ${x.new ? 'new' : ''}" href="${esc(x.link || '#/painel')}"><b>${esc(x.title)}</b><span class="small muted">${esc(x.body || '')}</span><span class="small muted">${window.BO.ago(x.at)}</span></a>`).join('') : '<div class="small muted" style="padding:12px 14px">Nada por aqui ainda.</div>'}`;
+        m.innerHTML = `<div class="menu-head"><div class="menu-name">Notificações</div></div>${n.rows.length ? n.rows.map((x) => `<a class="menu-item notif-row ${x.new ? 'new' : ''}" href="${esc(safeUrl(x.link || '#/painel'))}"><b>${esc(x.title)}</b><span class="small muted">${esc(x.body || '')}</span><span class="small muted">${window.BO.ago(x.at)}</span></a>`).join('') : '<div class="small muted" style="padding:12px 14px">Nada por aqui ainda.</div>'}`;
       } catch { m.innerHTML = '<div class="small muted" style="padding:12px 14px">Não consegui carregar.</div>'; }
     });
-    const gq = document.getElementById('gq'), gl = document.getElementById('gl');
-    if (gq) {
-      let t;
-      gq.oninput = () => {
-        clearTimeout(t);
-        const v = gq.value.trim();
-        if (v.length < 2) { gl.hidden = true; return; }
-        t = setTimeout(async () => {
-          const [cus, inv, con, leads] = await Promise.all([
-            rpc('bo_customers').then((r) => r.rows.filter((c) => `${c.name} ${c.legal_name || ''} ${c.doc || ''} ${c.email || ''}`.toLowerCase().includes(v.toLowerCase()) || (v.replace(/\D/g, '').length > 3 && String(c.doc || '').includes(v.replace(/\D/g, ''))))).catch(() => []),
-            rpc('bo_inv_list', { p_status: 'all', p_search: v }).catch(() => []),
-            rpc('bo_mkt_contacts', { p_search: v, p_tag: null, p_status: null }).then((r) => r.rows).catch(() => []),
-            rpc('bo_crm_list').then((r) => r.filter((l) => `${l.name} ${l.email || ''} ${l.doc || ''}`.toLowerCase().includes(v.toLowerCase()))).catch(() => []),
-          ]);
-          const rows = [].concat(
-            cus.slice(0, 3).map((c) => [`clientes/${c.kind}/${c.id}`, c.name, `Cliente · ${c.product}`]),
-            inv.slice(0, 3).map((i) => ['faturas', `${i.number} · ${i.customer_name}`, 'Fatura']),
-            leads.slice(0, 3).map((l) => [`funil/${l.id}`, l.name, 'Lead']),
-            con.slice(0, 3).map((c) => ['contatos', c.name || c.email, 'Contato']));
-          gl.innerHTML = rows.length ? rows.map(([h, t, k]) => `<a href="#/${h}"><b>${esc(t)}</b><span class="small muted">${k}</span></a>`).join('') : '<div class="small muted" style="padding:10px 14px">Nada encontrado.</div>';
-          gl.hidden = false;
-        }, 250);
-      };
-      gl.addEventListener('click', () => { gl.hidden = true; gq.value = ''; });
-      document.addEventListener('click', (e) => { if (!e.target.closest('.gsearch')) gl.hidden = true; });
-    }
-    const avatar = document.getElementById('avatar'), menu = document.getElementById('profile-menu');
-    avatar.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; avatar.setAttribute('aria-expanded', String(!menu.hidden)); };
-    document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; avatar.setAttribute('aria-expanded', 'false'); } });
+    pop('avatar', 'profile-menu');
+    wireSearch();
+    bindShellGlobals();
+    // abas: papéis, setas, esmaecido e aba ativa visível também quando a própria tela redesenha a barra
+    const viewEl = document.getElementById('view');
+    stopTabObserver(); // B-3: um observador por login (o do login anterior sai)
+    tabObs = new MutationObserver(() => { if (tabRaf) return; tabRaf = requestAnimationFrame(() => { tabRaf = 0; window.BO.ui.tabsReady(viewEl); }); });
+    tabObs.observe(viewEl, { childList: true, subtree: true });
     const home = me.partner ? '#/assinar' : '#/painel';
-    if (!location.hash || location.hash === '#/' || (me.partner && !location.hash.startsWith('#/assinar'))) location.hash = home;
+    // Voltou depois de a sessão cair: abre a tela em que estava (representante de parceiro: só Operações)
+    let back = takeReturn();
+    if (back && me.partner && !/^#\/assinar(\/|$)/.test(back)) back = null;
+    if (!location.hash || location.hash === '#/' || location.hash === '#') location.hash = back || home;
+    else if (me.partner && !location.hash.startsWith('#/assinar')) location.hash = home;
     route();
     refreshCounts();
   }
@@ -586,38 +794,94 @@
 
   const currentView = () => (location.hash.replace(/^#\//, '').split('/')[0] || 'painel');
 
+  let navSeq = 0; // a cada navegação; resposta atrasada de rota antiga não pinta a tela
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k) && typeof o[k] === 'function';
+  const homeHash = () => (me && me.partner ? '#/assinar' : '#/painel');
+  const NAV_ITEM = Object.fromEntries(NAV.map((n) => [n.id, n]));
+
+  /** Carrega js/base-demo.js (rota #/_base) sob demanda; se o arquivo não existir, a rota fica "não encontrada". */
+  function loadDemo() {
+    return new Promise((ok) => {
+      const s = document.createElement('script');
+      s.src = 'js/base-demo.js?v=20261126a';
+      s.onload = () => ok(true);
+      s.onerror = () => { s.remove(); ok(false); };
+      document.head.appendChild(s);
+    });
+  }
+
   async function route() {
     if (!me) return;
-    const [view, ...params] = location.hash.replace(/^#\//, '').split('/');
+    const mine = ++navSeq;
+    const raw = location.hash.replace(/^#\/?/, '');
+    const [v0, ...rest] = raw.split('/');
+    let view = v0 || (me.partner ? 'assinar' : 'painel');
+    if (me.partner && view !== 'assinar') { view = 'assinar'; history.replaceState(null, '', '#/assinar'); }
+    // "#/x/new" abre o formulário uma vez: limpa o endereço para a lista (F5 e salvar não reabrem)
+    if (rest.length === 1 && rest[0] === 'new') history.replaceState(null, '', `#/${view}`);
+    let params;
+    try { params = rest.map(decodeURIComponent); } catch { params = rest; }
     paintNav(view);
     const crumb = document.getElementById('crumb');
-    if (crumb) crumb.textContent = (me.partner ? 'Lottus Partners · ' : 'Admin · ') + (SECTION_TITLE[view] || 'Painel');
-    const el = document.getElementById('view');
-    const fn = me.partner ? window.BO.views.assinar : window.BO.views[view] || window.BO.views.painel;
+    // rota de apoio #/_base: só administrador; o arquivo é carregado na hora e, se não existir, vale "não encontrada"
+    if (!me.partner && view === '_base' && me.level === 'admin' && !own(window.BO.views, '_base')) await loadDemo();
+    if (mine !== navSeq) return;
+    const hasView = me.partner ? own(window.BO.views, 'assinar') : own(window.BO.views, view) && !LEGACY.has(view) && (view !== '_base' || me.level === 'admin');
+    const known = hasView;
+    if (crumb) crumb.textContent = (me.partner ? 'Lottus Partners · ' : 'Admin · ') + (known ? SECTION_TITLE[view] || 'Painel' : 'Página não encontrada');
+    const slot = document.getElementById('view');
+    const el = document.createElement('div'); // um contêiner por navegação: o que chegar atrasado cai num contêiner solto
+    el.className = 'view-host';
+    slot.replaceChildren(el);
+    slot.scrollTop = 0;
+    if (!known) {
+      el.innerHTML = `<div class="card denied"><h1 tabindex="-1">Página não encontrada</h1>
+        <p>O endereço <code>${esc(`#/${raw}`.slice(0, 120))}</code> não existe ou foi removido.</p><a class="btn" href="${homeHash()}">Voltar ao Início</a></div>`;
+      if (focusAfterNav) focusHeading();
+      return;
+    }
+    // Telas só de administrador: bloqueio no roteador, antes de montar a tela ou chamar o banco
+    const item = me.partner ? null : NAV_ITEM[view];
+    if (item && item.admin && me.level !== 'admin') {
+      window.BO.ui.denied(el, me, `A tela “${item.label}”`, 'administradores');
+      if (focusAfterNav) focusHeading();
+      return;
+    }
+    const fn = me.partner ? window.BO.views.assinar : window.BO.views[view];
     el.innerHTML = '<div class="spinner" aria-label="Carregando"></div>';
-    el.scrollTop = 0;
+    // B-4: modal aberto por esta rota com endereço profundo (#/funil/l1): o core liga ao primeiro modal que abrir sem ação da pessoa
+    window.BO._routeModal = null;
+    window.BO._routeOpen = rest.length >= 1 && rest[rest.length - 1] !== 'new'
+      ? { hash: location.hash, base: '#/' + [view, ...rest.slice(0, -1)].join('/'), n: window.BO._inputCount(), t: Date.now() } : null;
     try {
-      await fn(el, params.map(decodeURIComponent), me);
+      await fn(el, params, me);
+      if (mine !== navSeq) return;
       const grp = me.partner ? null : groupOf(view);
       if (grp) {
-        const tab = (x) => { const c = x.count ? counts[x.count] : 0; return `<a href="#/${x.id}" class="${x.id === view ? 'active' : ''}"${x.id === view ? ' aria-current="page"' : ''}>${esc(x.label)}${c ? `<span class="nav-count">${c > 99 ? '99+' : c}</span>` : ''}</a>`; };
-        el.insertAdjacentHTML('afterbegin', `<nav class="settings-nav" aria-label="${esc(grp.label)}">${grp.items.filter((x) => !x.admin || me.level === 'admin').map(tab).join('')}</nav>`);
+        const tab = (x) => { const c = x.count ? counts[x.count] : 0; return `<a href="#/${x.id}" role="tab" aria-selected="${x.id === view}" class="${x.id === view ? 'active' : ''}"${x.id === view ? ' aria-current="page"' : ''}>${esc(x.label)}${c ? `<span class="nav-count">${c > 99 ? '99+' : c}</span>` : ''}</a>`; };
+        el.insertAdjacentHTML('afterbegin', `<nav class="settings-nav" role="tablist" aria-label="${esc(grp.label)}">${grp.items.filter((x) => !x.admin || me.level === 'admin').map(tab).join('')}</nav>`);
       }
+      // toda tela tem um h1 (as que não desenham o próprio ganham o do menu, visível só para leitor de tela)
+      if (!el.querySelector('h1')) el.insertAdjacentHTML('afterbegin', `<h1 class="ui-sr">${esc(SECTION_TITLE[view] || 'Painel')}</h1>`);
+      window.BO.ui.tabsReady(el);
+      applyGlobalQuery(view);
+      if (focusAfterNav) focusHeading();
     } catch (e) {
-      const msg = message(e);
-      if (/mfa_required|forbidden|JWT|session/i.test(e.message || '')) { signOut(); return; }
-      el.innerHTML = `<div class="card"><div class="error-box">${esc(msg)}</div>
-        <div style="margin-top:12px"><button class="btn secondary" data-reload>Tentar de novo</button></div></div>`;
+      if (mine !== navSeq) return;
+      focusAfterNav = false;
+      if (/mfa_required|forbidden|JWT|session|not_authenticated/i.test(e.message || '')) { signOut(true); return; }
+      el.innerHTML = window.BO.ui.errorCard(message(e));
     }
   }
-  window.addEventListener('hashchange', () => { route(); refreshCounts(); });
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-retry]')) { route(); refreshCounts(); } });
+  window.addEventListener('hashchange', () => { window.BO.closeModal(); setDrawer(false, false); route(); refreshCounts(); });
   window.BO.reload = () => { route(); refreshCounts(); };
 
   /* --------------------------------------------------- saída por inatividade */
   let idle;
   const bump = () => {
     clearTimeout(idle);
-    idle = setTimeout(() => { if (me) { signOut(); window.BO.toast('Sessão encerrada por inatividade.'); } },
+    idle = setTimeout(() => { if (me) { signOut(true); window.BO.toast('Sessão encerrada por inatividade.'); } },
       (window.LOTTUS_CONFIG.idleMinutes || 30) * 60000);
   };
   ['click', 'keydown', 'mousemove', 'scroll'].forEach((ev) => window.addEventListener(ev, bump, { passive: true }));

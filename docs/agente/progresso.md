@@ -29,3 +29,7 @@ Atualizado em 23/11/2026. Branch git: `agentes-autonomo` (enviada ao GitHub; có
 1. Se o branch do Supabase existir (D-01): aplicar `supabase/migrations/*.sql` no branch, nesta ordem, rodar `supabase/tests/*.sql` e os testes de `scripts/wealth-local/testes/` contra ele; ler os advisors.
 2. Se o código do Invest e das funções de borda chegar (D-02): Fase 0 do Invest e leitura das 19 funções de borda restantes (API-02). O mesmo ambiente local (`scripts/wealth-local`) serve de modelo para testar outras plataformas.
 3. Com usuários de teste no branch (2e): auditar as telas logadas do Partners (10 áreas) e do Admin, seção por seção.
+
+
+## Admin v2 (27/11/2026)
+Versão reformulada (upload do Yuri) adotada como base; auditada (B1), corrigida em 3 pacotes e verificada na Fase 6 (aprovada com ressalvas). Entregue: menu/gaveta, bloqueio por nível, telas divididas, aba Plano e preço (trocar plano, preço personalizado com validade, motivo e alçada de 20%), catálogo, em atraso, régua; 2 migrações novas (preços/cobrança automática e segurança do Sign) testadas só em Postgres local. **Nada em produção.** Ver `docs/agente/admin/status.md` e `release.md`.

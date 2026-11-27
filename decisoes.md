@@ -1,0 +1,1 @@
+| 26/11/2026 | Aceitar a altura maior dos cartões em ≤640 px com ≤25 itens (M1) | Paginação de 25 derruba a altura com volume real; tabelas com rolagem lateral foram a causa dos cortes | Maestro | Remover campos dos cartões |

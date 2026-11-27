@@ -66,7 +66,7 @@
         <div class="card flush"><div class="table-wrap">${list.length ? `<table>
           <thead><tr><th>Cedente</th><th>Fase</th><th class="num">Ajuste no spread</th><th>Por quê</th><th class="num">Pagas</th><th class="num">Dias sem antecipar</th><th></th></tr></thead>
           <tbody>${list.map((c) => `<tr>
-            <td><a href="#/empresas/${esc(c.company_id)}"><b>${esc(c.name)}</b></a><div class="small muted">${esc(cnpj(c.cnpj))}</div></td>
+            <td><b>${esc(c.name)}</b><div class="small muted">${esc(cnpj(c.cnpj))}</div></td>
             <td>${phaseTag(c.phase)}${c.frozen_until ? `<div class="small muted">sem aumento até ${esc(B.date(c.frozen_until))}</div>` : ''}</td>
             <td class="num"><b style="color:${Number(c.adj) < 0 ? 'var(--success)' : Number(c.adj) > 0 ? 'var(--warning)' : 'inherit'}">${pctS(c.adj)}</b>${Number(c.comfort) ? `<div class="small muted">conforto ${pctS(c.comfort)}</div>` : ''}</td>
             <td class="small" style="max-width:320px">${esc(c.reason || '')}<div class="muted">atualizado ${dateTime(c.updated_at)}</div></td>

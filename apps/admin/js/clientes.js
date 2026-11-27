@@ -15,65 +15,92 @@
   const csvCell = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
   B.customerHealth = health;
 
+  /** "Ver mais" dentro de uma linha/cartão: o que não decide a ação fica recolhido. */
+  const rowMore = (pairs) => `<details class="row-more"><summary>Ver mais</summary><dl class="kv">${pairs.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl></details>`;
+  /** Lista que mostra N itens e libera mais N a cada clique em "Ver mais". item(x) devolve o HTML já escapado de cada item. */
+  function showMore(host, items, item, { size = 10, wrap = ['<ol class="timeline">', '</ol>'], label = 'Ver mais', all = false } = {}) {
+    let n = size;
+    const paint = (focusAt) => {
+      host.innerHTML = `${wrap[0]}${items.slice(0, n).map(item).join('')}${wrap[1]}${n < items.length ? `<div class="u-m4t"><button type="button" class="btn secondary" data-more>${esc(label)} (${items.length - n} restantes)</button></div>` : ''}`;
+      const b = host.querySelector('[data-more]');
+      if (b) b.onclick = () => { const prev = n; n = all ? items.length : n + size; paint(prev); };
+      if (focusAt != null && host.firstElementChild) { const li = host.firstElementChild.children[focusAt]; if (li) { li.setAttribute('tabindex', '-1'); li.focus(); } }
+    };
+    paint();
+  }
+
+  B.showMore = showMore;
+
   B.views.clientes = async (el, args, me) => {
     if (args[0] === 'funder' || args[0] === 'sign') return detail(el, args[0], args[1], me);
     const { rows, mrr } = await rpc('bo_customers');
-    const FILTERS = [['all', 'Todos'], ['partners', 'Partners'], ['sign', 'Sign'], ['active', 'Pagantes'], ['trial', 'Teste / gratuito'], ['overdue', 'Inadimplentes'], ['red', 'Saúde ruim'], ['cancelled', 'Cancelados']];
-    let f = FILTERS.some(([k]) => k === args[0]) ? args[0] : 'all', q = '';
-    const match = (c) => ({ all: c.status !== 'cancelled', partners: c.kind === 'funder' && c.status !== 'cancelled', sign: c.kind === 'sign' && c.status !== 'cancelled',
-      active: Number(c.mrr) > 0, trial: c.status === 'trial', overdue: c.status === 'overdue', red: c.health === 'red', cancelled: c.status === 'cancelled' })[f];
-    const cnt = (k) => { const o = f; f = k; const n = rows.filter(match).length; f = o; return n; };
+    const PRODUCTS = [['all', 'Todos'], ['partners', 'Partners'], ['sign', 'Sign']];
+    const SITUATIONS = [['any', 'Qualquer situação'], ['active', 'Pagantes'], ['trial', 'Teste / gratuito'], ['overdue', 'Inadimplentes'], ['red', 'Saúde ruim'], ['cancelled', 'Cancelados']];
+    // o endereço #/clientes/<filtro> continua valendo (o Início aponta para #/clientes/red)
+    let prod = PRODUCTS.some(([k]) => k === args[0]) ? args[0] : 'all';
+    let sit = SITUATIONS.some(([k]) => k === args[0]) ? args[0] : 'any';
+    const isProd = (c, p) => (p === 'partners' ? c.kind === 'funder' : p === 'sign' ? c.kind === 'sign' : true);
+    const isSit = (c, t) => ({ any: c.status !== 'cancelled', active: Number(c.mrr) > 0, trial: c.status === 'trial', overdue: c.status === 'overdue', red: c.health === 'red', cancelled: c.status === 'cancelled' })[t];
+    const count = (p, t) => rows.filter((c) => isProd(c, p) && isSit(c, t)).length;
+    const nRed = rows.filter((c) => c.health === 'red').length;
     el.innerHTML = `
-      ${head('Clientes', 'Quem paga a Lottus, quanto e como está cada um.', '<button class="btn ghost" id="csv">Exportar CSV</button>')}
-      <div class="kpi4">
+      ${B.ui.pageHead({ title: 'Clientes', sub: 'Quem paga a Lottus, quanto e como está cada um.', more: [{ id: 'csv', label: 'Exportar CSV' }] })}
+      <div class="kpi4 kpi4-c">
         <div class="tile main"><span class="kpi-label">MRR</span><span class="tile-value">${brl(mrr.mrr)}</span><span class="small muted">${nf(mrr.customers)} pagantes</span></div>
-        <div class="tile"><span class="kpi-label">Partners</span><span class="tile-value">${brl(mrr.partners)}</span><span class="small muted">${cnt('partners')} veículos</span></div>
-        <div class="tile"><span class="kpi-label">Sign</span><span class="tile-value">${brl(mrr.sign)}</span><span class="small muted">${cnt('sign')} contas</span></div>
-        <div class="tile ${cnt('red') ? 'danger' : ''}"><span class="kpi-label">Saúde ruim</span><span class="tile-value">${cnt('red')}</span><span class="small muted">atraso ou sem acesso há 45 dias</span></div>
+        <div class="tile"><span class="kpi-label">Partners</span><span class="tile-value">${brl(mrr.partners)}</span><span class="small muted">${count('partners', 'any')} veículos</span></div>
+        <div class="tile"><span class="kpi-label">Sign</span><span class="tile-value">${brl(mrr.sign)}</span><span class="small muted">${count('sign', 'any')} contas</span></div>
+        <div class="tile ${nRed ? 'danger' : ''}"><span class="kpi-label">Saúde ruim</span><span class="tile-value">${nRed}</span><span class="small muted">atraso ou sem acesso há 45 dias</span></div>
       </div>
-      <div class="row u-mb16" style="gap:12px;flex-wrap:wrap;justify-content:space-between">
-        ${tabs(FILTERS.map(([k, l]) => [k, `${l}${k !== 'all' && cnt(k) ? ` (${cnt(k)})` : ''}`]), f)}
-        <input class="input search" id="q" type="search" placeholder="Buscar nome, CNPJ ou e-mail" aria-label="Buscar cliente">
+      <div class="filter-line u-mb16">
+        <div id="ptabs">${tabs(PRODUCTS.map(([k, l]) => [k, `${l}${k !== 'all' ? ` (${count(k, 'any')})` : ''}`]), prod)}</div>
+        <div class="field filter-sel"><label for="sit">Situação</label><select class="input" id="sit">${SITUATIONS.map(([k, l]) => `<option value="${k}" ${k === sit ? 'selected' : ''}>${esc(l)}${k !== 'any' && count('all', k) ? ` (${count('all', k)})` : ''}</option>`).join('')}</select></div>
       </div>
-      <div class="card flush"><div class="table-wrap" id="list"></div></div>`;
+      <div id="list"></div>`;
+    const keepQ = () => { const i = el.querySelector('#list .lt-search input'); return i ? i.value : ''; };
     const paint = () => {
-      const t = q.toLowerCase(), d = q.replace(/\D/g, '');
-      const list = rows.filter(match).filter((c) => !t || `${c.name} ${c.legal_name} ${c.email || ''}`.toLowerCase().includes(t) || (d.length > 3 && String(c.doc || '').includes(d)));
-      el.querySelector('#list').innerHTML = !list.length ? empty('Nenhum cliente aqui.') : `<table>
-        <thead><tr><th>Cliente</th><th>Produto e plano</th><th class="num">Mensal</th><th>Uso</th><th>Último acesso</th><th>Situação</th><th>Saúde</th></tr></thead>
-        <tbody>${list.map((c) => `<tr class="link" data-k="${c.kind}" data-id="${esc(c.id)}">
-          <td><b>${esc(c.name)}</b><div class="small muted">${esc(B.cnpj ? B.cnpj(c.doc || '') : c.doc || '')}${c.owner_name ? ' · ' + esc(c.owner_name) : ''}</div></td>
-          <td>${esc(c.product)}<div class="small muted">${esc(c.plan)}${c.plan_requested ? ' · pediu ' + esc(c.plan_requested) : ''}</div></td>
-          <td class="num"><b>${brl(c.mrr)}</b></td><td class="small">${usage(c)}</td>
-          <td class="small muted">${c.last_access ? ago(c.last_access) : 'nunca'}</td><td>${statusTag(c.status)}</td><td>${health(c.health)}</td></tr>`).join('')}</tbody></table>`;
-      el.querySelectorAll('#list tr[data-id]').forEach((r) => (r.onclick = () => (location.hash = `#/clientes/${r.dataset.k}/${r.dataset.id}`)));
+      const list = rows.filter((c) => isProd(c, prod) && isSit(c, sit));
+      const host = el.querySelector('#list');
+      host.innerHTML = B.ui.table({
+        rows: list, pageSize: 25, q: keepQ(), searchLabel: 'Buscar por nome, CNPJ ou e-mail', cardTitle: 'name', emptyText: 'Nenhum cliente aqui.',
+        rowHref: (c) => `#/clientes/${c.kind}/${c.id}`,
+        columns: [
+          { key: 'name', label: 'Cliente', searchText: (c) => `${c.name} ${c.legal_name || ''} ${c.email || ''} ${c.doc || ''} ${B.cnpj(c.doc || '')}`, render: (c) => `<b>${esc(c.name)}</b><div class="small muted">${esc(B.cnpj(c.doc || ''))}${c.owner_name ? ' · ' + esc(c.owner_name) : ''}</div>` },
+          { key: 'plan', label: 'Plano', searchText: (c) => `${c.product} ${c.plan}`, render: (c) => `${esc(c.product)}<div class="small muted">${esc(c.plan)}${c.plan_requested && c.plan_requested !== c.plan ? ' · pediu ' + esc(c.plan_requested) : ''}</div>` },
+          { key: 'mrr', label: 'Mensal', num: true, searchText: () => '', render: (c) => `<b>${brl(c.mrr)}</b>` },
+          { key: 'status', label: 'Situação', searchText: (c) => (STATUS[c.status] || [c.status])[0], render: (c) => `${statusTag(c.status)}${rowMore([['Uso', esc(usage(c))], ['Último acesso', esc(c.last_access ? ago(c.last_access) : 'nunca')], ['Saúde', health(c.health)]])}` },
+        ],
+      });
+      B.ui.onTable(host);
+      const qi = host.querySelector('.lt-search input');
+      if (qi) { qi.id = 'q'; const lb = host.querySelector('.lt-search label'); if (lb) lb.htmlFor = 'q'; }
     };
     paint();
-    onTabs(el, (k) => { f = k; el.querySelectorAll('.page-head ~ .row [data-tab], .row [data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === k); b.setAttribute('aria-selected', String(b.dataset.tab === k)); }); paint(); });
-    el.querySelector('#q').oninput = (e) => { q = e.target.value.trim(); paint(); };
-    el.querySelector('#csv').onclick = () => {
+    onTabs(el.querySelector('#ptabs'), (k) => { prod = k; el.querySelectorAll('#ptabs [data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === k); b.setAttribute('aria-selected', String(b.dataset.tab === k)); b.tabIndex = b.dataset.tab === k ? 0 : -1; }); paint(); });
+    el.querySelector('#sit').onchange = (e) => { sit = e.target.value; paint(); };
+    B.ui.onPage(el, { csv: () => {
       const out = [['Cliente', 'Razão social', 'CNPJ/CPF', 'E-mail', 'Produto', 'Plano', 'Mensal', 'Cliente desde', 'Último acesso', 'Situação', 'Saúde']].concat(
         rows.map((c) => [c.name, c.legal_name, c.doc, c.email, c.product, c.plan, String(c.mrr).replace('.', ','), String(c.since || '').slice(0, 10), String(c.last_access || '').slice(0, 10), (STATUS[c.status] || [c.status])[0], (HEALTH[c.health] || ['—'])[0]]));
       B.downloadCsv ? B.downloadCsv('clientes', out) : null;
-    };
+    } });
   };
 
   B.downloadCsv = (name, rows) => {
     const blob = new Blob(['﻿' + rows.map((r) => r.map(csvCell).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}-${B.today()}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
 
   /* ------------------------------------------------------------ ficha */
   async function detail(el, kind, id, me) {
     const [c, staff] = await Promise.all([rpc('bo_customer', { p_kind: kind, p_id: id }), rpc('bo_staff_names').catch(() => [])]);
     const mayWrite = can(me, 'approver');
-    const TABS = [['resumo', 'Resumo'], ['faturas', `Faturas (${c.invoices.length})`], ['pessoas', 'Pessoas'], ['historico', 'Histórico']];
-    let tab = 'resumo';
+    const TABS = [['resumo', 'Resumo'], ['faturas', `Faturas (${c.invoices.length})`], ['pessoas', 'Pessoas'], ['historico', 'Histórico'], ['plano', 'Plano e preço']];
+    let tab = B._fichaTab === 'plano' ? 'plano' : 'resumo'; // depois de trocar plano/preço, a ficha volta nesta aba
+    B._fichaTab = null;
+    const moreActs = mayWrite ? [{ id: 'note', label: 'Registrar nota' }, { id: 'task', label: 'Marcar tarefa' }, c.cancelled_at ? { id: 'react', label: 'Reativar cliente' } : { id: 'cancel', label: 'Marcar como cancelado', danger: true }] : [];
     el.innerHTML = `
-      <a class="small" href="#/clientes">‹ Clientes</a>
-      ${head(esc(c.name), `${esc(c.product)} · ${esc(c.plan)} · cliente desde ${date(c.since)}`,
-        mayWrite ? `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn secondary" id="note">Registrar nota</button><button class="btn secondary" id="task">Marcar tarefa</button><button class="btn" id="inv">Nova fatura</button></div>` : '')}
-      <div class="kpi4">
+      <a class="small tap" href="#/clientes">‹ Clientes</a>
+      ${B.ui.pageHead({ title: c.name, sub: `${c.product} · ${c.plan} · cliente desde ${date(c.since)}`, primary: mayWrite ? { id: 'inv', label: 'Nova fatura' } : null, more: moreActs })}
+      <div class="kpi4 kpi4-c">
         <div class="tile main"><span class="kpi-label">Mensal</span><span class="tile-value">${brl(c.mrr)}</span><span class="small muted">${statusTag(c.status)}</span></div>
         <div class="tile"><span class="kpi-label">Uso</span><span class="tile-value">${c.kind === 'funder' ? B.brlCompact(c.usage) : nf(c.usage)}</span><span class="small muted">${c.kind === 'funder' ? 'PL do veículo' : 'documentos no mês' + (c.included ? ' de ' + nf(c.included) : '')}</span></div>
         <div class="tile ${Number(c.open_amount) && c.overdue ? 'danger' : ''}"><span class="kpi-label">Em aberto</span><span class="tile-value">${brl(c.open_amount)}</span><span class="small muted">${c.overdue ? c.overdue + ' vencida(s)' : 'nada vencido'}</span></div>
@@ -93,41 +120,65 @@
             ${c.cancelled_at ? `<dt>Cancelado em</dt><dd>${date(c.cancelled_at)}${c.cancel_reason ? ' · ' + esc(c.cancel_reason) : ''}</dd>` : ''}
           </dl>
           <div class="field" style="margin-top:12px"><label>Anotações fixas</label><textarea class="input" id="notes" rows="3" ${mayWrite ? '' : 'disabled'}>${esc(c.notes || '')}</textarea></div>
-          ${mayWrite ? `<div class="row" style="gap:8px;margin-top:8px"><button class="btn secondary sm" id="savenotes">Salvar anotações</button><span class="grow"></span>${c.cancelled_at ? '<button class="btn secondary sm" id="react">Reativar</button>' : '<button class="btn danger sm" id="cancel">Marcar como cancelado</button>'}</div>` : ''}
-          ${c.kind === 'funder' ? `<p class="small" style="margin-top:12px"><a href="#/parceiros/${esc(c.id)}">Abrir na gestão dos fundos ›</a></p>` : `<p class="small" style="margin-top:12px"><a href="#/planos/sign">Trocar plano ou isentar em Preços e planos ›</a></p>`}</div></div>`;
+          ${mayWrite ? `<div class="row" style="gap:8px;margin-top:8px"><button class="btn secondary sm" id="savenotes">Salvar anotações</button></div>` : ''}
+          ${c.kind === 'funder' ? `<p class="small" style="margin-top:12px"><a class="tap" href="#/parceiros/${esc(c.id)}">Abrir na gestão dos fundos ›</a></p>` : `<p class="small" style="margin-top:12px"><a class="tap" href="#/planos/sign">Trocar plano ou isentar em Preços e planos ›</a></p>`}</div></div>`;
         B.columnChart(box.querySelector('#ch'), c.revenue.map((r) => { const [y, m] = r.month.split('-'); return { label: `${m}/${y.slice(2)}`, value: Number(r.paid), detail: `faturado ${brl(r.billed)}` }; }), { name: 'Recebido' });
         const o = box.querySelector('#owner');
         if (o) o.onchange = () => run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'owner', owner_id: o.value } }), 'Responsável salvo').catch(() => {});
         const sn = box.querySelector('#savenotes');
         if (sn) sn.onclick = () => run(sn, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'notes', text: box.querySelector('#notes').value } }), 'Anotações salvas').catch(() => {});
-        const cb = box.querySelector('#cancel');
-        if (cb) cb.onclick = async () => {
-          const r = await confirmAction({ title: 'Marcar como cancelado', text: 'O cliente sai do MRR. Isso não apaga a conta nem bloqueia o acesso; para isso use a gestão do produto.', confirmLabel: 'Cancelar cliente', danger: true, note: true, noteLabel: 'Motivo' });
-          if (r == null) return;
-          run(cb, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'cancel', reason: r } }), 'Cliente cancelado').then(B.reload).catch(() => {});
-        };
-        const rb = box.querySelector('#react');
-        if (rb) rb.onclick = () => run(rb, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'reactivate' } }), 'Cliente reativado').then(B.reload).catch(() => {});
       } else if (tab === 'faturas') {
         const PH = { open: ['A vencer', 'brand'], overdue: ['Em atraso', 'danger'], paid: ['Paga', 'success'], cancelled: ['Cancelada', ''] };
-        box.innerHTML = `<div class="card flush">${c.invoices.length ? `<div class="table-wrap"><table><thead><tr><th>Fatura</th><th>Vencimento</th><th class="num">Valor</th><th>Situação</th></tr></thead><tbody>${c.invoices.map((i) => `<tr class="link" data-go="#/faturas/all"><td><b>${esc(i.number)}</b><div class="small muted">${esc(i.description)}</div></td><td>${date(i.due_date)}</td><td class="num">${brl(i.amount)}</td><td><span class="tag ${(PH[i.phase] || ['', ''])[1]}">${esc((PH[i.phase] || [i.phase])[0])}</span>${i.paid_at ? ` <span class="small muted">${date(i.paid_at)}</span>` : ''}</td></tr>`).join('')}</tbody></table></div>` : empty('Nenhuma fatura ainda.')}</div>`;
-        box.querySelectorAll('[data-go]').forEach((r) => (r.onclick = () => (location.hash = r.dataset.go)));
+        box.innerHTML = `<p class="small muted u-mb16">Toque numa fatura para ver a lista de faturas filtrada por este cliente.</p>${B.ui.table({
+          rows: c.invoices, pageSize: 25, cardTitle: 'number', emptyText: 'Nenhuma fatura ainda.', searchLabel: 'Buscar fatura',
+          onRow: () => { B._gq = { v: 'faturas', q: c.legal_name || c.name, t: Date.now() }; location.hash = '#/faturas/all'; },
+          columns: [
+            { key: 'number', label: 'Fatura', render: (i) => `<b>${esc(i.number)}</b><div class="small muted">${esc(i.description)}</div>` },
+            { key: 'due_date', label: 'Vencimento', searchText: () => '', render: (i) => date(i.due_date) },
+            { key: 'amount', label: 'Valor', num: true, searchText: () => '', render: (i) => brl(i.amount) },
+            { key: 'phase', label: 'Situação', searchText: (i) => (PH[i.phase] || [i.phase])[0], render: (i) => `<span class="tag ${(PH[i.phase] || ['', ''])[1]}">${esc((PH[i.phase] || [i.phase])[0])}</span>${i.paid_at ? ` <span class="small muted">${date(i.paid_at)}</span>` : ''}` },
+          ],
+        })}`;
+        B.ui.onTable(box);
       } else if (tab === 'pessoas') {
-        box.innerHTML = `<div class="card flush">${c.people.length ? `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Papel</th><th>E-mail</th><th>Último acesso</th></tr></thead><tbody>${c.people.map((p) => `<tr><td><b>${esc(p.name || '—')}</b>${p.phone ? `<div class="small muted">${esc(p.phone)}</div>` : ''}</td><td>${esc(p.role)}</td><td>${esc(p.email || '')}</td><td class="small muted">${p.last_access ? ago(p.last_access) : 'nunca'}</td></tr>`).join('')}</tbody></table></div>` : empty('Ninguém cadastrado.')}</div>
-          ${c.emails.length ? `<div class="card" style="margin-top:16px"><h2>E-mails enviados</h2><div class="table-wrap"><table><tbody>${c.emails.map((m) => `<tr><td class="nowrap small">${dateTime(m.at)}</td><td>${esc(m.subject || '')}</td><td class="small muted">${esc(m.status || '')}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
-      } else {
+        box.innerHTML = `${B.ui.table({
+          rows: c.people, pageSize: 25, cardTitle: 'name', emptyText: 'Ninguém cadastrado.', searchLabel: 'Buscar pessoa',
+          columns: [
+            { key: 'name', label: 'Nome', render: (p) => `<b>${esc(p.name || '—')}</b>${p.phone ? `<div class="small muted">${esc(p.phone)}</div>` : ''}` },
+            { key: 'role', label: 'Papel' },
+            { key: 'email', label: 'E-mail', render: (p) => esc(p.email || '') },
+            { key: 'last_access', label: 'Último acesso', searchText: () => '', render: (p) => `<span class="small muted">${p.last_access ? esc(ago(p.last_access)) : 'nunca'}</span>` },
+          ],
+        })}
+          ${c.emails.length ? `<div class="card u-m16t"><h2>E-mails enviados</h2><div class="table-wrap"><table class="stack-m"><tbody>${c.emails.map((m) => `<tr><td class="nowrap small" data-label="Quando">${dateTime(m.at)}</td><td data-label="Assunto">${esc(m.subject || '')}</td><td class="small muted" data-label="Situação">${esc(m.status || '')}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
+        B.ui.onTable(box);
+      } else if (tab === 'historico') {
         box.innerHTML = `<div class="card">${c.events.length ? `<ol class="timeline">${c.events.map((e) => `<li><span class="tl-when small muted">${dateTime(e.at)}</span><b>${esc(EVENT[e.event] || e.event)}</b> ${esc(e.text || '')}${e.mrr_before != null && e.mrr_after != null && Number(e.mrr_before) !== Number(e.mrr_after) ? ` <span class="small muted">(${brl(e.mrr_before)} → ${brl(e.mrr_after)})</span>` : ''}${e.by_name ? ` <span class="small muted">· ${esc(e.by_name)}</span>` : ''}</li>`).join('')}</ol>` : empty('Sem histórico.')}</div>`;
+      } else {
+        // Plano, preço de tabela, preço personalizado e troca de plano: plano-ficha.js (bo_customer_plan)
+        B.planoFicha.render(box, { c, kind, id, me, fallbackHref: c.kind === 'funder' ? `#/parceiros/${c.id}` : '#/planos/sign' });
       }
     };
     paint();
     onTabs(el.querySelector('.u-mb16'), (k) => { tab = k; el.querySelectorAll('.u-mb16 [data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === k); b.setAttribute('aria-selected', String(b.dataset.tab === k)); }); paint(); });
     if (!mayWrite) return;
-    el.querySelector('#note').onclick = async () => {
+    B.ui.onPage(el, {
+      note: async () => {
       const r = await confirmAction({ title: 'Registrar nota', text: 'Fica no histórico do cliente.', confirmLabel: 'Salvar', note: true, noteLabel: 'Nota', noteRequired: true });
       if (r) run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'note', text: r } }), 'Nota registrada').then(B.reload).catch(() => {});
-    };
-    el.querySelector('#task').onclick = () => B.openTask && B.openTask({ customer_kind: kind, customer_id: id, title: `Falar com ${c.name}` });
-    el.querySelector('#inv').onclick = () => B.newInvoice && B.newInvoice({ customer_kind: kind, funder_id: kind === 'funder' ? id : null, sign_account_id: kind === 'sign' ? id : null, customer_name: c.legal_name || c.name, customer_doc: c.doc, customer_email: c.email });
+      },
+      task: () => B.openTask && B.openTask({ customer_kind: kind, customer_id: id, title: `Falar com ${c.name}` }),
+      inv: () => { B._invReturn = `#/clientes/${kind}/${id}`; return B.newInvoice && B.newInvoice({ customer_kind: kind, funder_id: kind === 'funder' ? id : null, sign_account_id: kind === 'sign' ? id : null, customer_name: c.legal_name || c.name, customer_doc: c.doc, customer_email: c.email }); },
+      cancel: async () => {
+        const r = await confirmAction({ title: 'Marcar como cancelado', text: 'O cliente sai do MRR. Isso não apaga a conta nem bloqueia o acesso; para isso use a gestão do produto.', confirmLabel: 'Cancelar cliente', danger: true, note: true, noteLabel: 'Motivo' });
+        if (r == null) return;
+        run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'cancel', reason: r } }), 'Cliente cancelado').then(B.reload).catch(() => {});
+      },
+      react: async () => {
+        if ((await confirmAction({ title: 'Reativar cliente', text: `<b>${esc(c.name)}</b> volta a contar no MRR e sai da lista de cancelados. Confirma?`, confirmLabel: 'Reativar cliente' })) == null) return;
+        return run(null, () => rpc('bo_customer_set', { p_kind: kind, p_id: id, p: { action: 'reactivate' } }), 'Cliente reativado').then(B.reload).catch(() => {});
+      },
+    });
   }
 
   /* ----------------------------------------------------------- assinaturas */
@@ -135,19 +186,43 @@
     const s = await rpc('bo_subscriptions', { p_month: null });
     const mv = s.moves, net = Number(mv.new) + Number(mv.expansion) + Number(mv.contraction) + Number(mv.churn);
     const sign = (v) => `${Number(v) > 0 ? '+' : ''}${brl(v)}`;
+    const TABS = [['planos', `Por plano (${s.plans.length})`], ['mudancas', `Mudanças do mês (${s.events.length})`]];
+    let tab = 'planos';
     el.innerHTML = `
-      ${head('Assinaturas', 'Quem está em cada plano e o que mudou o MRR neste mês.')}
-      <div class="kpi4">
+      ${B.ui.pageHead({ title: 'Assinaturas', sub: 'Quem está em cada plano e o que mudou o MRR neste mês.' })}
+      <div class="card today dash-row"><h2>Pedidos de troca de plano${s.requests.length ? ` (${s.requests.length})` : ''}</h2><div id="req"></div></div>
+      <div class="kpi4 kpi4-c">
         <div class="tile main"><span class="kpi-label">MRR</span><span class="tile-value">${brl(s.mrr.mrr)}</span><span class="small muted">${sign(net)} no mês</span></div>
         <div class="tile"><span class="kpi-label">Novos</span><span class="tile-value">${sign(mv.new)}</span><span class="small muted">${mv.new_count} cliente(s)</span></div>
         <div class="tile"><span class="kpi-label">Upgrades e downgrades</span><span class="tile-value">${sign(Number(mv.expansion) + Number(mv.contraction))}</span><span class="small muted">${brl(mv.expansion)} a mais · ${brl(-mv.contraction)} a menos</span></div>
         <div class="tile ${Number(mv.churn) ? 'danger' : ''}"><span class="kpi-label">Cancelamentos</span><span class="tile-value">${sign(mv.churn)}</span><span class="small muted">${mv.churn_count} cliente(s)</span></div>
       </div>
-      ${s.requests.length ? `<div class="card today dash-row"><h2>Pedidos de troca de plano</h2><div class="queue">${s.requests.map((r) => `<a class="queue-row" href="#/planos/sign"><span class="queue-label"><b>${esc(r.name)}</b><br><span class="small muted">${esc(r.plan)} → ${esc(r.plan_requested)} · ${ago(r.requested_at)}</span></span><span class="btn secondary sm">Responder</span></a>`).join('')}</div></div>` : ''}
-      <div class="grid-2 dash-row">
-        <div class="card flush"><div class="card-head" style="padding:16px 20px 0"><h2>Por plano</h2></div><div class="table-wrap"><table><thead><tr><th>Produto</th><th>Plano</th><th class="num">Clientes</th><th class="num">MRR</th></tr></thead><tbody>
-          ${s.plans.map((p) => `<tr><td>${esc(p.product)}</td><td>${esc(p.plan)}</td><td class="num">${nf(p.count)}</td><td class="num"><b>${brl(p.mrr)}</b></td></tr>`).join('')}</tbody></table></div></div>
-        <div class="card"><h2>Mudanças do mês</h2>${s.events.length ? `<ol class="timeline">${s.events.map((e) => `<li><a href="#/clientes/${e.kind}/${esc(e.id)}"><b>${esc(e.name || 'Cliente')}</b></a> · ${esc(EVENT[e.event] || e.event)}${e.mrr_before != null && e.mrr_after != null && Number(e.mrr_before) !== Number(e.mrr_after) ? ` <span class="small muted">${brl(e.mrr_before)} → ${brl(e.mrr_after)}</span>` : ''}<div class="small muted">${dateTime(e.at)}</div></li>`).join('')}</ol>` : empty('Nada mudou neste mês.')}</div>
-      </div>`;
+      <div class="u-mb16" id="atabs">${tabs(TABS, tab)}</div>
+      <div id="atab"></div>`;
+    // pedidos: sempre no topo; 5 à vista e o resto sob demanda
+    const req = el.querySelector('#req');
+    if (!s.requests.length) req.innerHTML = empty('Nenhum pedido de troca de plano.');
+    else showMore(req, s.requests, (r) => `<li class="req-row"><a class="queue-row" href="#/planos/sign"><span class="queue-label td-wrap"><b>${esc(r.name)}</b><br><span class="small muted">${esc(r.plan)} → ${esc(r.plan_requested)} · ${esc(ago(r.requested_at))}</span></span><span class="btn secondary sm">Responder</span></a></li>`, { size: 5, wrap: ['<ul class="queue req-list">', '</ul>'], label: 'Ver mais pedidos' });
+    const paint = () => {
+      const box = el.querySelector('#atab');
+      if (tab === 'planos') {
+        box.innerHTML = B.ui.table({
+          rows: s.plans, pageSize: 25, cardTitle: 'plan', search: s.plans.length > 10, searchLabel: 'Buscar plano', emptyText: 'Nenhum plano com clientes.',
+          columns: [
+            { key: 'product', label: 'Produto' }, { key: 'plan', label: 'Plano' },
+            { key: 'count', label: 'Clientes', num: true, render: (p) => nf(p.count) },
+            { key: 'mrr', label: 'MRR', num: true, render: (p) => `<b>${brl(p.mrr)}</b>` },
+          ],
+        });
+        B.ui.onTable(box);
+      } else {
+        box.innerHTML = '<div class="card"><h2>Mudanças do mês</h2><div id="ev"></div></div>';
+        const ev = box.querySelector('#ev');
+        if (!s.events.length) ev.innerHTML = empty('Nada mudou neste mês.');
+        else showMore(ev, s.events, (e) => `<li><a href="#/clientes/${esc(e.kind)}/${esc(e.id)}"><b>${esc(e.name || 'Cliente')}</b></a> · ${esc(EVENT[e.event] || e.event)}${e.mrr_before != null && e.mrr_after != null && Number(e.mrr_before) !== Number(e.mrr_after) ? ` <span class="small muted">${brl(e.mrr_before)} → ${brl(e.mrr_after)}</span>` : ''}<div class="small muted">${dateTime(e.at)}</div></li>`, { size: 10 });
+      }
+    };
+    paint();
+    onTabs(el.querySelector('#atabs'), (k) => { tab = k; el.querySelectorAll('#atabs [data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === k); b.setAttribute('aria-selected', String(b.dataset.tab === k)); b.tabIndex = b.dataset.tab === k ? 0 : -1; }); paint(); });
   };
 })();

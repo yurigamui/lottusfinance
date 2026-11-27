@@ -10,7 +10,7 @@
   const KINDS = [['', 'Não informado'], ['securitizadora', 'Securitizadora'], ['fidc', 'FIDC'], ['gestora', 'Gestora'], ['bancarizador', 'Bancarizador'], ['empresa', 'Empresa'], ['escritorio', 'Escritório'], ['pessoa', 'Pessoa física'], ['outro', 'Outro']];
   const TKIND = [['ligar', 'Ligar'], ['email', 'E-mail'], ['reuniao', 'Reunião'], ['proposta', 'Enviar proposta'], ['retorno', 'Retorno'], ['outro', 'Outro']];
   const opt = (arr, v) => arr.map(([k, l]) => `<option value="${esc(k)}" ${k === (v || '') ? 'selected' : ''}>${esc(l)}</option>`).join('');
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => B.today();
   const days = (a, b = new Date()) => Math.max(0, Math.round((new Date(b) - new Date(a)) / 864e5));
   const num = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
   let staffCache = null, campCache = null;
@@ -198,7 +198,7 @@
       <div class="u-mb16">${tabs(SC, scope)}</div><div id="tl"></div>`;
     const paint = async () => {
       const list = await rpc('bo_tasks', { p_scope: scope });
-      const t0 = today(), wk = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+      const t0 = today(), wk = B.addDays(t0, 7);
       const groups = scope === 'done' ? [['Feitas', list]] : [
         ['Atrasadas', list.filter((t) => t.due_on < t0)], ['Hoje', list.filter((t) => t.due_on === t0)],
         ['Próximos 7 dias', list.filter((t) => t.due_on > t0 && t.due_on <= wk)], ['Depois', list.filter((t) => t.due_on > wk)]];
@@ -206,7 +206,7 @@
         ${t.done_at ? `<button class="chk on" data-undo="${esc(t.id)}" aria-label="Desfazer">✓</button>` : `<button class="chk" data-done="${esc(t.id)}" aria-label="Concluir"></button>`}
         <div class="grow"><div><b>${esc(t.title)}</b> <span class="tag">${esc((TKIND.find((k) => k[0] === t.kind) || [0, t.kind])[1])}</span></div>
           <div class="small muted">${date(t.due_on)}${t.due_time ? ' · ' + String(t.due_time).slice(0, 5) : ''}${t.owner_name ? ' · ' + esc(t.owner_name) : ''}
-          ${t.lead_name ? ` · <a href="#/funil/${esc(t.lead_id)}">${esc(t.lead_name)}</a>` : ''}${t.customer_name ? ` · <a href="#/clientes/${esc(t.customer_kind)}/${esc(t.customer_id)}">${esc(t.customer_name)}</a>` : ''}${t.result ? ' · ' + esc(t.result) : ''}</div></div>
+          ${t.lead_name ? ` · <a class="tap" href="#/funil/${esc(t.lead_id)}">${esc(t.lead_name)}</a>` : ''}${t.customer_name ? ` · <a class="tap" href="#/clientes/${esc(t.customer_kind)}/${esc(t.customer_id)}">${esc(t.customer_name)}</a>` : ''}${t.result ? ' · ' + esc(t.result) : ''}</div></div>
         ${t.done_at ? '' : `<button class="btn ghost sm" data-edit="${esc(t.id)}">Editar</button>`}<button class="btn ghost sm" data-del="${esc(t.id)}" aria-label="Apagar">✕</button></div>`;
       el.querySelector('#tl').innerHTML = list.length ? groups.filter(([, g]) => g.length).map(([n, g]) => `<div class="card dash-row"><h2>${n} <span class="tag">${g.length}</span></h2>${g.map(row).join('')}</div>`).join('') : `<div class="card">${empty(scope === 'done' ? 'Nada feito nos últimos 30 dias.' : 'Nenhuma tarefa pendente. Marque o próximo passo de cada lead.')}</div>`;
       el.querySelectorAll('[data-done]').forEach((b) => (b.onclick = async () => {

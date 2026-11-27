@@ -94,7 +94,7 @@
   B.views.juridico = async (el) => {
     const pend = await rpc('bo_legal_pending').catch(() => null);
     el.innerHTML = `
-      ${head('Jurídico', 'Todos os documentos assinados na Lottus')}
+      ${head('Documentos assinados', 'Todos os documentos assinados na Lottus')}
       <div class="stack">
         ${pend ? `<div class="card"><div class="card-head"><div><h2>Verificação</h2>
             <div class="muted small">Feita automaticamente a cada operação e sempre que esta tela abre.</div></div>

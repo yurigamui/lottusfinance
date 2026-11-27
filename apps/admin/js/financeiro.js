@@ -8,7 +8,7 @@
   const CAT = { pessoal: 'Pessoal', tecnologia: 'Tecnologia', marketing: 'Marketing', juridico: 'Jurídico', contabil: 'Contabilidade', impostos: 'Impostos', escritorio: 'Escritório', financeiro: 'Tarifas e juros', outros: 'Outros' };
   const REC = { none: 'Não se repete', monthly: 'Todo mês', yearly: 'Todo ano' };
   const PH = { open: ['A vencer', 'brand'], soon: ['Vence em 7 dias', 'warning'], overdue: ['Vencida', 'danger'], paid: ['Paga', 'success'], cancelled: ['Cancelada', ''] };
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => B.today();
   const num = (v) => { const n = Number(String(v || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
   const opts = (map, v) => Object.entries(map).map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const phase = (p) => { const [l, c] = PH[p] || [p, '']; return `<span class="tag ${c}">${esc(l)}</span>`; };
@@ -36,12 +36,12 @@
     const paint = () => {
       const t = q.toLowerCase();
       const list = all.filter((x) => (f === 'all' || (f === 'open' ? x.status === 'open' : x.status === f)) && (!cat || x.category === cat) && (!t || `${x.supplier} ${x.description || ''}`.toLowerCase().includes(t)));
-      el.querySelector('#list').innerHTML = !list.length ? empty(f === 'open' ? 'Nenhuma conta em aberto. Cadastre as despesas da Lottus para enxergar o caixa.' : 'Nada aqui.') : `<table>
+      el.querySelector('#list').innerHTML = !list.length ? empty(f === 'open' ? 'Nenhuma conta em aberto. Cadastre as despesas da Lottus para enxergar o caixa.' : 'Nada aqui.') : `<table class="stack-m">
         <thead><tr><th>Fornecedor</th><th>Categoria</th><th>Vencimento</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead>
-        <tbody>${list.map((x) => `<tr class="link" data-id="${esc(x.id)}"><td><b>${esc(x.supplier)}</b><div class="small muted">${esc(x.description || '')}${x.recurring !== 'none' ? ' · ' + esc(REC[x.recurring]) : ''}</div></td>
-          <td>${esc(CAT[x.category] || x.category)}</td><td class="nowrap">${date(x.due_date)}</td><td class="num"><b>${brl(x.amount)}</b></td>
-          <td>${phase(x.phase)}${x.paid_at ? ` <span class="small muted">${date(x.paid_at)}${x.account ? ' · ' + esc(x.account) : ''}</span>` : ''}</td>
-          <td class="num">${mayWrite && x.status === 'open' ? `<button class="btn secondary sm" data-pay="${esc(x.id)}">Pagar</button>` : ''}</td></tr>`).join('')}</tbody></table>`;
+        <tbody>${list.map((x) => `<tr class="link" data-id="${esc(x.id)}"><td class="st-title"><b>${esc(x.supplier)}</b><div class="small muted">${esc(x.description || '')}${x.recurring !== 'none' ? ' · ' + esc(REC[x.recurring]) : ''}</div></td>
+          <td data-label="Categoria">${esc(CAT[x.category] || x.category)}</td><td class="nowrap" data-label="Vencimento">${date(x.due_date)}</td><td class="num" data-label="Valor"><b>${brl(x.amount)}</b></td>
+          <td data-label="Situação">${phase(x.phase)}${x.paid_at ? ` <span class="small muted">${date(x.paid_at)}${x.account ? ' · ' + esc(x.account) : ''}</span>` : ''}</td>
+          <td class="num st-actions">${mayWrite && x.status === 'open' ? `<button class="btn secondary sm" data-pay="${esc(x.id)}">Pagar</button>` : ''}</td></tr>`).join('')}</tbody></table>`;
       el.querySelectorAll('#list tr[data-id]').forEach((r) => (r.onclick = (e) => { if (!e.target.closest('button')) open(all.find((x) => x.id === r.dataset.id)); }));
       el.querySelectorAll('[data-pay]').forEach((b) => (b.onclick = () => pay(all.find((x) => x.id === b.dataset.pay))));
     };
@@ -106,9 +106,9 @@
     cf.items.forEach((x) => { const d = String(x.day).slice(0, 10); byDay.set(d, (byDay.get(d) || 0) + (x.kind === 'in' ? 1 : -1) * Number(x.amount)); });
     const weeks = [];
     for (let i = 0; i < 13; i++) {
-      const s = new Date(Date.now() + i * 7 * 864e5), e = new Date(Date.now() + (i * 7 + 6) * 864e5);
-      for (let d = new Date(s); d <= e; d = new Date(+d + 864e5)) { const k = d.toISOString().slice(0, 10); bal += byDay.get(k) || 0; if (low == null || bal < low.v) low = { v: bal, d: k }; }
-      weeks.push({ label: `${s.getDate()}/${MONTH[s.getMonth()]}`, long: `semana de ${s.toLocaleDateString('pt-BR')}`, value: Math.round(bal * 100) / 100 });
+      const s = B.addDays(B.today(), i * 7);
+      for (let k = 0; k < 7; k++) { const d = B.addDays(s, k); bal += byDay.get(d) || 0; if (low == null || bal < low.v) low = { v: bal, d }; }
+      weeks.push({ label: `${Number(s.slice(8))}/${MONTH[Number(s.slice(5, 7)) - 1]}`, long: `semana de ${date(s)}`, value: Math.round(bal * 100) / 100 });
     }
     const ins = cf.items.filter((x) => x.kind === 'in').reduce((t, x) => t + Number(x.amount), 0), outs = cf.items.filter((x) => x.kind === 'out').reduce((t, x) => t + Number(x.amount), 0);
     const min = Number(cf.cash_min || 0);
@@ -126,11 +126,11 @@
       <div class="card dash-row"><h2>Saldo previsto por semana</h2><div id="ch"></div></div>
       <div class="grid-2 dash-row">
         <div class="card"><div class="card-head"><h2>Contas</h2></div>
-          ${acc.rows.length ? acc.rows.map((a) => `<div class="list-row"><div class="grow"><b>${esc(a.name)}</b> <span class="small muted">${esc(a.bank || (a.kind === 'trio' ? 'Trio' : ''))}</span><div>${status(a)}</div></div><b>${brl(a.balance)}</b>${admin ? `<button class="btn ghost sm" data-acc="${esc(a.id)}">Editar</button>` : ''}</div>`).join('')
+          ${acc.rows.length ? acc.rows.map((a) => `<div class="list-row"><div class="grow"><b>${esc(a.name)}</b> <span class="small muted">${esc(a.bank || (a.kind === 'trio' ? 'Trio' : ''))}</span><div>${status(a)}</div></div><b class="amt" title="${esc(brl(a.balance))}">${brl(a.balance)}</b>${admin ? `<button class="btn ghost sm" data-acc="${esc(a.id)}">Editar</button>` : ''}</div>`).join('')
             : empty('Cadastre a conta da Lottus na Trio para o saldo entrar sozinho, ou lance outra conta à mão.')}
           ${(acc.egress_ips || []).length ? `<p class="small muted" style="margin-top:10px">Na chave da Trio, libere os IPs: ${esc(acc.egress_ips.join(', '))}</p>` : ''}</div>
-        <div class="card"><h2>Próximos 30 dias</h2>${cf.items.filter((x) => String(x.day) <= new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)).slice(0, 14).map((x) =>
-          `<div class="list-row"><span class="small muted nowrap" style="width:64px">${date(x.day).slice(0, 5)}</span><span class="grow small">${esc(x.label)}${x.late ? ' <span class="tag danger">atrasada</span>' : ''}${x.ref === 'forecast' ? ' <span class="tag">previsão</span>' : ''}</span><b class="${x.kind === 'in' ? 'pos' : 'neg'}">${x.kind === 'in' ? '+' : '−'}${brl(x.amount)}</b></div>`).join('') || empty('Nada previsto.')}</div>
+        <div class="card"><h2>Próximos 30 dias</h2>${cf.items.filter((x) => String(x.day) <= B.addDays(B.today(), 30)).slice(0, 14).map((x) =>
+          `<div class="list-row"><span class="small muted nowrap" style="width:64px">${date(x.day).slice(0, 5)}</span><span class="grow small">${esc(x.label)}${x.late ? ' <span class="tag danger">atrasada</span>' : ''}${x.ref === 'forecast' ? ' <span class="tag">previsão</span>' : ''}</span><b class="amt ${x.kind === 'in' ? 'pos' : 'neg'}">${x.kind === 'in' ? '+' : '−'}${brl(x.amount)}</b></div>`).join('') || empty('Nada previsto.')}</div>
       </div>`;
     B.columnChart(el.querySelector('#ch'), weeks, { name: 'Saldo previsto' });
     const sy = el.querySelector('#sync');
@@ -184,39 +184,43 @@
 
   /* -------------------------------------------------------------- resultado */
   B.views.resultado = async (el, [y]) => {
-    const year = Number(y) || new Date().getFullYear();
+    const nowYear = Number(B.today().slice(0, 4)), year = Number(y) || nowYear;
     const r = await rpc('bo_fin_result', { p_year: year });
     const ms = r.months, mt = r.metrics;
     const tot = (k) => shownRef.reduce((t, m) => t + Number(m[k] || 0), 0);
     let shownRef = [];
     const cats = [...new Set(ms.flatMap((m) => Object.keys(m.expenses || {})))];
-    const cur = new Date().getMonth(), shown = year === new Date().getFullYear() ? ms.slice(0, cur + 1) : ms;
+    const cur = Number(B.today().slice(5, 7)) - 1, shown = year === nowYear ? ms.slice(0, cur + 1) : ms;
     shownRef = shown;
     const cell = (v, neg) => `<td class="num ${neg && v < 0 ? 'neg' : ''}">${v ? brl(v) : '<span class="muted">—</span>'}</td>`;
     const rev = (m) => Number(m.rev_partners) + Number(m.rev_sign) + Number(m.rev_other);
+    // tabela do resultado: recebe os meses a mostrar; o Total é sempre o do período inteiro
+    const dre = (cols) => `<div class="table-wrap dre"><table>
+        <thead><tr><th></th>${cols.map((m) => `<th class="num">${MONTH[Number(m.month.slice(5)) - 1]}</th>`).join('')}<th class="num">Total</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td>Receita</td>${cols.map((m) => cell(rev(m))).join('')}${cell(shown.reduce((t, m) => t + rev(m), 0))}</tr>
+          <tr><td class="sub">Lottus Partners</td>${cols.map((m) => cell(Number(m.rev_partners))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_partners), 0))}</tr>
+          <tr><td class="sub">Lottus Sign</td>${cols.map((m) => cell(Number(m.rev_sign))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_sign), 0))}</tr>
+          <tr><td class="sub">Outras</td>${cols.map((m) => cell(Number(m.rev_other))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_other), 0))}</tr>
+          <tr class="grp"><td>Despesas</td>${cols.map((m) => cell(-Number(m.exp_total), true)).join('')}${cell(-shown.reduce((t, m) => t + Number(m.exp_total), 0), true)}</tr>
+          ${cats.map((c) => `<tr><td class="sub">${esc(CAT[c] || c)}</td>${cols.map((m) => cell(-Number((m.expenses || {})[c] || 0), true)).join('')}${cell(-shown.reduce((t, m) => t + Number((m.expenses || {})[c] || 0), 0), true)}</tr>`).join('')}
+          <tr class="grp total"><td>Resultado</td>${cols.map((m) => cell(rev(m) - Number(m.exp_total), true)).join('')}${cell(shown.reduce((t, m) => t + rev(m) - Number(m.exp_total), 0), true)}</tr>
+          <tr><td class="sub">MRR no fim do mês</td>${cols.map((m) => `<td class="num small muted">${m.mrr != null ? brl(m.mrr) : '—'}</td>`).join('')}<td></td></tr>
+        </tbody></table></div>`;
     el.innerHTML = `
-      ${head('Resultado', 'Receita, despesas e o que sobrou, mês a mês (regime de caixa: quando o dinheiro entrou ou saiu).',
-        `<div class="row" style="gap:8px">${tabs([[String(year - 1), String(year - 1)], [String(year), String(year)]], String(year))}<button class="btn ghost" id="csv">Exportar para o contador</button></div>`)}
-      <div class="kpi4">
+      ${B.ui.pageHead({ title: 'Resultado', sub: 'Receita, despesas e o que sobrou, mês a mês (regime de caixa: quando o dinheiro entrou ou saiu).', more: [{ id: 'csv', label: 'Exportar para o contador' }] })}
+      <div class="u-mb16" id="ytabs">${tabs([[String(year - 1), String(year - 1)], [String(year), String(year)]], String(year))}</div>
+      <div class="kpi4 kpi4-c">
         <div class="tile main"><span class="kpi-label">Resultado no ano</span><span class="tile-value ${tot('exp_total') > rev({ rev_partners: tot('rev_partners'), rev_sign: tot('rev_sign'), rev_other: tot('rev_other') }) ? 'neg' : ''}">${brl(tot('rev_partners') + tot('rev_sign') + tot('rev_other') - tot('exp_total'))}</span><span class="small muted">receita ${brl(tot('rev_partners') + tot('rev_sign') + tot('rev_other'))} · despesas ${brl(tot('exp_total'))}</span></div>
         <div class="tile"><span class="kpi-label">Receita média por cliente</span><span class="tile-value">${brl(mt.arpa)}</span><span class="small muted">MRR ${brl(mt.mrr)} · ${mt.customers} cliente(s)</span></div>
         <div class="tile"><span class="kpi-label">Churn mensal</span><span class="tile-value">${String(mt.churn_rate).replace('.', ',')}%</span><span class="small muted">${mt.ltv ? 'LTV ' + brl(mt.ltv) : 'LTV aparece com o primeiro cancelamento'}</span></div>
         <div class="tile"><span class="kpi-label">Custo por cliente (CAC)</span><span class="tile-value">${mt.cac == null ? '—' : brl(mt.cac)}</span><span class="small muted">${mt.new_90d} novo(s) em 90 dias · ${brl(mt.spend_90d)} em marketing</span></div>
       </div>
-      <div class="card flush"><div class="table-wrap dre"><table>
-        <thead><tr><th></th>${shown.map((m) => `<th class="num">${MONTH[Number(m.month.slice(5)) - 1]}</th>`).join('')}<th class="num">Total</th></tr></thead>
-        <tbody>
-          <tr class="grp"><td>Receita</td>${shown.map((m) => cell(rev(m))).join('')}${cell(shown.reduce((t, m) => t + rev(m), 0))}</tr>
-          <tr><td class="sub">Lottus Partners</td>${shown.map((m) => cell(Number(m.rev_partners))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_partners), 0))}</tr>
-          <tr><td class="sub">Lottus Sign</td>${shown.map((m) => cell(Number(m.rev_sign))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_sign), 0))}</tr>
-          <tr><td class="sub">Outras</td>${shown.map((m) => cell(Number(m.rev_other))).join('')}${cell(shown.reduce((t, m) => t + Number(m.rev_other), 0))}</tr>
-          <tr class="grp"><td>Despesas</td>${shown.map((m) => cell(-Number(m.exp_total), true)).join('')}${cell(-shown.reduce((t, m) => t + Number(m.exp_total), 0), true)}</tr>
-          ${cats.map((c) => `<tr><td class="sub">${esc(CAT[c] || c)}</td>${shown.map((m) => cell(-Number((m.expenses || {})[c] || 0), true)).join('')}${cell(-shown.reduce((t, m) => t + Number((m.expenses || {})[c] || 0), 0), true)}</tr>`).join('')}
-          <tr class="grp total"><td>Resultado</td>${shown.map((m) => cell(rev(m) - Number(m.exp_total), true)).join('')}${cell(shown.reduce((t, m) => t + rev(m) - Number(m.exp_total), 0), true)}</tr>
-          <tr><td class="sub">MRR no fim do mês</td>${shown.map((m) => `<td class="num small muted">${m.mrr != null ? brl(m.mrr) : '—'}</td>`).join('')}<td></td></tr>
-        </tbody></table></div></div>`;
-    onTabs(el.querySelector('.page-head'), (k) => (location.hash = `#/resultado/${k}`));
-    el.querySelector('#csv').onclick = () => B.downloadCsv(`resultado-${year}`, [['Mês', 'Receita Partners', 'Receita Sign', 'Outras receitas', 'Despesas'].concat(cats.map((c) => CAT[c] || c), ['Resultado'])].concat(
+      <div class="card flush">${dre(shown.slice(-3))}</div>
+      ${shown.length > 3 ? `<div class="u-m16t">${B.ui.more('Ver todos os meses', `<div class="card flush">${dre(shown)}</div>`)}</div>` : ''}`;
+    onTabs(el.querySelector('#ytabs'), (k) => (location.hash = `#/resultado/${k}`));
+    const exportCsv = () => B.downloadCsv(`resultado-${year}`, [['Mês', 'Receita Partners', 'Receita Sign', 'Outras receitas', 'Despesas'].concat(cats.map((c) => CAT[c] || c), ['Resultado'])].concat(
       ms.map((m) => [m.month, m.rev_partners, m.rev_sign, m.rev_other, m.exp_total].concat(cats.map((c) => (m.expenses || {})[c] || 0), [rev(m) - Number(m.exp_total)]).map((v) => String(v).replace('.', ',')))));
+    B.ui.onPage(el, { csv: exportCsv });
   };
 })();
