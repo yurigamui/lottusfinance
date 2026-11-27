@@ -39,6 +39,10 @@
     if (ERRORS[raw]) return ERRORS[raw];
     const key = Object.keys(ERRORS).find((k) => raw.includes(k));
     if (key) return ERRORS[key];
+    if (/duplicate key value violates unique constraint/i.test(raw)) return 'Esse registro já existe.';
+    if (/violates foreign key/i.test(raw)) return 'Registro vinculado inexistente.';
+    if (/null value in column/i.test(raw)) return 'Faltou preencher um campo.';
+    if (/statement timeout/i.test(raw)) return 'A consulta demorou demais. Tente de novo.';
     if (/JWT expired|jwt expired|invalid JWT|PGRST30[0-9]/i.test(raw)) return 'Sua sessão expirou. Entre de novo.';
     if (/violates (check )?constraint|check constraint|23514|23505|23502|23503|22003|22P02/i.test(raw + ' ' + String((e && e.code) || ''))) return 'Algum valor não é permitido. Revise os campos.';
     if (/permission denied|42501|row-level security/i.test(raw + ' ' + String((e && e.code) || ''))) return 'Você não tem permissão para isso.';
