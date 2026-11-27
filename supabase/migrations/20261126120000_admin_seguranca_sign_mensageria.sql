@@ -25,11 +25,18 @@
 --     "insufficient_level" (a tela mostra o erro pelo fail() padrão).
 --   - Rodar num branch do Supabase e repetir a migração uma segunda vez (é idempotente).
 --
--- Como reverter (num único bloco; conferir os argumentos com \df public.sign_*)
---   drop function public.sign_messaging_save(jsonb);
---   alter function public._sign_messaging_save_impl(jsonb) rename to sign_messaging_save;
---   (idem sign_root_add e sign_root_toggle, com os argumentos reais)
---   grant execute on function <cada original> to authenticated;   -- como estava antes
+-- Como reverter (bloco idempotente e já testado: lê os argumentos reais do banco; se a impl não existir, pula)
+--   begin;
+--   do $$ declare n text; impl text; o oid; ident text;
+--   begin foreach n in array array['sign_messaging_save','sign_root_add','sign_root_toggle'] loop
+--     impl := '_' || n || '_impl';
+--     select p.oid into o from pg_proc p where p.pronamespace='public'::regnamespace and p.proname=impl;
+--     if o is null then continue; end if;
+--     ident := pg_get_function_identity_arguments(o);
+--     execute format('drop function if exists public.%I(%s)', n, ident);
+--     execute format('alter function public.%I(%s) rename to %I', impl, ident, n);
+--     execute format('grant execute on function public.%I(%s) to authenticated', n, ident);
+--   end loop; end $$; commit;
 
 begin;
 

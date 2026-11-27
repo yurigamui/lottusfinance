@@ -320,6 +320,13 @@ do $$ declare fa uuid := 'f0000000-0000-0000-0000-000000000001'; fb uuid := 'f00
   r := public.bo_set_plan(jsonb_build_object('product', 'partners', 'subject', fa, 'plan', 'contract', 'rate_aa', 0.0012, 'min_monthly', 150));
   perform pg_temp.chk('X10 contrato existente atualiza taxa e mínimo', not (r->>'unchanged')::boolean and (select rate_aa from public.platform_fee_plans where funder_id = fa) = 0.0012
     and (select min_monthly from public.platform_fee_plans where funder_id = fa) = 150 and (select count(*) from public.staff_actions where action = 'set_plan') = n0 + 2);
+  -- list_rate e min_monthly em bo_customer_plan: só para contrato
+  r := public.bo_set_plan(jsonb_build_object('product', 'partners', 'subject', fa, 'plan', 'contract', 'rate_aa', 0.0012, 'min_monthly', 700));
+  cp := public.bo_customer_plan('partners', fa);
+  perform pg_temp.chk('X10b contrato: list_rate 0,0012 e min_monthly 700', (cp->>'list_rate')::numeric = 0.0012 and (cp->>'min_monthly')::numeric = 700);
+  perform pg_temp.chk('X10c fundo na tabela: list_rate e min_monthly nulos', public.bo_customer_plan('partners', fb)->'list_rate' = 'null'::jsonb and public.bo_customer_plan('partners', fb)->'min_monthly' = 'null'::jsonb);
+  perform pg_temp.chk('X10d conta Sign: list_rate e min_monthly nulos', public.bo_customer_plan('sign', s2)->'list_rate' = 'null'::jsonb and public.bo_customer_plan('sign', s2)->'min_monthly' = 'null'::jsonb);
+  perform public.bo_set_plan(jsonb_build_object('product', 'partners', 'subject', fa, 'plan', 'contract', 'rate_aa', 0.0012, 'min_monthly', 150));
   -- M4: troca de plano do Sign limpa o pedido pendente
   perform pg_temp.chk('X11 pré-condição: conta com pedido pendente', true);
   update public.sign_accounts set plan_requested = 'empresa', requested_at = now() where id = s2;

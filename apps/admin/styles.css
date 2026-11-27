@@ -1201,3 +1201,11 @@ table.stack-m td.st-actions { text-align: right; }
 .od-info p { margin: 0 0 4px; overflow-wrap: anywhere; }
 .od-info p:last-child { margin-bottom: 0; }
 .modal .field .help { overflow-wrap: anywhere; }
+
+/* Pacote 3 (correção): textos longos sem espaço não estouram cartões, abas, modais nem caixas de aviso */
+.card, .card li, .card h2, .card h3, .card dd, .card dt, .tile, .small { overflow-wrap: anywhere; min-width: 0; }
+.card li > a, .card li > b, td a, .td-wrap, .queue-label { overflow-wrap: anywhere; word-break: normal; min-width: 0; }
+.modal p, .modal b, .modal dd, .modal dt, .modal li, .modal h2, .modal h3, .modal .small { overflow-wrap: anywhere; min-width: 0; }
+.error-box, .note-box, .ok-box, .warn-box, [role="alert"], [role="status"] { overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+#atab, #tab, #ptab, [data-tabpanel] { min-width: 0; max-width: 100%; }
+a[href^="http"], .url-long { overflow-wrap: anywhere; word-break: break-all; }

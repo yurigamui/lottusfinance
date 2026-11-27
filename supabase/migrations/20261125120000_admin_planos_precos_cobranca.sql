@@ -286,7 +286,9 @@ begin
   v_list := (sub->>'list_price')::numeric;
   select * into o from public.price_overrides where product = p_product and subject_id = p_subject and revoked_at is null
      and valid_from <= public._today_br() and (valid_until is null or valid_until >= public._today_br());
-  if p_product = 'partners' then v_eff := (public._partners_fee_calc(p_subject, public._today_br())->>'amount')::numeric;
+  if p_product = 'partners' then
+    c := public._partners_fee_calc(p_subject, public._today_br());
+    v_eff := (c->>'amount')::numeric;
   elsif p_product = 'sign' then v_eff := public._effective_price('sign', p_subject, coalesce((sub->>'custom_price')::numeric, v_list), public._today_br());
   else v_eff := public._effective_price('wealth', p_subject, v_list, public._today_br());
   end if;
@@ -298,6 +300,8 @@ begin
   v_ref := date_trunc('month', public._today_br())::date;   -- competência em andamento: pós-paga, fatura gerada no dia 2 do mês seguinte
   return jsonb_build_object('product', p_product, 'subject', p_subject, 'name', sub->>'name', 'plan', sub->>'plan', 'plan_name', sub->>'plan_name',
     'exempt', (sub->>'exempt')::boolean, 'list_price', v_list, 'custom_price', sub->'custom_price',
+    'list_rate', case when p_product = 'partners' and sub->>'origin' <> 'self' then to_jsonb((c->>'rate_aa')::numeric) else null end,       -- taxa a.a. (fração) do contrato; null fora de contrato
+    'min_monthly', case when p_product = 'partners' and sub->>'origin' <> 'self' then to_jsonb((c->>'min_monthly')::numeric) else null end,  -- mínimo mensal do contrato
     'due_day', v_dd,
     'override_inapplicable', case when v_inapp then jsonb_build_object('id', o.id, 'kind', o.kind, 'value', o.value, 'reason', o.reason) else null end,
     'override', case when o.id is null or v_inapp then null else jsonb_build_object('id', o.id, 'kind', o.kind, 'value', o.value, 'valid_from', o.valid_from,
