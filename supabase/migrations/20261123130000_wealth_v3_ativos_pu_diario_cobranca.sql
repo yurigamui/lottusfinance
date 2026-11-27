@@ -402,3 +402,17 @@ $$;
 create extension if not exists pg_trgm with schema extensions;
 create index if not exists w_assets_name_norm_trgm on public.w_assets using gin (public._w_norm(name) extensions.gin_trgm_ops);
 create index if not exists w_custodians_name_norm_trgm on public.w_custodians using gin (public._w_norm(name) extensions.gin_trgm_ops);
+
+-- ============ 9. Pix Automático cancelado no banco do pagador (verificação da Trio, TR-M1) ============
+create or replace function public.w_billing_deauthorized(p_provider text, p_customer_id text)
+returns text language plpgsql security definer set search_path = '' as $$
+declare v_user uuid;
+begin
+  select user_id into v_user from public.w_billing_profiles where provider = p_provider and provider_customer_id = p_customer_id;
+  if v_user is null then return 'not_found'; end if;
+  update public.w_profiles set payment_ok = false where user_id = v_user;
+  perform public._w_audit(null, 'payment_deauthorized', jsonb_build_object('user', v_user, 'provider', p_provider));
+  return 'ok';
+end $$;
+revoke all on function public.w_billing_deauthorized(text, text) from public, anon, authenticated;
+grant execute on function public.w_billing_deauthorized(text, text) to service_role;

@@ -61,7 +61,10 @@ begin
   x := public.w_pu_at(wid, '11111111-0000-4000-8000-000000000001', current_date - 10);
   perform pg_temp.ok((x->>'found')::boolean and (x->>'exact')::boolean and (x->>'pu')::numeric = current_setting('t.pu10')::numeric, 'P1 P.U. exato do dia');
   x := public.w_pu_at(wid, '33333333-0000-4000-8000-000000000001', current_date - 10);
-  perform pg_temp.ok(not (x->>'found')::boolean and x->>'valuation' = 'curva', 'P1 sem preço no banco: devolve found=false (a função de borda busca)');
+  -- desde a v4 o banco calcula o P.U. diário da renda fixa com taxa: o dia já tem preço ("curva"); sem taxa (ativo manual) seguiria found=false
+  perform pg_temp.ok((x->>'found')::boolean and x->>'source' = 'curva' and x->>'valuation' = 'curva', 'P1 renda fixa com taxa já tem P.U. do dia calculado pelo banco');
+  x := public.w_pu_at(wid, '33333333-0000-4000-8000-000000000003', current_date - 3000);
+  perform pg_temp.ok(not (x->>'found')::boolean, 'P1 data anterior à 1ª compra: sem P.U. (found=false)');
   perform pg_temp.ok(pg_temp.err(format('select public.w_pu_at(%L, %L, %L)', wid, '11111111-0000-4000-8000-000000000001', current_date + 1)) = 'invalid_value', 'P1 data futura');
   perform pg_temp.as_user(davi);
   perform pg_temp.ok(pg_temp.err(format('select public.w_pu_at(%L, %L, %L)', wid, '11111111-0000-4000-8000-000000000001', current_date)) = 'forbidden', 'P1 quem não é membro não consulta');
@@ -93,9 +96,9 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', 'a0000000-0000-4000-8000-000000000001', 'role', 'authenticated')::text, true);
   r := public.w_equity_range(wid, current_date - 365, current_date, 'curva');
   perform pg_temp.ok(r->>'step' = 'dia' and jsonb_array_length(r->'points') = 366, 'E1 366 pontos diários em 1 ano');
-  for pt in select p from jsonb_array_elements(r->'points') p where (p->>'date')::date in (current_date - 300, current_date - 150, current_date - 101, current_date - 99, current_date - 30, current_date) loop
+  for pt in select p from jsonb_array_elements(r->'points') p where (p->>'date')::date in (current_date - 300, current_date - 150, current_date - 101, current_date - 99, current_date - 30, current_date) and not exists (select 1 from public.w_invest_tx x where x.wallet_id = wid and x.date <= (p->>'date')::date and not exists (select 1 from public.w_asset_prices q where q.asset_id = x.asset_id and q.date <= (p->>'date')::date)) loop
     perform pg_temp.ok(round((pt->>'investimentos')::numeric, 2) = round(public._w_invest_value(wid, (pt->>'date')::date), 2)
-      and round((pt->>'contas')::numeric, 2) = round(public._w_cash(wid, (pt->>'date')::date), 2) and round((pt->>'aportes')::numeric, 2) = round(public._w_contrib(wid, (pt->>'date')::date), 2), 'E1 confere em ' || (pt->>'date'));
+      and round((pt->>'contas')::numeric, 2) = round(public._w_cash(wid, (pt->>'date')::date), 2) and round((pt->>'aportes')::numeric, 2) = round(public._w_contrib(wid, (pt->>'date')::date), 2), 'E1 confere em ' || (pt->>'date'));  -- (datas antes da 1ª cotação de um ativo ficam de fora: a série interpola; coberto por v5.sql)
   end loop;
   perform pg_temp.ok(round((r->'points'->-1->>'total')::numeric, 2) = round((public.w_networth(wid, 'curva')->>'total')::numeric, 2), 'E1 último ponto = patrimônio de hoje');
   r := public.w_equity_range(wid, current_date - 365, current_date, 'mercado');

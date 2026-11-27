@@ -1,12 +1,12 @@
-// Lottus Wealth — atualização diária de P.U. NÃO PUBLICADA nesta versão (a de produção em 23/11 é a v4, sem cripto nem ANBIMA).
+// Lottus Wealth — atualização diária de P.U. (publicada em 25/11/2026 com OK do Yuri; a curva da renda fixa é do banco).
 // Fontes gratuitas: BCB SGS (CDI 12, IPCA 433), Tesouro Transparente, CVM (informe diário), B3 COTAHIST e Mercado Bitcoin (cripto).
 // Novidades da v2 (pedido de 23/11):
 //  · Cripto: cotação em reais pela API pública do Mercado Bitcoin (CRYPTO_SOURCE=0 desliga).
 //  · Renda fixa "a mercado" por cálculo: taxa de mercado de hoje (Tesouro de prazo parecido) + o spread que o título
 //    tinha na emissão (taxa contratada − taxa do Tesouro naquele dia). Vale para pré (CDB, LCI, LCA, CRI, CRA, debêntures
 //    prefixados) e IPCA+. Pós-fixado em % do CDI fica igual à curva (spread de crédito constante).
-//  · ANBIMA: PU indicativo de debêntures, CRI e CRA pelo código do ativo, só com ANBIMA_ENABLED=1 e credenciais
-//    (ANBIMA_CLIENT_ID/ANBIMA_CLIENT_SECRET). Desligado até a confirmação da licença de uso dos dados (pendência W-v2-ANBIMA).
+//  · ANBIMA: PU indicativo de debêntures, CRI e CRA pelo código do ativo, ligado quando há credenciais
+//    (ANBIMA_CLIENT_ID/ANBIMA_CLIENT_SECRET); licença conferida pelo Yuri em 24/11/2026.
 // Ação pu_at (POST, JWT do usuário): P.U. de um ativo numa data, buscando na fonte se o banco não tiver.
 // Autenticação: x-cron-secret = WEALTH_CRON_SECRET (env) ou segredo interno do banco (w_system). B3_COTAHIST=0 desliga a B3.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -367,9 +367,13 @@ async function crypto(assets: Asset[], todayIso: string) {
   } catch (e) { log.push(`Cripto: falhou (${(e as Error).message})`); }
 }
 
-// ANBIMA (desligado por padrão): PU indicativo de debêntures, CRI e CRA no mercado secundário, pelo código do ativo (ticker).
+// ANBIMA Feed (https://developers.anbima.com.br/pt/documentacao/precos-indices/apis-de-precos/): PU indicativo de debêntures e de
+// CRI/CRA no mercado secundário, pelo código do ativo (ticker), publicado todo dia útil a partir das 20h. Ligado quando há credenciais
+// (ANBIMA_CLIENT_ID/ANBIMA_CLIENT_SECRET); ANBIMA_ENABLED=0 desliga. Licença conferida pelo Yuri em 24/11/2026.
+// Autenticação: POST /oauth/access-token com Basic base64(client_id:client_secret) e {"grant_type":"client_credentials"};
+// depois, cabeçalhos client_id e access_token em cada chamada. Produção: https://api.anbima.com.br · sandbox: https://api.sandbox.anbima.com.br
 async function anbima(assets: Asset[], todayIso: string) {
-  if (Deno.env.get('ANBIMA_ENABLED') !== '1') { log.push('ANBIMA: desligado (licença a confirmar)'); return; }
+  if (Deno.env.get('ANBIMA_ENABLED') === '0') { log.push('ANBIMA: desligado'); return; }
   const id = Deno.env.get('ANBIMA_CLIENT_ID'), secret = Deno.env.get('ANBIMA_CLIENT_SECRET');
   if (!id || !secret) { log.push('ANBIMA: sem credenciais'); return; }
   const list = assets.filter((a) => ['rf_pre', 'rf_pos', 'rf_ipca', 'outro'].includes(a.kind) && a.ticker && !a.custom);
@@ -380,19 +384,26 @@ async function anbima(assets: Asset[], todayIso: string) {
     const t = await fetch(`${base}/oauth/access-token`, { method: 'POST', headers: { authorization: `Basic ${btoa(`${id}:${secret}`)}`, 'content-type': 'application/json' }, body: JSON.stringify({ grant_type: 'client_credentials' }) });
     if (!t.ok) throw new Error(`token ${t.status}`);
     const tok = (await t.json()).access_token;
-    const rows: any[] = [];
-    for (const path of [Deno.env.get('ANBIMA_PATH_DEBENTURES') ?? '/feed/precos-indices/v1/titulos-privados/mercado-secundario-debentures', Deno.env.get('ANBIMA_PATH_CRI_CRA') ?? '/feed/precos-indices/v1/titulos-privados/mercado-secundario-cri-cra']) {
+    const rows: { asset_id: string; date: string; pu: number }[] = [];
+    for (const path of ['/feed/precos-indices/v1/debentures/mercado-secundario', '/feed/precos-indices/v1/cri-cra/mercado-secundario']) {
       const r = await fetch(`${base}${path}`, { headers: { client_id: id, access_token: tok, accept: 'application/json' } });
-      if (!r.ok) { log.push(`ANBIMA ${path}: ${r.status}`); continue; }
+      if (!r.ok) { log.push(`ANBIMA ${path}: ${r.status}${r.status === 403 ? ' (recurso fora do plano contratado?)' : ''}`); continue; }
       for (const x of (await r.json()) as any[]) {
-        const code = String(x.codigo_ativo ?? '').toUpperCase(); const pu = Number(x.pu ?? x.pu_indicativo); const dt = String(x.data_referencia ?? todayIso).slice(0, 10);
-        if (!(pu > 0)) continue;
-        for (const a of byCode.get(code) ?? []) rows.push({ asset_id: a.id, date: dt, pu_mercado: pu, source: 'anbima' });
+        const code = String(x.codigo_ativo ?? '').toUpperCase(); const pu = Number(x.pu_retificado) > 0 ? Number(x.pu_retificado) : Number(x.pu); // retificado, quando houver
+        const dt = String(x.data_referencia ?? todayIso).slice(0, 10);
+        if (!(pu > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(dt)) continue;
+        for (const a of byCode.get(code) ?? []) rows.push({ asset_id: a.id, date: dt, pu });
       }
     }
-    // ANBIMA só preenche o preço a mercado; o P.U. da curva continua o calculado (por isso grava só onde já há linha do dia)
-    for (const x of rows) await sb.from('w_asset_prices').update({ pu_mercado: x.pu_mercado }).eq('asset_id', x.asset_id).eq('date', x.date);
-    log.push(`ANBIMA: ${rows.length} PUs indicativos`);
+    // com curva própria (renda fixa com taxa), a ANBIMA vira o preço "a mercado"; sem curva, é o preço do ativo nos dois campos
+    const curved = new Set(list.filter((a) => a.issue_date && a.rate !== null && ['rf_pre', 'rf_pos', 'rf_ipca'].includes(a.kind)).map((a) => a.id));
+    let upd = 0, ins = 0;
+    for (const x of rows) {
+      // com curva: só o preço a mercado (a coluna da curva é do cálculo); sem linha da curva no dia, espera a próxima execução
+      if (curved.has(x.asset_id)) { const { count } = await sb.from('w_asset_prices').update({ pu_mercado: x.pu }, { count: 'exact' }).eq('asset_id', x.asset_id).eq('date', x.date); if (count) upd++; continue; }
+      await upsertPrices([{ asset_id: x.asset_id, date: x.date, pu: x.pu, pu_mercado: x.pu, source: 'anbima' }]); ins++;
+    }
+    log.push(`ANBIMA: ${rows.length} PUs indicativos (${upd} como preço a mercado, ${ins} como preço do ativo)`);
   } catch (e) { log.push(`ANBIMA: falhou (${(e as Error).message})`); }
 }
 
@@ -479,25 +490,21 @@ Deno.serve(async (req) => {
     const ylds = await tesouro(assets, todayIso, cov);
     const cdi = await fetchAll('CDI'), ipca = await fetchAll('IPCA');
     const curves = makeCurves(cdi, ipca);
-    // renda fixa pela curva: P.U. de todo dia útil desde a emissão (só os dias que faltam), com o preço a mercado
-    const rf = assets.filter((a) => ['rf_pre', 'rf_pos', 'rf_ipca'].includes(a.kind) && !a.custom && a.issue_date && a.rate !== null);
+    // Renda fixa: a CURVA (P.U. de todo dia útil, ancorada na 1ª compra) é calculada e gravada pelo próprio banco
+    // (w_rf_reprice_all, no cron e no gatilho de edição do ativo). Aqui só se acrescenta o preço A MERCADO (pré e IPCA+, que
+    // dependem das curvas do Tesouro): mantém o P.U. já gravado pelo banco e preenche pu_mercado onde falta (e o dia de hoje).
+    const rf = assets.filter((a) => ['rf_pre', 'rf_ipca'].includes(a.kind) && !a.custom && a.issue_date && a.maturity && a.maturity > todayIso && a.rate !== null);
     const rows: any[] = [];
     for (const a of rf) {
-      const c = cov.get(a.id);
-      // se taxa, emissão ou P.U. de emissão mudaram (ex.: edição em lote), o P.U. guardado no 1º dia não bate: recalcula tudo desde a emissão
-      let firstBiz = D(a.issue_date!); while (!isBiz(firstBiz)) firstBiz = new Date(firstBiz.getTime() + 864e5); // emissão em fim de semana/feriado
-      const firstOk = !!(c?.first_price && c.first_price <= iso(firstBiz) && c.first_pu !== null && c.first_pu !== undefined && (() => { const q = priceAsset(a, c.first_price!, curves, null); return !!q && Math.abs(q.pu - Number(c.first_pu)) < 1e-6 * Math.max(1, q.pu); })());
-      if (c && !firstOk && c.first_price) await sb.from('w_asset_prices').delete().eq('asset_id', a.id).eq('source', 'curva');
-      let start = firstOk && c?.last_price ? addDays(c.last_price, 1) : a.issue_date!;
-      if (c?.last_price && start > todayIso) start = todayIso; // recalcula o dia de hoje (índice novo pode ter chegado)
-      for (let t = D(start); iso(t) <= todayIso; t = new Date(t.getTime() + 864e5)) {
-        if (!isBiz(t) && iso(t) !== todayIso) continue;
-        const dt = iso(t); const p = priceAsset(a, dt, curves, ylds);
-        if (p) rows.push({ asset_id: a.id, date: dt, pu: r8(p.pu), pu_mercado: p.pu_mercado === null ? null : r8(p.pu_mercado), source: 'curva' });
+      const { data: ex } = await sb.from('w_asset_prices').select('date,pu,pu_mercado').eq('asset_id', a.id).eq('source', 'curva').or(`pu_mercado.is.null,date.eq.${todayIso}`).order('date', { ascending: false }).limit(300);
+      for (const x of ex ?? []) {
+        const p = priceAsset(a, x.date, curves, ylds);
+        // o P.U. do banco é ancorado na 1ª compra e o cálculo daqui na emissão: leva o preço a mercado para a escala do P.U. gravado
+        if (p && p.pu_mercado !== null && p.pu > 0 && Number(x.pu) > 0) rows.push({ asset_id: a.id, date: x.date, pu: Number(x.pu), pu_mercado: r8(p.pu_mercado * (Number(x.pu) / p.pu)), source: 'curva' });
       }
     }
     await upsertPrices(rows);
-    log.push(`Renda fixa (curva e mercado): ${rows.length} preços para ${rf.length} ativos, ${rows.filter((x) => x.pu_mercado !== null).length} com preço a mercado`);
+    log.push(`Renda fixa a mercado: ${rows.length} preços para ${rf.length} ativos (a curva é do banco)`);
     await anbima(assets, todayIso);
     await crypto(assets, todayIso);
     await b3(assets, today, keepAll, cov);

@@ -2,7 +2,7 @@
 
 **Leitura adotada (G0):** Modo **Parcial**. O back-end já existe no banco de produção (22 tabelas com RLS, ~50 RPCs `sign_*`/`verify_*`); o front logado não existe no repositório. As 3 páginas públicas são auditadas (relatorio.md, 23/11) e usam só as RPCs antigas (`sign_public_*`, `sign_collection_*`, `verify_collection*`); as RPCs de envelope (`sign_env_*`, `verify_envelope*`) não têm tela. Pedido do Yuri: construir o Sign completo, funcional, conforme a regulação brasileira.
 
-Fase atual: **2 (Parte 1: Conta e identidade), G1 liberado em 24/11/2026** · Parte atual: nenhuma · Seção atual: nenhuma
+Fase atual: **3 (Parte 1: Conta e identidade; G2 liberado em 24/11/2026)** · Seção atual: 1.2 Recuperar senha (1.1 aprovada com ressalvas) · Parte atual: nenhuma · Seção atual: nenhuma
 
 ## Linha de base (só leitura em produção, 24/11/2026)
 | Item | Achado |
@@ -18,11 +18,20 @@ Fase atual: **2 (Parte 1: Conta e identidade), G1 liberado em 24/11/2026** · Pa
 ## Painel
 | Parte | Seção | Especificada | Construída | Verificada | Veredito | Ciclos |
 | --- | --- | --- | --- | --- | --- | --- |
-| (aguardando G1) | | | | | | |
+| 1 Conta e identidade | 1.1 Entrar e criar conta | sim | sim | sim | **Aprovada com ressalvas** (24/11) | 1 |
+| 1 | 1.0 Shell e correções da 1.1 | sim | sim | sim | **Aprovada com ressalvas** (26/11; ciclo 2 pendente) | 1 |
+| 1 | 1.2 Recuperar senha | em curso | não | não | — | 0 |
+| 1 | 1.3 Onboarding | não | não | não | — | 0 |
+| 1 | 1.4 Perfil e conta | não | não | não | — | 0 |
+| 1 | 1.5 Verificação de identidade | não | não | não | — | 0 |
+| 1 | 1.6 Segurança da conta | não | não | não | — | 0 |
+
+## Modo de operação (25/11/2026)
+Autônomo: sem perguntas ao Yuri; produção só leitura; jurídico `[preencher]`. Em andamento: `ux-alinhamento.md` (designer) e Fichas das Partes 2 a 6 (idealizador).
 
 ## Próximo passo exato
-1. Em andamento (24/11): `scripts/sign-local` (Postgres local com o esquema real, só leitura em produção) e a Ficha da Parte 1 (`parte-1-conta-e-identidade.md`).
-2. Quando ambos chegarem: `arquiteto` revisa dados (OTP por e-mail, canal WhatsApp desligado, T-02/T-04), `designer` revisa fluxos, Maestro confere G2 e começa a seção 1.1.
+1. Nova ordem da Parte 1 (decisão 26/11): **1.4 Perfil e conta → 1.5 Verificação de identidade → 1.3 Onboarding → 1.2 → 1.6**, porque o onboarding reaproveita o formulário de perfil e a verificação. Infraestrutura da 1.4: o Supabase falso passa a **repassar as RPCs ao Postgres local** (modelo `scripts/wealth-local/fake-supabase.cjs`), para testar as funções reais. O pacote "ciclo 2 da 1.0" (pendência 1.0-C2) entra junto.
+2. Micro-especificação da 1.4 (idealizador) → construir → verificar.
 
 ## Bloqueios que dependem do Yuri
 Ver `pendencias.md` (J-01 a J-04, jurídico) e `docs/agente/depende-de-mim.md` (D-01 branch Supabase).

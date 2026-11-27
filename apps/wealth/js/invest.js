@@ -8,16 +8,16 @@
   const empty = (t, a = '') => `<div class="empty">${esc(t)}${a ? `<div style="margin-top:12px">${a}</div>` : ''}</div>`;
   const clsDelta = (v) => `<span class="${W.cls(v)}">${v === null || v === undefined ? '—' : W.sign(v, W.brl)}</span>`;
 
-  /* ================= Patrimônio ================= */
+  /* ================= Períodos (calendário), seleção no gráfico e blocos comuns ================= */
   const BM = { CDI: 'CDI', IPCA: 'IPCA', nenhum: '' };
-  // período da evolução: ?de=&ate= (calendário); padrão: últimos 12 meses; "Desde o início" = de=inicio
-  const periodOf = (ctx) => {
+  // período: ?de=&ate= (calendário). Gráficos: últimos 12 meses por padrão; Posição: desde o início. "Desde o início" = de=inicio
+  const periodOf = (ctx, defAll) => {
     const de = ctx.q.get('de'), ate = ctx.q.get('ate'); const today = W.ymd();
     const ok = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '') && W.parseDate(s.split('-').reverse().join('/')) === s && s <= today;
-    // endereço com data impossível, futura ou invertida volta ao padrão (últimos 12 meses, como o atalho do calendário)
     let to = ok(ate) ? ate : today; let from = ok(de) ? de : null; if (from && from > to) { from = null; to = today; }
     const n = new Date(to + 'T00:00:00'); const d12 = W.ymd(new Date(n.getFullYear(), n.getMonth() - 11, 1));
-    return { from: de === 'inicio' ? '2000-01-01' : from || d12, to, all: de === 'inicio' }; };
+    const all = de === 'inicio' || (defAll && !from);
+    return { from: all ? (defAll ? null : '2000-01-01') : from || d12, to, all }; };
   const rangeLabel = (r) => (r.step === 'mes' ? (x) => W.monthLabel(x.date) : (x) => W.dt(x.date).slice(0, r.step === 'dia' ? 5 : 8));
   const periodBar = (ctx, per) => `<div class="range-bar"><div class="field"><label>Período</label>${W.rangeHtml(per.all ? '' : per.from, per.all ? '' : per.to, [3, 6, 12, 24, 60])}</div></div>`;
   // ao escolher no calendário, o período vai para o endereço (F5 e Voltar mantêm)
@@ -28,70 +28,85 @@
     if (!f && !to) { q.set('de', 'inicio'); q.delete('ate'); } else { if (f) q.set('de', f); else q.delete('de'); if (to) q.set('ate', to); else q.delete('ate'); }
     location.hash = `${path}?${q}`;
   });
-  // rendimento do benchmark no período, aplicado aos aportes (mesmo dinheiro, mesmas datas)
-  const benchKpi = (eq, bm) => { const l = eq[eq.length - 1]; if (!bm || !l || l.benchmark === null || l.benchmark === undefined || !(Number(l.aportes) > 0)) return null; return { val: Number(l.benchmark), diff: Number(l.investimentos) - Number(l.benchmark) }; };
-  W.route('/w/:id/patrimonio', async (ctx) => {
-    const id = ctx.w.id; const mode = W.viewMode(ctx); const per = periodOf(ctx);
-    const [nw, rg, pos] = await Promise.all([W.rpc('w_networth', { p_wallet: id, p_mode: mode }), W.rpc('w_equity_range', { p_wallet: id, p_from: per.from, p_to: per.to, p_mode: mode }), W.rpc('w_positions', { p_wallet: id, p_mode: mode })]);
-    const eq = rg.points; const lab = rangeLabel(rg);
-    const bm = BM[nw.benchmark] || ''; const bk = benchKpi(eq, bm);
-    const kpi = (l, v, sub, c = '') => `<div class="kpi"><div class="kpi-label">${l}</div><div class="big ${c}">${v}</div>${sub ? `<div class="muted small">${sub}</div>` : ''}</div>`;
-    ctx.after = () => {
-      const rows = eq.map((p) => ({ label: lab(p), long: W.dt(p.date), a: p.total, b: p.aportes, inv: p.investimentos, c: p.benchmark }));
-      const draw = (m) => W.lineChart(document.getElementById('ch-eq'), m === 'rent' ? rows.map((r) => ({ label: r.label, long: r.long, a: r.inv, b: r.b, ...(bm ? { c: r.c } : {}) })) : rows.map((r) => ({ label: r.label, long: r.long, a: r.a })), { names: m === 'rent' ? ['Investimentos', 'Aportes líquidos', `Aportes rendendo ${bm}`] : ['Patrimônio líquido'], name: 'Evolução' });
-      draw('pl');
-      document.querySelectorAll('[data-chart]').forEach((b) => b.addEventListener('click', () => { document.querySelectorAll('[data-chart]').forEach((x) => x.classList.toggle('active', x === b)); document.getElementById('lg-rent').hidden = b.dataset.chart !== 'rent'; draw(b.dataset.chart); }));
-      const kinds = {}; pos.forEach((p) => { kinds[KIND[p.kind] || 'Outro'] = (kinds[KIND[p.kind] || 'Outro'] || 0) + Number(p.value); });
-      W.donut(document.getElementById('ch-alloc'), Object.entries(kinds).map(([name, value]) => ({ name, value })), { name: 'Alocação por tipo de ativo' });
-      W.donut(document.getElementById('ch-comp'), [{ name: 'Investimentos', value: nw.investimentos }, { name: 'Contas (Gastos)', value: Math.max(nw.contas, 0) }], { name: 'Composição do patrimônio' });
-    };
-    return `${W.pageHead('Patrimônio', 'Investimentos + saldos das contas. Imóveis, veículos e outros bens entram como ativos personalizados.', `${W.modeBar(mode)}<a class="btn secondary" href="#/w/${id}/relatorios">${ico('file')} Relatórios</a><a class="btn secondary" href="#/w/${id}/acessos">${ico('users')} Acessos</a>${ctx.canWrite ? `<a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
-      ${W.modeHint(mode, nw.tem_mercado)}
-      <div class="kpis">${kpi('Patrimônio líquido', W.brl(nw.total), mode === 'mercado' ? 'A mercado' : 'Na curva')}${kpi('Investimentos', W.brl(nw.investimentos), `Resultado ${W.sign(nw.resultado, W.brl)}${nw.rentabilidade === null ? '' : ` (${W.sign(nw.rentabilidade, (v) => W.pct(v))})`}`)}${kpi('Contas (saldo em Gastos)', W.brl(nw.contas), '')}${bk ? kpi(`Comparado ao ${bm}`, W.sign(bk.diff, W.brl), `Os mesmos aportes rendendo ${bm} desde a data de cada um valeriam ${W.brl(bk.val)}`, W.cls(bk.diff)) : kpi('Benchmark', bm || 'Nenhum', bm ? 'Sem aportes no período' : (ctx.w.role === 'gestor' ? `<a href="#/w/${id}/config">Escolher em Configurações</a>` : 'Definido pelo gestor'))}</div>
-      <div class="card" style="margin-bottom:16px" data-evo-range><div class="card-head"><h2>Evolução</h2><div class="row"><div class="tabs"><button class="active" data-chart="pl">Patrimônio</button><button data-chart="rent">Investimentos × aportes</button></div></div></div>
-        ${periodBar(ctx, per)}<p class="muted small">${W.dt(rg.from)} a ${W.dt(rg.to)} · ${{ dia: 'um ponto por dia', semana: 'um ponto por semana', mes: 'um ponto por mês' }[rg.step]}, pelos P.U. de cada dia</p><div class="legend-bench" id="lg-rent" hidden><span><i></i>Investimentos</span><span><i class="alt"></i>Aportes líquidos</span>${bm ? `<span><i class="bench"></i>Aportes rendendo ${bm}</span>` : ''}</div><div id="ch-eq"></div>
-        <p class="muted small">Rentabilidade simples: resultado ÷ aportes líquidos (não desconta o tempo em que cada aporte ficou investido).${bm ? ` A linha do ${bm} aplica o índice a cada aporte desde a data dele.` : ''}</p></div>
-      <div class="grid-2"><div class="card"><div class="card-head"><h2>Composição</h2></div><div id="ch-comp"></div></div><div class="card"><div class="card-head"><h2>Investimentos por tipo</h2></div><div id="ch-alloc"></div></div></div>`;
-  });
+  // desempenho de um trecho escolhido no gráfico (arrastando): "rent" = investimentos sem o efeito dos aportes (TWR diário); "pl" = variação do total
+  const retInfo = (rows, mode) => (i0, i1) => {
+    const a = rows[i0], b = rows[i1]; if (!a || !b || i1 <= i0) return null;
+    if (mode === 'rent') {
+      let f = 1; for (let k = i0 + 1; k <= i1; k++) { const prev = Number(rows[k - 1].inv); if (prev > 0) f *= (Number(rows[k].inv) - (Number(rows[k].b) - Number(rows[k - 1].b))) / prev; }
+      return { money: Number(b.inv) - Number(a.inv) - (Number(b.b) - Number(a.b)), pct: f - 1, from: a.long, to: b.long };
+    }
+    const m = Number(b.a) - Number(a.a); return { money: m, pct: Number(a.a) ? m / Math.abs(Number(a.a)) : null, from: a.long, to: b.long };
+  };
+  const kpi = (l, v, sub, c = '') => `<div class="kpi"><div class="kpi-label">${l}</div><div class="big ${c}" title="${esc(String(v).replace(/<[^>]+>/g, ''))}">${v}</div>${sub ? `<div class="muted small one-line">${sub}</div>` : ''}</div>`;
+  W.inv = { get periodOf() { return periodOf; }, get periodBar() { return periodBar; }, get retInfo() { return retInfo; }, get kpi() { return kpi; }, get resultSub() { return resultSub; }, BM, KIND };
+  const resultSub = (nw) => `${W.sign(nw.resultado, W.brl)}${nw.rentabilidade === null ? '' : ` (${W.sign(nw.rentabilidade, (v) => W.pct(v, 2))})`}`;
+
+  /* ================= Patrimônio ================= */
   // Bens e dívidas saiu na v2: o endereço antigo leva ao Patrimônio
   W.route('/w/:id/bens', async (ctx) => { W.go(`/w/${ctx.w.id}/patrimonio`); return ''; }, { wallet: true });
   const curId = () => (location.hash.match(/#\/w\/([^/?]+)/) || [])[1];
   W.curId = curId;
 
-  /* ================= Visão geral de investimentos ================= */
-  W.route('/w/:id/investimentos', async (ctx) => {
-    const id = ctx.w.id; const mode = W.viewMode(ctx); const per = periodOf(ctx);
-    const [nw, rg, pos] = await Promise.all([W.rpc('w_networth', { p_wallet: id, p_mode: mode }), W.rpc('w_equity_range', { p_wallet: id, p_from: per.from, p_to: per.to, p_mode: mode }), W.rpc('w_positions', { p_wallet: id, p_mode: mode })]);
-    const eq = rg.points; const lab = rangeLabel(rg);
-    const bm = BM[nw.benchmark] || ''; const bk = benchKpi(eq, bm);
-    const kpi = (l, v, sub, c = '') => `<div class="kpi"><div class="kpi-label">${l}</div><div class="big ${c}">${v}</div>${sub ? `<div class="muted small">${sub}</div>` : ''}</div>`;
-    const top = [...pos].sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 6); const tot = pos.reduce((x, p) => x + Number(p.value), 0);
-    ctx.after = () => {
-      W.lineChart(document.getElementById('ch-inv'), eq.map((p) => ({ label: lab(p), long: W.dt(p.date), a: p.investimentos, b: p.aportes, ...(bm ? { c: p.benchmark } : {}) })), { names: ['Investimentos', 'Aportes líquidos', `Aportes rendendo ${bm}`], name: 'Evolução dos investimentos' });
-      const kinds = {}; pos.forEach((p) => { kinds[KIND[p.kind] || 'Outro'] = (kinds[KIND[p.kind] || 'Outro'] || 0) + Number(p.value); });
-      W.donut(document.getElementById('ch-alloc'), Object.entries(kinds).map(([name, value]) => ({ name, value })), { name: 'Alocação por tipo de ativo' });
-    };
-    return `${W.pageHead('Visão geral', 'Quanto você tem investido e como está distribuído.', `${W.modeBar(mode)}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
-      ${W.modeHint(mode, nw.tem_mercado)}
-      <div class="kpis">${kpi('Valor atual', W.brl(nw.investimentos), `${pos.length} ${pos.length === 1 ? 'ativo' : 'ativos'}`)}${kpi('Aportes líquidos', W.brl(nw.aportes), 'Compras menos vendas')}${kpi('Resultado', W.sign(nw.resultado, W.brl), nw.rentabilidade === null ? 'Sem aportes registrados' : `${W.sign(nw.rentabilidade, (v) => W.pct(v))} sobre os aportes`, W.cls(nw.resultado))}${bk ? kpi(`Comparado ao ${bm}`, W.sign(bk.diff, W.brl), `Aportes rendendo ${bm} desde a data de cada um: ${W.brl(bk.val)}`, W.cls(bk.diff)) : kpi('Maior posição', top.length && tot > 0 ? W.pct(Number(top[0].value) / tot, 1) : '—', top.length ? esc(top[0].ticker || top[0].name) : 'Sem posições')}</div>
-      <div class="card" style="margin-bottom:16px" data-evo-range><div class="card-head"><h2>Evolução</h2></div>${periodBar(ctx, per)}<p class="muted small">${W.dt(rg.from)} a ${W.dt(rg.to)} · ${{ dia: 'um ponto por dia', semana: 'um ponto por semana', mes: 'um ponto por mês' }[rg.step]}, pelos P.U. de cada dia</p><div class="legend-bench"><span><i></i>Investimentos</span><span><i class="alt"></i>Aportes líquidos</span>${bm ? `<span><i class="bench"></i>Aportes rendendo ${bm}</span>` : ''}</div><div id="ch-inv"></div></div>
-      <div class="grid-2"><div class="card"><div class="card-head"><h2>Alocação por tipo</h2></div><div id="ch-alloc"></div></div>
-        <div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Maiores posições</h2><a href="#/w/${id}/posicao" class="muted small">Ver todas</a></div>${top.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Ativo</th><th class="num">Valor</th><th class="num">Peso</th></tr></thead><tbody>${top.map((p) => `<tr class="link" data-href="#/w/${id}/ativo/${esc(p.asset_id)}"><td><b>${esc(p.ticker || p.name)}</b></td><td class="num">${W.brl(p.value)}</td><td class="num">${tot > 0 ? W.pct(Number(p.value) / tot, 1) : '—'}</td></tr>`).join('')}</tbody></table></div>` : empty('Nenhum investimento registrado.')}</div></div>`;
-  });
-
-  /* ================= Posição ================= */
+  /* ================= Posição (classes → subclasses → ativos, com TWR, P&L e custodiante) ================= */
+  const classOf = (p) => {
+    const k = p.kind;
+    if (k === 'acao') return ['Renda Variável', 'Ações', 'rv']; if (k === 'fii') return ['Renda Variável', 'FIIs', 'rv']; if (k === 'etf') return ['Renda Variável', 'ETFs', 'rv']; if (k === 'bdr') return ['Renda Variável', 'BDRs', 'rv'];
+    if (k === 'tesouro') return ['Renda Fixa', 'Tesouro Direto', 'rf']; if (k === 'rf_pos') return ['Renda Fixa', 'Pós-fixado', 'rf']; if (k === 'rf_pre') return ['Renda Fixa', 'Pré-fixado', 'rf']; if (k === 'rf_ipca') return ['Renda Fixa', 'Inflação (IPCA+)', 'rf'];
+    if (k === 'fundo') return ['Fundos', 'Fundos de Investimento', 'fd']; if (k === 'cripto') return ['Criptoativos', 'Criptoativos', 'cr'];
+    if (k === 'imovel') return ['Outros ativos', 'Imóveis', 'ot']; if (k === 'veiculo') return ['Outros ativos', 'Veículos', 'ot']; return ['Outros ativos', 'Outros', 'ot'];
+  };
+  const posSort = { key: 'weight', dir: -1 }; const posOpen = new Set(); let posAllClosed = false;
+  const POS_COLS = [['name', 'Classe / Ativo', ''], ['value', 'Valor atualizado', 'num'], ['invested', 'Valor investido', 'num c-inv'], ['pnl', 'P&L', 'num'], ['twr', 'Rent. TWR', 'num'], ['qty', 'Quantidade', 'num c-qty'], ['custodian', 'Custodiante', 'c-cust'], ['weight', '% do portfólio', 'num']];
+  const buildTree = (pos) => {
+    const root = new Map();
+    for (const p of pos) {
+      const [c1, c2, col] = classOf(p); const g1 = root.get(c1) || { name: c1, col, subs: new Map() }; root.set(c1, g1);
+      const g2 = g1.subs.get(c2) || { name: c2, assets: [] }; g1.subs.set(c2, g2); g2.assets.push(p);
+    }
+    const agg = (items) => { const o = { value: 0, invested: 0, pnl: 0, w: 0, tw: 0, weight: 0 }; for (const p of items) { o.value += Number(p.value); o.invested += Number(p.invested); o.pnl += Number(p.pnl ?? p.result ?? 0); o.weight += Number(p.weight || 0); if (p.twr !== null && p.twr !== undefined) { o.w += Math.max(Number(p.invested), 0); o.tw += Number(p.twr) * Math.max(Number(p.invested), 0); } } o.twr = o.w > 0 ? o.tw / o.w : null; return o; };
+    const groups = [...root.values()].map((g1) => { const subs = [...g1.subs.values()].map((g2) => ({ ...g2, ...agg(g2.assets), name: g2.name })); const all = subs.flatMap((s) => s.assets); return { name: g1.name, col: g1.col, subs, ...agg(all) }; });
+    return { groups, total: agg(pos) };
+  };
+  const posCell = (v, f) => (v === null || v === undefined ? '—' : f(v));
+  const twrCell = (v) => (v === null || v === undefined ? '—' : `<span class="${W.cls(v)}">${W.pct(Math.abs(v), 2).replace(/^/, v < 0 ? '-' : '')}</span> <span class="${W.cls(v)}" aria-hidden="true">${v >= 0 ? '↑' : '↓'}</span>`);
+  const pnlCell = (v) => `<span class="${W.cls(v)}">${v < 0 ? '-' : ''}${W.brl(Math.abs(v))}</span>`;
+  const cmp = (key) => (a, b) => { const x = key === 'name' || key === 'custodian' ? String(a[key] || '').toLowerCase() : Number(a[key] ?? -Infinity), y = key === 'name' || key === 'custodian' ? String(b[key] || '').toLowerCase() : Number(b[key] ?? -Infinity); return (x < y ? -1 : x > y ? 1 : 0) * posSort.dir; };
+  const renderPos = (id, pos) => {
+    const tree = buildTree(pos); const sorter = cmp(posSort.key);
+    const arrow = `<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const grow = (g, lvl, key) => { const open = !posOpen.has(`c:${key}`); return `<tr class="g g${lvl}" data-key="${esc(key)}" tabindex="0" role="button" aria-expanded="${open}"><td class="cell-name"><span class="gname" style="padding-left:${lvl * 18}px"><span class="tog${open ? ' open' : ''}">${arrow}</span>${esc(g.name)}${lvl === 0 ? ` <i class="dot col-${g.col}"></i>` : ''}</span></td><td class="num">${W.brl(g.value)}</td><td class="num c-inv">${W.brl(g.invested)}</td><td class="num">${pnlCell(g.pnl)}</td><td class="num">${twrCell(g.twr)}</td><td class="num c-qty">-</td><td class="c-cust">-</td><td class="num">${W.pct(g.weight, 2)}</td><td></td></tr>`; };
+    const arow = (p, col, lvl) => `<tr class="a link" data-href="#/w/${id}/ativo/${esc(p.asset_id)}"><td class="cell-name" title="${esc(p.name)}"><span class="aname" style="padding-left:${lvl * 18}px;--bar:var(--c-${col})"><b>${esc(p.ticker || p.name)}</b>${p.ticker ? `<span class="muted small one-line"> ${esc(p.name)}</span>` : ''}</span><div class="show-md muted small one-line" style="padding-left:${lvl * 18 + 14}px">${W.qty(p.qty)} · ${esc(p.custodian || '—')}${p.maturity ? ` · vence ${W.dt(p.maturity)}` : ''}</div></td><td class="num">${W.brl(p.value)}</td><td class="num c-inv">${W.brl(p.invested)}</td><td class="num">${pnlCell(Number(p.pnl ?? p.result ?? 0))}</td><td class="num">${twrCell(p.twr === null ? null : Number(p.twr))}</td><td class="num c-qty">${W.qty(p.qty)}</td><td class="c-cust cell-name" title="${esc(p.custodian || '')}">${esc(p.custodian || '—')}</td><td class="num">${W.pct(Number(p.weight || 0), 2)}</td><td class="chev-r">›</td></tr>`;
+    let html = '';
+    for (const g of [...tree.groups].sort(sorter)) {
+      html += grow(g, 0, g.name); if (posOpen.has(`c:${g.name}`)) continue;
+      for (const s of [...g.subs].sort(sorter)) {
+        html += grow(s, 1, `${g.name}/${s.name}`); if (posOpen.has(`c:${g.name}/${s.name}`)) continue;
+        for (const p of [...s.assets].sort(sorter)) html += arow(p, g.col, 2);
+      }
+    }
+    const T = tree.total;
+    return { body: html, foot: `<tr class="tot"><td><b>Total</b></td><td class="num"><b>${W.brl(T.value)}</b></td><td class="num c-inv"><b>${W.brl(T.invested)}</b></td><td class="num"><b>${pnlCell(T.pnl)}</b></td><td class="num"><b>${twrCell(T.twr)}</b></td><td class="num c-qty"></td><td class="c-cust"></td><td class="num"><b>100%</b></td><td></td></tr>`, keys: tree.groups.flatMap((g) => [g.name, ...g.subs.map((s) => `${g.name}/${s.name}`)]) };
+  };
   W.route('/w/:id/posicao', async (ctx) => {
-    const id = ctx.w.id; const mode = W.viewMode(ctx); const pos = await W.rpc('w_positions', { p_wallet: id, p_mode: mode });
-    const hasMkt = pos.some((p) => p.pu_mercado !== null); const merc = mode === 'mercado';
-    const draw = () => {
-      const tot = pos.reduce((s, p) => s + Number(merc && p.value_mercado !== null ? p.value_mercado : p.value), 0), cost = pos.reduce((s, p) => s + Number(p.cost), 0);
-      document.getElementById('pos-body').innerHTML = pos.length ? pos.map((p) => { const v = merc && p.value_mercado !== null ? p.value_mercado : p.value; const r = Number(v) - Number(p.cost); return `<tr class="link" data-href="#/w/${id}/ativo/${esc(p.asset_id)}"><td><b>${esc(p.ticker || p.name)}</b>${p.ticker ? `<div class="muted small">${esc(p.name)}</div>` : ''}</td><td>${esc(KIND[p.kind] || '')}${p.maturity ? `<div class="muted small">vence ${W.dt(p.maturity)}</div>` : ''}</td><td class="num">${W.qty(p.qty)}</td><td class="num">${W.num(p.avg_pu, 4)}</td><td class="num">${W.num(merc && p.pu_mercado !== null ? p.pu_mercado : p.pu, 4)}<div class="muted small">${W.dt(p.pu_date)}</div></td><td class="num"><b>${W.brl(v)}</b></td><td class="num">${clsDelta(r)}<div class="small ${W.cls(r)}">${p.cost > 0 ? W.sign(r / p.cost, (x) => W.pct(x)) : ''}</div></td><td class="num">${tot > 0 ? W.pct(Number(v) / tot, 1) : '—'}</td></tr>`; }).join('') : `<tr><td colspan="8">${empty('Nenhum investimento registrado.')}</td></tr>`;
-      document.getElementById('pos-foot').innerHTML = pos.length ? `<tr><td colspan="5"><b>Total</b></td><td class="num"><b>${W.brl(tot)}</b></td><td class="num">${clsDelta(tot - cost)}</td><td class="num">100%</td></tr>` : '';
+    const id = ctx.w.id; const mode = W.viewMode(ctx); const per = periodOf(ctx, true);
+    const pos = await W.rpc('w_positions', { p_wallet: id, p_mode: mode, p_from: per.from, p_to: per.to });
+    ctx.after = () => {
+      W.cur = ctx; const host = document.getElementById('pos-table'); if (!host) return;
+      const paint = () => {
+        const r = renderPos(id, pos); host.querySelector('tbody').innerHTML = r.body; host.querySelector('tfoot').innerHTML = r.foot; host.__keys = r.keys;
+        host.querySelectorAll('th[data-sort]').forEach((th) => { th.setAttribute('aria-sort', th.dataset.sort === posSort.key ? (posSort.dir > 0 ? 'ascending' : 'descending') : 'none'); th.querySelector('.srt').textContent = th.dataset.sort === posSort.key ? (posSort.dir > 0 ? '▲' : '▼') : '↕'; });
+      };
+      paint();
+      host.addEventListener('click', (e) => {
+        const th = e.target.closest('th[data-sort]'); if (th) { const k = th.dataset.sort; if (posSort.key === k) posSort.dir = -posSort.dir; else { posSort.key = k; posSort.dir = k === 'name' || k === 'custodian' ? 1 : -1; } return paint(); }
+        if (e.target.closest('[data-allpos]')) { posAllClosed = !posAllClosed; posOpen.clear(); if (posAllClosed) (host.__keys || []).forEach((k) => posOpen.add(`c:${k}`)); return paint(); }
+        const g = e.target.closest('tr.g'); if (g) { const k = `c:${g.dataset.key}`; if (posOpen.has(k)) posOpen.delete(k); else posOpen.add(k); paint(); }
+      });
+      host.addEventListener('keydown', (e) => { const g = e.target.closest('tr.g'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); g.click(); } });
     };
-    ctx.after = () => { draw(); document.getElementById('pos-body').addEventListener('click', (e) => { const r = e.target.closest('tr[data-href]'); if (r) location.hash = r.dataset.href.slice(1); }); };
-    return `${W.pageHead('Posição', 'Quanto você tem em cada ativo hoje.', `${W.modeBar(mode)}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
-      ${W.modeHint(mode, hasMkt)}
-      <div class="card flush"><div class="table-wrap"><table><thead><tr><th>Ativo</th><th>Tipo</th><th class="num">Quantidade</th><th class="num">P.U. médio</th><th class="num">P.U. atual</th><th class="num">Valor</th><th class="num">Resultado</th><th class="num">Peso</th></tr></thead><tbody id="pos-body"></tbody><tfoot id="pos-foot"></tfoot></table></div></div>`;
+    return `${W.pageHead('Posição', '', `${W.modeBar(mode)}${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`)}
+      <div data-evo-range>${periodBar(ctx, per)}</div>
+      <div class="card flush">${pos.length ? `<div class="table-wrap"><table class="pos" id="pos-table"><thead><tr><th class="allpos"><button type="button" class="ghost-ico" data-allpos aria-label="Expandir ou recolher tudo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l5 5 5-5M7 13l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></th>${POS_COLS.slice(1).map(([k, l, c]) => `<th class="${c}" data-sort="${k}" aria-sort="none" tabindex="0"><span>${l}</span> <span class="srt" aria-hidden="true">↕</span></th>`).join('')}<th></th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>` : empty('Nenhuma posição na data escolhida.', ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button> <a class="btn" href="#/w/${id}/transacoes?new=1">Nova transação</a>` : '')}</div>`;
   });
   document.addEventListener('click', (e) => { const r = e.target.closest('tr.link[data-href]'); if (r && !e.target.closest('a,button')) location.hash = r.dataset.href.slice(1); });
 
@@ -120,7 +135,7 @@
   W.acts['imp-open'] = () => {
     const id = curId();
     W.modal({ title: 'Importar arquivo', wide: true, body: '<p class="muted small">Arraste aqui o CSV com todas as suas posições (ativo, quantidade e preço médio) ou o extrato de negociação da corretora. Você confere as colunas antes de importar; linhas repetidas não entram duas vezes.</p><div id="imp-host" style="margin-top:14px"></div>' });
-    W.importUI(document.getElementById('imp-host'), { mode: 'invest', label: 'Arraste o CSV de posições aqui', onImport: async (rows, name) => { const r = await W.rpc('w_tx_import', { p_wallet: id, p_filename: name, p_rows: rows }); return `<p><b>${r.new}</b> lançamentos novos · ${r.duplicates} já existiam · ${r.invalid} inválidos.</p><button class="btn" data-act="imp-done">Concluir</button>`; } });
+    W.importUI(document.getElementById('imp-host'), { mode: 'invest', label: 'Arraste o CSV de posições aqui', onImport: async (rows, name) => { const r = await W.rpc('w_tx_import', { p_wallet: id, p_filename: name, p_rows: rows }); return `<p><b>${r.new}</b> lançamentos novos${r.renda_fixa ? ` (${r.renda_fixa} ${r.renda_fixa === 1 ? 'título' : 'títulos'} de renda fixa com a curva calculada)` : ''} · ${r.duplicates} já existiam · ${r.invalid} inválidos.</p><button class="btn" data-act="imp-done">Concluir</button>`; } });
   };
   W.acts['imp-done'] = () => { W.closeModal(); W.refresh(); };
   W.acts['tx-edit'] = (el) => openTx(W.cur, W.txRows.find((t) => t.id === el.dataset.id));
@@ -129,11 +144,14 @@
     W.modal({ title: t ? 'Editar transação' : 'Nova transação', body: `<form class="stack" data-form="tx-save"><input type="hidden" name="id" value="${esc(t ? t.id : '')}">
       <div class="form-grid"><div class="field"><label>Tipo</label><select class="input" name="kind">${W.opts(Object.entries(TX), t ? t.kind : 'compra')}</select></div><div class="field"><label>Data</label><input class="input" name="date" data-mask="date" required max="${W.ymd()}" value="${esc(t ? t.date : W.ymd())}"></div>
       <div class="field full"><label>Ativo</label><div class="combo" data-combo="asset"><input class="input" name="asset_q" type="text" required autocomplete="off" placeholder="Digite o nome ou o ticker, ex.: PETR4" value="${esc(t ? `${t.ticker ? t.ticker + ' · ' : ''}${t.asset}` : '')}"><input type="hidden" name="asset_id" value="${esc(t ? t.asset_id : '')}"><div class="combo-list" hidden></div></div><div class="help" id="pu-hint">Não achou? <a href="#" data-act="asset-from-tx">Cadastre um ativo</a></div></div>
-      <div class="field"><label>Quantidade</label><input class="input" name="qty" inputmode="decimal" required value="${t ? esc(W.qty(t.qty)) : ''}"></div><div class="field"><label>P.U. (R$)</label><input class="input" name="unit_price" inputmode="decimal" required value="${t ? esc(W.num(t.unit_price, 4)) : ''}"></div><div class="field full pu-day" id="pu-day" aria-live="polite"></div>
+      <div class="field"><label>Quantidade</label><input class="input" name="qty" data-mask="qty" inputmode="decimal" required value="${t ? esc(W.qty(t.qty)) : ''}"></div><div class="field"><label>P.U. (R$)</label><input class="input" name="unit_price" data-mask="pu" inputmode="decimal" required value="${t ? esc(W.num(t.unit_price, 4)) : ''}"></div><div class="field full tx-total" id="tx-total" aria-live="polite"></div><div class="field full pu-day" id="pu-day" aria-live="polite"></div>
       <div class="field full"><label>Custodiante (opcional)</label><div class="combo" data-combo="cust"><input class="input" name="custodian" type="text" autocomplete="off" value="${esc(t ? t.custodian || '' : '')}" placeholder="Digite para buscar a corretora ou DTVM"><div class="combo-list" hidden></div></div></div></div>
       <div class="modal-foot"><button type="button" class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn" type="submit">Salvar</button></div></form>` });
     const form = document.querySelector('form[data-form=tx-save]'), ah = form.querySelector('[data-combo=asset]');
     const puIn = form.querySelector('input[name=unit_price]'); let puTouched = !!t; puIn.addEventListener('input', () => { puTouched = true; });
+    const qIn = form.querySelector('input[name=qty]'), totEl = form.querySelector('#tx-total');
+    const total = () => { const q = W.parseNum(qIn.value), p = W.parseNum(puIn.value); totEl.innerHTML = q > 0 && p >= 0 && qIn.value && puIn.value ? `Valor total da transação: <b>${W.brl(q * p)}</b>` : ''; };
+    qIn.addEventListener('input', total); puIn.addEventListener('input', total); total();
     ah.__onType = () => { form.querySelector('input[name=asset_id]').value = ''; };
     W.combo(ah, { fetch: (q) => W.rpc('w_asset_search', { p_wallet: ctx.w.id, p_q: q }), label: (a) => `${a.ticker ? a.ticker + ' · ' : ''}${a.name}`, sub: (a) => (a.last_pu !== null && a.last_pu !== undefined ? `R$ ${W.num(a.last_pu, 4)}` : KIND[a.kind] || ''),
       onPick: (a) => { form.querySelector('input[name=asset_id]').value = a.id; document.getElementById('pu-hint').textContent = ''; puDay(); } });
@@ -209,7 +227,7 @@
     W.modal({ title: `Editar ${ids.length} ${ids.length === 1 ? 'ativo' : 'ativos'} em lote`, sub: 'Só os campos preenchidos mudam; os demais ficam como estão.', wide: true, body: `<form class="stack" data-form="asset-bulk"><input type="hidden" name="ids" value="${esc(ids.join(','))}">
       <div class="form-grid"><div class="field"><label for="bk-kind">Tipo</label><select class="input" id="bk-kind" name="kind">${W.opts(Object.entries(KIND), '', 'Manter')}</select></div>
         <div class="field"><label for="bk-idx">Remuneração</label><select class="input" id="bk-idx" name="indexer">${W.opts([['CDI', '% do CDI'], ['PRE', 'Pré-fixada (% a.a.)'], ['IPCA', 'IPCA + (% a.a.)']], '', 'Manter')}</select></div>
-        <div class="field"><label for="bk-rate">Taxa (%)</label><input class="input" id="bk-rate" name="rate" inputmode="decimal" placeholder="Ex.: 100 (do CDI) ou 12,5 (a.a.)"></div>
+        <div class="field"><label for="bk-rate">Taxa (%)</label><input class="input" id="bk-rate" name="rate" data-mask="pct" inputmode="decimal" placeholder="Ex.: 100 (do CDI) ou 12,5 (a.a.)"></div>
         <div class="field"><label for="bk-mat">Vencimento</label><input class="input" id="bk-mat" name="maturity" data-mask="date"></div>
         <div class="field"><label for="bk-iss">Emissor</label><input class="input" id="bk-iss" name="issuer" maxlength="120"></div>
         <div class="field"><label for="bk-val">Valorização</label><select class="input" id="bk-val" name="valuation">${W.opts([['auto', 'Automática (curva ou cotação)'], ['manual', 'Manual']], '', 'Manter')}</select></div></div>
@@ -237,7 +255,7 @@
     W.modal({ title: a ? 'Editar ativo' : 'Novo ativo', body: `<form class="stack" data-form="asset-save"><input type="hidden" name="id" value="${esc(a ? a.id : '')}">
       <div class="form-grid"><div class="field full"><label>Nome</label><input class="input" name="name" required minlength="2" value="${esc(a ? a.name : '')}" placeholder="CDB Banco X 2028, Debênture Y…"></div>
       <div class="field"><label>Tipo</label><select class="input" name="kind" data-kind>${W.opts(Object.entries(KIND), a ? a.kind : 'rf_pos')}</select></div><div class="field"><label>Ticker/código (opcional)</label><input class="input" name="ticker" value="${esc(a ? a.ticker || '' : '')}"><div class="help" data-tick-help>Cripto e bolsa com código têm cotação automática.</div></div><div class="field"><label>Emissor (opcional)</label><input class="input" name="issuer" maxlength="120" value="${esc(a ? a.issuer || '' : '')}"></div>
-      <div class="field" data-rate><label data-rate-l>Taxa</label><input class="input" name="rate" inputmode="decimal" value="${a && a.rate ? esc(W.num(a.rate * 100, 4)) : ''}"></div><div class="field" data-rate><label>P.U. de emissão (R$)</label><input class="input" name="pu_inicial" inputmode="decimal" value="${esc(a ? W.num(a.pu_inicial, 4) : '1.000,00')}"></div>
+      <div class="field" data-rate><label data-rate-l>Taxa</label><input class="input" name="rate" data-mask="pct" inputmode="decimal" value="${a && a.rate ? esc(W.num(a.rate * 100, 4)) : ''}"></div><div class="field" data-rate><label>P.U. de emissão (R$)</label><input class="input" name="pu_inicial" data-mask="pu" inputmode="decimal" value="${esc(a ? W.num(a.pu_inicial, 4) : '1.000,00')}"></div>
       <div class="field" data-rate><label>Data de emissão</label><input class="input" name="issue_date" data-mask="date" value="${esc(a ? a.issue_date || '' : '')}"></div><div class="field"><label>Vencimento (opcional)</label><input class="input" name="maturity" data-mask="date" value="${esc(a ? a.maturity || '' : '')}"></div>
       <div class="field full"><label>Valorização</label><select class="input" name="valuation">${W.opts([['auto', 'Automática (curva para renda fixa, cotação para cripto e bolsa)'], ['manual', 'Manual (eu informo o valor)']], a ? (a.custom ? 'manual' : 'auto') : 'auto')}</select></div></div>
       <div class="modal-foot"><button type="button" class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn" type="submit">Salvar</button></div></form>` });
@@ -258,22 +276,22 @@
   };
   W.acts['price-del'] = async (el) => { if (!(await W.confirm('Excluir este valor?', `O valor informado em ${W.dt(el.dataset.date)} deixa de valer; vale o anterior.`, 'Excluir', true))) return; await W.rpc('w_asset_price_delete', { p_wallet: curId(), p_asset: el.dataset.asset, p_date: el.dataset.date }); W.toast('Valor excluído'); W.refresh(); };
   W.acts['price-new'] = (el) => { const a = (W.assets || []).find((x) => x.id === el.dataset.id) || { id: el.dataset.id, name: 'Ativo' }; priceModal(a); };
-  function priceModal(a) { W.modal({ title: `Atualizar valor · ${a.name}`, body: `<form class="stack" data-form="price-save"><input type="hidden" name="asset" value="${esc(a.id)}"><div class="form-grid"><div class="field"><label>Data</label><input class="input" name="date" data-mask="date" required max="${W.ymd()}" value="${W.ymd()}"></div><div class="field"><label>P.U. (R$)</label><input class="input" name="pu" inputmode="decimal" required></div></div><div class="help">Vale daqui para frente, até o próximo valor informado.</div><div class="modal-foot"><button type="button" class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn" type="submit">Salvar</button></div></form>` }); }
+  function priceModal(a) { W.modal({ title: `Atualizar valor · ${a.name}`, body: `<form class="stack" data-form="price-save"><input type="hidden" name="asset" value="${esc(a.id)}"><div class="form-grid"><div class="field"><label>Data</label><input class="input" name="date" data-mask="date" required max="${W.ymd()}" value="${W.ymd()}"></div><div class="field"><label>P.U. (R$)</label><input class="input" name="pu" data-mask="pu" inputmode="decimal" required></div></div><div class="help">Vale daqui para frente, até o próximo valor informado.</div><div class="modal-foot"><button type="button" class="btn secondary" data-act="modal-close">Cancelar</button><button class="btn" type="submit">Salvar</button></div></form>` }); }
   W.forms['price-save'] = async (f) => { const v = W.form(f); const pu = W.parseNum(v.pu); if (!(pu >= 0)) throw new Error('P.U. inválido.'); if (v.date && v.date > W.ymd()) { W.fieldError(f.querySelector('[name=date]'), 'A data não pode ser futura.'); const er = new Error('A data não pode ser futura.'); er.shownInField = true; throw er; } await W.rpc('w_asset_price_set', { p_wallet: curId(), p_asset: v.asset, p_date: v.date, p_pu: pu }); W.closeModal(); W.toast('Valor atualizado'); W.refresh(); };
 
   /* ================= Detalhe do ativo ================= */
   W.route('/w/:id/ativo/:aid', async (ctx) => {
-    const d = await W.rpc('w_asset_detail', { p_wallet: ctx.w.id, p_asset: ctx.params.aid }); const a = d.asset, p = d.position; const id = ctx.w.id;
-    ctx.after = () => { W.cur = ctx; W.assets = [a]; const pr = d.prices; const host = document.getElementById('ch-px'); if (pr.length > 1) W.lineChart(host, pr.map((x) => ({ label: W.dt(x.date).slice(0, 5), long: W.dt(x.date), a: x.pu, b: x.pu_mercado === null ? undefined : x.pu_mercado })), { names: ['P.U.', 'P.U. a mercado'], format: (v) => W.num(v, 4), name: 'Histórico do P.U.' }); else host.innerHTML = empty('Ainda não há histórico de P.U. para este ativo.'); };
+    const d = await W.rpc('w_asset_detail', { p_wallet: ctx.w.id, p_asset: ctx.params.aid }); const a = d.asset, p = d.position; const id = ctx.w.id; const per = periodOf(ctx, true);
+    ctx.after = () => { W.cur = ctx; W.assets = [a]; const pr = d.prices.filter((x) => (!per.from || x.date >= per.from) && x.date <= per.to); const host = document.getElementById('ch-px'); if (pr.length > 1) { const rows = pr.map((x) => ({ label: W.dt(x.date).slice(0, 5), long: W.dt(x.date), a: x.pu, b: x.pu_mercado === null ? undefined : x.pu_mercado })); W.lineChart(host, rows, { names: ['P.U.', 'P.U. a mercado'], format: (v) => W.num(v, 4), name: 'Histórico do P.U.', onRange: (i0, i1) => { const x = rows[i0], y = rows[i1]; if (!x || !y || !(Number(x.a) > 0)) return null; return { money: Number(y.a) - Number(x.a), pct: Number(y.a) / Number(x.a) - 1, from: x.long, to: y.long, fmt: (v) => W.num(v, 4) }; } }); } else host.innerHTML = empty('Não há histórico de P.U. neste período.'); };
     const own = a.wallet_id === id;
     return `${W.pageHead(a.ticker || a.name, `${KIND[a.kind] || ''}${a.ticker ? ' · ' + a.name : ''}${a.maturity ? ' · vence ' + W.dt(a.maturity) : ''}`, ctx.canWrite && own ? `<button class="btn secondary" data-act="price-new" data-id="${esc(a.id)}">Atualizar valor</button><button class="btn secondary" data-act="asset-edit" data-id="${esc(a.id)}">Editar ativo</button>` : '', [`/w/${id}/posicao`, 'Posição'])}
       <div class="kpis"><div class="kpi"><div class="kpi-label">Quantidade</div><div class="big">${p ? W.qty(p.qty) : '0'}</div></div><div class="kpi"><div class="kpi-label">P.U. médio</div><div class="big">${p ? W.num(p.avg_pu, 4) : '—'}</div></div><div class="kpi"><div class="kpi-label">P.U. atual</div><div class="big">${p ? W.num(p.pu, 4) : '—'}</div><div class="muted small">${p && p.pu_date ? W.dt(p.pu_date) : ''}</div></div><div class="kpi"><div class="kpi-label">Valor</div><div class="big">${p ? W.brl(p.qty * p.pu) : '—'}</div></div>
       <div class="kpi"><div class="kpi-label">Resultado</div><div class="big ${p ? W.cls(p.qty * (p.pu - p.avg_pu)) : ''}">${p ? W.sign(p.qty * (p.pu - p.avg_pu), W.brl) : '—'}</div></div></div>
       ${a.indexer ? `<div class="banner info">${ico('trend')}<div class="grow">Remuneração: <b>${remun(a)}</b>, valorizada pela curva todo dia útil${a.indexer === 'PRE' || a.indexer === 'IPCA' ? '. O P.U. “a mercado” é uma estimativa: taxa do Tesouro de prazo parecido hoje + o spread que o título tinha na emissão.' : a.indexer === 'CDI' ? '. Em % do CDI, o valor a mercado é igual ao da curva.' : '.'}</div></div>` : ''}
       ${d.valuation && (d.valuation.missing || []).length && own ? `<div class="banner warn">${ico('alert')}<div class="grow">Para valorizar automaticamente falta: <b>${esc(d.valuation.missing.join(', '))}</b>. Até lá vale o preço da última transação ou o valor informado.</div>${ctx.canWrite ? `<button class="btn secondary sm" data-act="asset-edit" data-id="${esc(a.id)}">Completar</button>` : ''}</div>` : ''}
-      <div class="card" style="margin-bottom:16px"><div class="card-head"><h2>Histórico do P.U.</h2></div><div id="ch-px"></div></div>
+      <div class="card" style="margin-bottom:16px" data-evo-range><div class="card-head"><h2>Histórico do P.U.</h2></div>${periodBar(ctx, per)}<div id="ch-px"></div></div>
       ${own && d.prices.some((x) => x.source === 'manual') ? `<div class="card flush" style="margin-bottom:16px"><div class="card-head" style="padding:18px 24px 0"><h2>Valores informados</h2></div><div class="table-wrap"><table class="tight fit"><thead><tr><th>Data</th><th class="num">P.U.</th><th></th></tr></thead><tbody>${d.prices.filter((x) => x.source === 'manual').reverse().map((x) => `<tr><td>${W.dt(x.date)}</td><td class="num">${W.num(x.pu, 4)}</td><td class="actions">${ctx.canWrite ? `<button class="btn ghost sm" data-act="price-del" data-asset="${esc(a.id)}" data-date="${esc(x.date)}" aria-label="Excluir valor de ${W.dt(x.date)}">${ico('trash')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
-      <div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Transações</h2></div>${d.tx.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Data</th><th>Tipo</th><th class="num">Quantidade</th><th class="num">P.U.</th><th>Custodiante</th></tr></thead><tbody>${d.tx.map((t) => `<tr><td>${W.dt(t.date)}</td><td>${tag(TX[t.kind])}</td><td class="num">${W.qty(t.qty)}</td><td class="num">${W.num(t.unit_price, 4)}</td><td>${esc(t.custodian || '—')}</td></tr>`).join('')}</tbody></table></div>` : empty('Sem transações.')}</div>`;
+      <div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Transações</h2></div>${d.tx.length ? `<div class="table-wrap"><table class="tight"><thead><tr><th>Data</th><th>Tipo</th><th class="num">Quantidade</th><th class="num">P.U.</th><th class="num">Total</th><th>Custodiante</th></tr></thead><tbody>${d.tx.map((t) => `<tr><td>${W.dt(t.date)}</td><td>${tag(TX[t.kind])}</td><td class="num">${W.qty(t.qty)}</td><td class="num">${W.num(t.unit_price, 4)}</td><td class="num">${W.brl(Number(t.qty) * Number(t.unit_price))}</td><td>${esc(t.custodian || '—')}</td></tr>`).join('')}</tbody></table></div>` : empty('Sem transações.')}</div>`;
   });
 
 })();

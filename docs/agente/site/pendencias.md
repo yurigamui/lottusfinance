@@ -8,7 +8,7 @@
 | S-004 | Formulário de contato sem destino (`formEndpoint` vazio em `main.js`): mostra a mensagem pronta para copiar. Ligar a uma função própria exige decidir o serviço | Baixa | Yuri | a definir | auditoria 23/11 |
 | S-005 | `build.py` menciona `solucoes.html`, `sobre.html` e `contato.html`, que não existem no site publicado (página única). Comentário enganoso | Baixa | Agente | com S-003 | auditoria 23/11 |
 | S-006 | Home sem páginas próprias por solução (`/partners`, `/sign`): páginas dedicadas ranqueariam melhor por palavra-chave. Exige textos novos e decisão de escopo | Média | Yuri (aprovar escopo) | a definir | SEO 24/11 |
-| S-007 | Wealth e Invest não aparecem no site. Decidir se entram e com que texto (Invest: sem oferta em tela aberta) | Média | Yuri | a definir | pedido 24/11 |
+| S-007 | Wealth ganhou página (em breve); Invest removido do site (ver S-020) | Média | Yuri | – | 24/11 |
 | S-008 | Após publicar: cadastrar o site no Google Search Console e no Bing Webmaster, enviar `sitemap.xml`, validar o JSON-LD no Teste de Resultados Ricos; medir LCP/INP/CLS em 4G real | Média | Yuri / agente | no lançamento | SEO 24/11 |
 | S-009 | `build.py`/`legal.py` seguem desatualizados e NÃO geram o novo SEO nem o bloco do Sign. Rodá-los apagaria as mudanças | Alta (risco) | Agente | com S-003 | 24/11 |
 | S-010 | Confirmar `lottusfinance.com.br` sem `www` como endereço canônico (redirecionar o outro na hospedagem) | Baixa | Yuri | no lançamento | SEO 24/11 |
@@ -21,3 +21,8 @@
 | S-017 | O status do Invest no site ("em breve") assume que o app ainda não está no ar; Yuri confirmar a data e o endereço | Média | Yuri | no lançamento | 24/11 |
 | S-018 | "Debêntures privadas" como público do Invest vem do manual (seção 3) e do Projeto, não dos documentos de `docs/agente/invest`. Yuri confirmar o texto | Baixa | Yuri | antes de divulgar | verificação 24/11 |
 | S-019 | Checkbox de consentimento (4×13 px) e logo do cabeçalho (28 px) do formulário abaixo de 44 px; já existiam | Baixa | Agente | com S-012 | verificação 24/11 |
+| S-020 | Invest saiu do site a pedido do Yuri. Voltar quando houver app e texto jurídico (S-014, S-017, S-018 ficam adiados). Página antiga recuperável no histórico do git (commit `df401d8`) | Baixa | Yuri | quando decidir | 24/11 |
+| S-021 | Faixa "R$ 0" do Partners e plano "Grátis" do Sign aparecem nas tabelas de planos (vêm da Política de Preços). Yuri decide se ficam | Média | Yuri | antes de divulgar | 24/11 |
+| S-022 | Wealth: tabela de planos só depois de W-031/W-039 (preço, Grátis com 1 ou 3 carteiras) | Média | Yuri | no lançamento | 24/11 |
+| S-023 | Prints têm nomes fictícios ("Alfa Capital Securitizadora" etc.): conferir se algum coincide com empresa real | Baixa | Yuri | antes de divulgar | 24/11 |
+| S-024 | Textos do Sign ajustados ao que está documentado: "conta com identidade confirmada" (quem envia) e "signatário assina pelo link com o CPF conferido". A promessa de confirmação de identidade do signatário (OTP, T-04) e o nível da assinatura (J-01) voltam ao site só depois de implementados e aprovados pelo jurídico | Alta | Yuri / jurídico | antes de divulgar | verificação 24/11 |
