@@ -16,3 +16,4 @@ Vínculos reais hoje (código lido, 24/11/2026). Preenchido por seção à medid
 | `#/conta/perfil` | "Verificar contato" | `#/conta/verificacao` | Sim | 26/11 |
 | shell | menu Documentos / Conta; avatar → Conta, Sair | `#/documentos`, `#/conta/perfil`, `#/entrar` | Sim | 26/11 |
 | `#/conta/verificacao` | Voltar ao perfil / Ir para meus documentos / Corrigir meu CPF | `#/conta/perfil`, `#/documentos`, `#/conta/perfil` | Sim | 27/11 |
+| `#/onboarding/1..3` | Salvar e continuar / Continuar / Concluir / Pular certificado / Voltar / Sair | passo seguinte, `#/documentos`, passo anterior, `#/entrar` | Sim | 27/11 |
