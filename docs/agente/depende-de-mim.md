@@ -111,3 +111,10 @@ O repositório é **público**. Em *Settings*:
 ### W-v2-03 · Publicar a v2
 - **Ordem:** 1) branch do Supabase (D-01) com as migrações até `20261123125000`; 2) testes `supabase/tests` e `scripts/wealth-local/testes`; 3) publicar as funções `wealth-pu`, `wealth-billing`, `wealth-api` (verify_jwt desligado; ver `supabase/functions/README.md`); 4) publicar `apps/wealth`; 5) produção só com o seu OK.
 
+
+
+## 5. Admin v2 (27/11/2026)
+- **Decisões de negócio (hipóteses adotadas sem supervisão, a rever):** D2 ciclo mensal e vencimento dia 10; D3 carência de 15 dias sem bloqueio automático; D4 aprovador até 20% de desconto, acima só administrador. A-028: a régua de e-mails não cobre as faturas automáticas (sem `org_id`). E-mail da fatura Sign. Textos de cobrança/termos de plano: jurídico.
+- **Migrações do Admin** (`20261125120000`, `20261126120000`): branch (D-01), comparar funções com produção e rodar a consulta de dependências do cabeçalho; roteiro em `docs/agente/admin/release.md`.
+- **Publicação:** apontar o domínio admin para `apps/admin` (P-01) e rodar o roteiro de 5 minutos de `docs/agente/admin/verificacao-final.md`.
+- **Arquivos órfãos do Admin antigo** (operations.js, credit*.js, portal.js etc.) para `_revisar/`: precisa do seu OK (A-027, A-047).

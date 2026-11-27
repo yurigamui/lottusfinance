@@ -1,4 +1,4 @@
-# STATUS: Admin · atualizado em 25/11/2026
+# STATUS: Admin · atualizado em 27/11/2026
 
 > **REPLANEJAMENTO (25/11):** o merge do `main` trouxe a **versão reformulada do Admin** (upload do Yuri em 23/11, commit f55fa8f): menu Início / Clientes / Comercial / Marketing / Financeiro / Produtos / Configurações (com Preços e planos e Régua de cobrança), 32 RPCs `bo_*` **todas existentes e liberadas só a `authenticated` em produção**. É a "demo" do pedido. As seções 1 a 3 da Parte 1 foram feitas sobre o Admin antigo (menu antigo, rotas antigas) e ficam **superadas** no `app.js`, `views.js` e `index.html` (restaurados para a versão do Yuri). Ficam aproveitáveis: componentes de `ui.js` (pageHead, list, more, skeleton) e a lógica de bloqueio por nível/destino pós-login, a portar. Novo plano: Modo Beta na versão reformulada (auditar), depois UX, vínculos, cobrança e preços. O plano das Partes 1 a 4 de `ficha-plataforma-v2.md` vale; `ficha-parte-1.md` é reescrita sobre a versão nova.
 
@@ -7,7 +7,7 @@
 
 **Modo:** Beta (código existe; auditoria parcial em `relatorio.md`) + pedido novo de evolução (Admin v2).
 **Leitura adotada (G0, sem resposta ainda):** o Yuri quer (1) reorganizar a UX do Admin, hoje com informação demais numa tela; (2) vincular o Admin a todas as plataformas Lottus; (3) automatizar a cobrança; (4) trocar plano e definir preço personalizado por cliente. Preço, plano e regra de cobrança são decisão dele (manual, seção 15).
-**Fase atual:** Modo Beta, B4: Pacote 1 e Pacote 2 (2a e 2b) aprovados com ressalvas; migrações de preços e de segurança do Sign prontas e testadas localmente (não aplicadas). Em andamento: Pacote 3 (plano, preço personalizado e cobrança no front).
+**Fase atual:** Fase 6 concluída (aprovada com ressalvas, 27/11). Fase 7 (release) AGUARDA o Yuri: nada aplicado em produção nem publicado. Pacote de release em `release.md`; verificação final e roteiro de 5 minutos em `verificacao-final.md`.
 
 ## Linha de base (Fase 0, fatos verificados em 23/11/2026)
 - Front: 1 página, 20 módulos JS (~4,8 mil linhas), 89 RPCs chamadas. Menu: 6 grupos, 18 itens (Configurações mistura Motor, Equipe, E-mails, Auditoria, Indicações e Taxa).
@@ -34,3 +34,21 @@
 
 ## Bloqueios que dependem do Yuri
 G1 (Ficha); D1 a D4 em `ficha-plataforma-v2.md`; D-01 (branch Supabase) para testar migrações de cobrança.
+
+
+## Painel (27/11/2026)
+| Parte | Seção | Verificada | Veredito | Ciclos |
+| --- | --- | --- | --- | --- |
+| Beta | Auditoria B0/B1 do Admin reformulado | sim | Reprovada (1 bloqueante, 4 altos) → plano em 3 pacotes | 1 |
+| Pacote 1 | Segurança e fluxo (menu mobile, bloqueio por nível, fuso, hash /new, validações) | sim | Aprovada com ressalvas | 1 |
+| Pacote 2a | Base de UX global (modal, alvos 44 px, topbar, busca, abas, tabela em cartões) | sim | Aprovada com ressalvas | 1 |
+| Pacote 2b | Telas divididas (Início, A receber, Clientes, Assinaturas, Produtos, Preços, Resultado, Campanhas, Mensageria, E-mails) | sim | Aprovada com ressalvas | 2 (1 reprovação) |
+| Pacote 3 | Plano e preço, catálogo, em atraso, régua | sim | Aprovada com ressalvas | 1 |
+| Banco | `20261125120000` preços/cobrança (161 de 161 local) e `20261126120000` segurança Sign (24 de 24 local) | sim (local, stubs) | Aprovada com ressalvas | 1 |
+| Fase 6 | Plataforma | sim | Aprovada com ressalvas | 1 |
+| Pós-Fase 6 | Correções M-A (banco, testado local), M-B e M-C (front, varredura de 10 larguras só em 320 e 768 depois do último ajuste) | **sem reverificação independente** | — | — |
+
+## Próximo passo exato
+1. Yuri: ler `release.md` (seções 3 e 8), decidir D2 a D4 e A-028; criar o branch do Supabase (D-01).
+2. No branch: aplicar as migrações do Admin, rodar `supabase/tests/admin_*.sql`, confirmar `bo_inv_list` (`funder_id`/`sign_account_id`) e o mínimo do contrato; reverificar M-A, M-B e M-C com o app contra o branch e auditar as telas logadas (usuário de teste com MFA).
+3. Só então, com OK explícito, G7: backup, aplicar, publicar `apps/admin`, roteiro de 5 minutos e 48 h de acompanhamento.
