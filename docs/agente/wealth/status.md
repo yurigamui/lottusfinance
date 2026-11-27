@@ -83,3 +83,10 @@ Publicada `wealth-pu` (versão 5, `verify_jwt` desligado como antes: ela mesma e
 
 ## Correção de layout (26/11/2026)
 Na tela Patrimônio publicada, os cartões "Investimentos" e "Gastos" ficavam espremidos em colunas estreitas: faltava a classe de grade `span-6` no CSS (só existiam 4, 5, 7, 8 e 12). Corrigido, e as legendas da rosca não quebram mais palavra nem número. Conferido em 1280 e 390 px (cartões com 538 px e 342 px). Versão dos arquivos `v4b`.
+
+## Wealth v4.3 (27/11/2026) — pedidos do Yuri
+1. **Rentabilidade sobre o patrimônio investido no dia:** o retorno diário passou a ser (valor do dia + proventos) ÷ (saldo do dia anterior + aporte do dia). Antes, o aporte grande de um dia contra um saldo pequeno virava "perda" (ex.: carteira do Yuri em 01/08/2025: Tesouro comprado a 811,32 contra cotação 805,91 sobre saldo de R$ 58 = −7,44%; agora o pior dia da carteira é −3,4%, causado por Bitcoin sem histórico de cotação, valorizado pelo último preço negociado).
+2. Período no cabeçalho, ao lado de Relatórios (Investimentos e Patrimônio), em estilo de botão.
+3. Relatórios: janela nova (3 cartões, PDF e planilha para cada um) e PDFs no estilo da marca (cabeçalho, cartões de resumo, tabelas com cabeçalho repetido, total, rodapé). Posição, transações e gastos.
+4. Sempre na curva: removidos o seletor "A mercado", a opção em Configurações e o P.U. a mercado do ativo (o cálculo continua no banco).
+5. Conta do Yuri como Fund: ver pendência com o Yuri (cobrança).

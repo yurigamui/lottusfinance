@@ -64,7 +64,6 @@
       <div class="grid-2"><form class="card stack" data-form="wallet-settings"><h2>Portfólio</h2>
         <div class="field"><label for="ws-name">Nome do portfólio</label><input class="input" id="ws-name" name="name" required minlength="2" maxlength="80" value="${esc(w.name)}"></div>
         <div class="field"><label for="ws-bm">Benchmark</label><select class="input" id="ws-bm" name="benchmark">${W.opts(BMS, w.benchmark || 'CDI')}</select></div>
-        <div class="field"><label for="ws-vm">Visão padrão dos preços</label><select class="input" id="ws-vm" name="view_mode">${W.opts([['curva', 'Na curva (taxa contratada)'], ['mercado', 'A mercado (preço de venda hoje)']], w.view_mode || 'curva')}</select></div>
         <div><button class="btn" type="submit"${w.read_only ? ' disabled' : ''}>Salvar</button></div></form>
       <div class="card stack"><h2>Acessos</h2><p class="muted small">Quem enxerga e edita esta carteira.</p><a class="btn secondary" href="#/w/${esc(w.id)}/acessos">${ico('users')} Gerenciar acessos</a></div></div>
       <div style="margin-top:16px">${brand}</div>
@@ -72,7 +71,7 @@
         <div class="row between"><div><b>Arquivar</b><div class="muted small">A carteira some da lista de todos. Os dados ficam guardados e você a reativa em Minhas carteiras > Carteiras arquivadas.</div></div><button class="btn secondary" data-act="wallet-archive"${w.read_only ? ' disabled' : ''}>Arquivar</button></div>
         <div class="row between"><div><b>Excluir de vez</b><div class="muted small">Apaga a carteira, os lançamentos, as contas, os ativos personalizados e os acessos. Não dá para desfazer. Faturas já emitidas continuam na sua conta.</div></div><button class="btn danger" data-act="wallet-delete">Excluir carteira</button></div></div>` : '<p class="muted small" style="margin-top:16px">Só o titular pode arquivar ou excluir esta carteira.</p>'}`;
   });
-  W.forms['wallet-settings'] = async (f) => { const v = W.form(f); const nm = f.querySelector('[name=name]'); W.fieldError(nm, ''); const n = String(v.name || '').trim(); if (n.length < 2 || n.length > 80) W.fieldFail(nm, 'O nome precisa ter de 2 a 80 caracteres.'); await W.rpc('w_wallet_settings_save', { p_wallet: curId(), p: { name: v.name, benchmark: v.benchmark, view_mode: v.view_mode } }); W.state.wallets = []; W.toast('Configurações salvas'); W.refresh(); };
+  W.forms['wallet-settings'] = async (f) => { const v = W.form(f); const nm = f.querySelector('[name=name]'); W.fieldError(nm, ''); const n = String(v.name || '').trim(); if (n.length < 2 || n.length > 80) W.fieldFail(nm, 'O nome precisa ter de 2 a 80 caracteres.'); await W.rpc('w_wallet_settings_save', { p_wallet: curId(), p: { name: v.name, benchmark: v.benchmark, view_mode: 'curva' } }); W.state.wallets = []; W.toast('Configurações salvas'); W.refresh(); };
   document.addEventListener('change', (e) => { if (e.target.id === 'bg-sel') { const n = document.getElementById('bg-new'); if (n) n.hidden = !!e.target.value; } });
   W.forms['brand-group'] = async (f) => {
     const v = W.form(f); const id = curId();

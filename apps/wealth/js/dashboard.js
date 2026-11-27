@@ -18,7 +18,7 @@
     const n = days.length; const d = days.map((x) => x[0]); const inv = days.map((x) => Number(x[1])), fl = days.map((x) => Number(x[2])), inc = days.map((x) => Number(x[3])), k = days.map((x) => Number(x[4]));
     const r = new Array(n).fill(0), idx = new Array(n).fill(1), cumFl = new Array(n).fill(0);
     for (let i = 0; i < n; i++) {
-      if (i > 0) { const prev = inv[i - 1]; r[i] = prev > 0 ? (inv[i] - fl[i] + inc[i]) / prev - 1 : 0; idx[i] = idx[i - 1] * (1 + r[i]); cumFl[i] = cumFl[i - 1] + fl[i]; } else cumFl[i] = fl[i];
+      if (i > 0) { const prev = inv[i - 1]; const den = prev + fl[i]; r[i] = den > 0 ? (inv[i] + inc[i]) / den - 1 : 0; /* sobre o patrimônio investido no dia: saldo anterior + aporte do dia */ idx[i] = idx[i - 1] * (1 + r[i]); cumFl[i] = cumFl[i - 1] + fl[i]; } else cumFl[i] = fl[i];
     }
     const wk = d.map((s) => { const g = new Date(s + 'T12:00:00').getDay(); return g > 0 && g < 6; });
     const at = (s) => { let lo = 0, hi = n - 1, a = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (d[m] <= s) { a = m; lo = m + 1; } else hi = m - 1; } return a; };
@@ -55,8 +55,9 @@
   W.route('/w/:id/investimentos', async (ctx) => {
     const id = ctx.w.id; const mode = W.viewMode(ctx); const per = perOf(ctx);
     const [ser, nw, pos, liq] = await Promise.all([W.rpc('w_dashboard_series', { p_wallet: id, p_from: null, p_to: per.to, p_mode: mode }), W.rpc('w_networth', { p_wallet: id, p_mode: mode }), W.rpc('w_positions', { p_wallet: id, p_mode: mode, p_from: per.from, p_to: per.to }), W.rpc('w_liquidity', { p_wallet: id, p_mode: mode })]);
-    const actions = `${W.modeBar(mode)}<button class="btn secondary" data-act="reports-open">${ico('file')} Relatórios</button>${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`;
-    if (!ser.days.length) return `${W.pageHead('Investimentos', '', actions)}${empty('Ainda não há investimentos para mostrar. Registre uma transação ou importe um arquivo.')}`;
+    const range = (a, b) => `<div data-evo-range class="range-inline">${W.rangeHtml(a, b, [3, 6, 12, 24])}</div>`;
+    const actions = `<RANGE><button class="btn secondary" data-act="reports-open">${ico('file')} Relatórios</button>${ctx.canWrite ? `<button class="btn secondary" data-act="imp-open">Importar arquivo</button><a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`;
+    if (!ser.days.length) return `${W.pageHead('Investimentos', '', actions.replace('<RANGE>', ''))}${empty('Ainda não há investimentos para mostrar. Registre uma transação ou importe um arquivo.')}`;
     const c = calc(ser.days); const first = ser.first; const from = per.all ? first : per.from < first ? first : per.from;
     const i0 = c.base(from), i1 = c.at(per.to); const cur = c.win(i0, i1);
     const rows = []; for (let i = i0 + 1; i <= i1; i++) rows.push(i);
@@ -99,8 +100,7 @@
     const head = `<div class="dash-top"><div><div class="dash-name">${esc(ctx.w.name)}</div><div class="muted small">Início do portfólio: ${W.dt(first)}</div></div>
       <div class="dash-kpi"><span class="muted small">Patrimônio em ${W.dt(per.to)}</span><b>${W.brl(nw.total)}</b></div>
       <div class="dash-kpi"><span class="muted small">Resultado (${per.all ? 'desde o início' : `${Math.round((new Date(per.to) - new Date(per.from)) / 864e5) + 1} dias`})</span><b class="${cl(cur.money)}">${sg(cur.money)} <span class="pill ${cl(cur.ret)}">${p2(cur.ret)} ${cur.ret >= 0 ? '↑' : '↓'}</span></b></div></div>`;
-    const evoPer = `<div data-evo-range class="dash-range"><div class="field"><label>Período</label>${W.rangeHtml(per.all ? '' : from, per.all ? '' : per.to, [3, 6, 12, 24])}</div></div>`;
-    return `${W.pageHead('Investimentos', '', actions)}${evoPer}${head}
+    return `${W.pageHead('Investimentos', '', actions.replace('<RANGE>', range(per.all ? '' : from, per.all ? '' : per.to)))}${head}
       <div class="dash-grid">
         ${card('Rentabilidade', '<div id="d-rent"></div>', 'span-7')}
         ${card('Alocação patrimonial', `<div class="dash-alloc"><div id="d-alloc"></div>${tbl('<th>Classe de ativo</th><th class="num">Valor atualizado</th><th class="num">Rentabilidade</th>', allocRows.map((g) => `<tr><td>${esc(g.name)}</td><td class="num">${W.brl(g.value)}</td><td class="num ${cl(g.twr)}">${p2(g.twr)}</td></tr>`).join(''))}</div>`, 'span-5')}

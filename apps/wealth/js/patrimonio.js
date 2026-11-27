@@ -31,9 +31,8 @@
       W.donut(document.getElementById('ch-comp'), comp, { name: 'Composição do patrimônio' });
       if (sp.by_month.length) W.flowChart(document.getElementById('ch-flow'), sp.by_month.map((m) => ({ label: W.monthLabel(m.month), long: W.monthLabel(m.month), in: m.receitas, out: m.despesas }))); else document.getElementById('ch-flow').innerHTML = empty('Sem lançamentos no período.');
     };
-    const actions = `${W.modeBar(mode)}<button class="btn secondary" data-act="reports-open">${ico('file')} Relatórios</button>${ctx.canWrite ? `<a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`;
+    const actions = `<div data-evo-range class="range-inline">${W.rangeHtml(per.all ? '' : per.from, per.all ? '' : per.to, [3, 6, 12, 24, 60])}</div><button class="btn secondary" data-act="reports-open">${ico('file')} Relatórios</button>${ctx.canWrite ? `<a class="btn" href="#/w/${id}/transacoes?new=1">${ico('plus')} Nova transação</a>` : ''}`;
     return `${W.pageHead('Patrimônio', '', actions)}
-      <div data-evo-range class="dash-range"><div class="field"><label>Período</label>${W.rangeHtml(per.all ? '' : per.from, per.all ? '' : per.to, [3, 6, 12, 24, 60])}</div></div>
       <div class="kpis">${I.kpi('Patrimônio líquido', W.brl(nw.total), dTotal === null ? '' : `${W.sign(dTotal, W.brl)} no período`)}${I.kpi('Investimentos', W.brl(nw.investimentos), I.resultSub(nw))}${I.kpi('Contas bancárias', W.brl(nw.contas))}${I.kpi('Liquidez imediata', W.brl(imediata))}</div>
       <div class="dash-grid">
         ${card('Evolução do patrimônio', `<div class="legend-bench" id="lg-parts" hidden><span><i></i>Investimentos</span><span><i class="alt"></i>Contas bancárias</span></div><div id="ch-pat"></div>`, 'span-8', '<div class="tabs"><button class="active" data-pchart="total">Total</button><button data-pchart="parts">Por parte</button></div>')}

@@ -20,8 +20,8 @@
     return `<span class="org-mark${extra}"${c}>${esc(W.initials(w ? w.name : 'W'))}</span>`;
   };
   // visão dos preços: "na curva" (taxa contratada) ou "a mercado" (preço de saída hoje)
-  W.viewMode = (ctx) => { const v = ctx.q.get('v'); return v === 'mercado' || v === 'curva' ? v : (ctx.w && ctx.w.view_mode) || 'curva'; };
-  W.modeBar = (mode) => `<div class="tabs" role="group" aria-label="Visão dos preços">${[['curva', 'Na curva'], ['mercado', 'A mercado']].map(([k, l]) => `<button type="button" data-act="view-mode" data-mode="${k}" class="${mode === k ? 'active' : ''}" aria-pressed="${mode === k}">${l}</button>`).join('')}</div>`;
+  W.viewMode = () => 'curva';   // sempre na curva (decisão do Yuri em 27/11/2026)
+  W.modeBar = () => '';
   W.modeHint = () => '';  // sem texto explicativo: o seletor "Na curva | A mercado" basta
   W.qs = (ctx, k, v) => { const q = new URLSearchParams(ctx.q); q.set(k, v); return q.toString(); };
   document.addEventListener('error', (e) => { const im = e.target; if (!(im instanceof HTMLImageElement)) return; const box = im.closest('.org-mark.has-logo'); if (!box) return; box.classList.remove('has-logo'); box.textContent = W.initials(im.alt || 'W'); }, true);
@@ -315,7 +315,7 @@
     const tot = g.wallets.reduce((a, x) => ({ inv: a.inv + Number(x.investimentos), c: a.c + Number(x.contas), t: a.t + Number(x.total) }), { inv: 0, c: 0, t: 0 });
     const kpi = (l, v) => `<div class="kpi"><div class="kpi-label">${l}</div><div class="big">${v}</div></div>`;
     ctx.after = () => { const h = document.getElementById('ch-grp'); if (h && g.wallets.length) W.donut(h, g.wallets.filter((x) => Number(x.total) > 0).map((x) => ({ name: x.name, value: Number(x.total) })), { name: 'Patrimônio por carteira' }); };
-    return `${W.pageHead(g.name, 'Patrimônio consolidado das carteiras do grupo, cada uma na sua visão (na curva ou a mercado).', `<button class="btn secondary" data-act="group-edit" data-id="${esc(g.id)}">Editar</button><button class="btn danger" data-act="group-del" data-id="${esc(g.id)}">Excluir</button>`, ['/carteiras', 'Minhas carteiras'])}
+    return `${W.pageHead(g.name, 'Patrimônio consolidado das carteiras do grupo, valorizadas na curva.', `<button class="btn secondary" data-act="group-edit" data-id="${esc(g.id)}">Editar</button><button class="btn danger" data-act="group-del" data-id="${esc(g.id)}">Excluir</button>`, ['/carteiras', 'Minhas carteiras'])}
       <div class="kpis">${kpi('Patrimônio líquido', W.brl(tot.t))}${kpi('Investimentos', W.brl(tot.inv))}${kpi('Contas', W.brl(tot.c))}</div>
       <div class="grid-2"><div class="card flush"><div class="card-head" style="padding:18px 24px 0"><h2>Carteiras</h2></div><div class="table-wrap"><table class="tight"><thead><tr><th>Carteira</th><th class="num">Investimentos</th><th class="num">Contas</th><th class="num">Patrimônio</th></tr></thead><tbody>${g.wallets.map((x) => `<tr><td><a href="#/w/${esc(x.id)}/patrimonio">${esc(x.name)}</a></td><td class="num">${W.brl(x.investimentos)}</td><td class="num">${W.brl(x.contas)}</td><td class="num"><b>${W.brl(x.total)}</b></td></tr>`).join('')}</tbody></table></div></div>
       <div class="card"><div class="card-head"><h2>Participação de cada carteira</h2></div><div id="ch-grp"></div></div></div>
