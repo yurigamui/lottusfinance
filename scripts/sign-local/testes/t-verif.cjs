@@ -2,7 +2,7 @@
 // A função de borda do certificado é SIMULADA pelo fake-sign.cjs (a real não existe no repositório, T-07): o que se testa é a tela e o banco.
 // Uso: SIGN_DB=sign_dev15 SIGN_DB_ANTES=sign_dev15_antes [SHOTS=<pasta>] [ONLY=<regex>] node t-verif.cjs   (recria o banco no início e no fim)
 const { open, overflow } = require('./drv.cjs');
-const { check, t: t0, done, hash, text, logged, VER } = require('./lib.cjs');
+const { check, t: t0, done, hash, text, logged, VER, login, PW } = require('./lib.cjs');
 if (!process.env.SIGN_DB || !process.env.SIGN_DB_ANTES) { console.error('defina SIGN_DB e SIGN_DB_ANTES (bancos isolados; nunca o "sign" compartilhado)'); process.exit(2); }
 const ONLY = process.env.ONLY;
 const t = (name, ...r) => (ONLY && !new RegExp(ONLY).test(name) ? Promise.resolve() : t0(name, ...r));
@@ -60,6 +60,8 @@ const cortes = (p) => p.evaluate(() => {
 const fileCert = (o) => ({ name: 'cert.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ serial: 'AB12', subject: 'CN=Fabi Exemplo', issuer: 'AC Teste', cpf: U.U6.cpf, not_before: new Date(Date.now() - 30 * 864e5).toISOString(), not_after: new Date(Date.now() + 300 * 864e5).toISOString(), chain_ok: true, ...o })) });
 const limpaCert = (d) => q(d, `update public.sign_identity set cert_serial = null, cert_subject = null, cert_issuer = null, cert_cpf = null, cert_not_before = null, cert_not_after = null, cert_verified_at = null, cert_chain_ok = false where user_id = $1`, [U.U6.id]);
 const codigo = (d, email) => d.fake.codeOf(email);
+const volta = async (p) => { await p.evaluate(() => { location.hash = '#/conta/verificacao'; }); await p.reload(); await ready(p); };
+const sai = async (d) => { await d.page.evaluate(async (v) => { const u = await import('/js/lib/api.js?v=' + v); await u.signOut(); }, VER); await d.page.waitForFunction(() => location.hash === '#/entrar'); };
 
 (async () => {
   console.info('recriando banco local isolado...'); reset('depois');
@@ -79,7 +81,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await p.waitForSelector('#vf-codigo');
     const c = await codigo(d.fake ? d : d, U.U2.email);
     check('AC1 depois do envio: campo de código com inputmode numeric e autocomplete one-time-code', (await p.getAttribute('#vf-codigo', 'inputmode')) === 'numeric' && (await p.getAttribute('#vf-codigo', 'autocomplete')) === 'one-time-code');
-    check('AC1 ajuda mostra o destino mascarado e a validade', /Enviamos o código para b\*\*\*@teste\.example\. Ele vale 10 minutos\./.test(await text(p, '#vf-codigo-help')), await text(p, '#vf-codigo-help'));
+    check('AC1 ajuda mostra o destino mascarado e a validade', /Enviamos o código para o\*\*\*@teste\.example\. Ele vale 10 minutos\./.test(await text(p, '#vf-codigo-help')), await text(p, '#vf-codigo-help'));
     check('AC1 foco no campo de código', (await p.evaluate(() => document.activeElement.id)) === 'vf-codigo');
     check('AC1 o código existe no banco (6 dígitos) e não aparece na tela', /^\d{6}$/.test(c) && !(await p.locator('body').innerText()).includes(c), c);
     await p.keyboard.type(`${c.slice(0, 3)} ${c.slice(3)}`);   // colar/digitar com espaço: só 6 dígitos valem; envia sozinho ao completar
@@ -131,13 +133,13 @@ const codigo = (d, email) => d.fake.codeOf(email);
     for (let i = 4; i >= 1; i--) {
       await p.fill('#vf-codigo', errado); await wait(p, (n) => document.querySelector('#vf-msg') && document.querySelector('#vf-msg').textContent.includes('mais ' + n + ' '), i);
       vistos.push(await text(p, '#vf-msg'));
-      await p.waitForFunction(() => !document.querySelector('#vf-codigo').disabled && !document.querySelector('.vf-actions .btn[aria-busy]'));
+      await p.waitForFunction(() => !document.querySelector('#vf-codigo').disabled && !document.querySelector('.vf-col:last-child .vf-card:first-child .vf-actions .btn[aria-busy]'));
     }
     check('AC3 mensagens exatas de 4 a 1', JSON.stringify(vistos) === JSON.stringify([4, 3, 2, 1].map((n) => `Código incorreto. Você tem mais ${n} tentativas.`)), vistos);
     check('AC3 depois de cada erro o campo é limpo e fica com o foco', (await p.inputValue('#vf-codigo')) === '' && (await p.evaluate(() => document.activeElement.id)) === 'vf-codigo');
     await p.fill('#vf-codigo', errado); await wait(p, () => /Muitas tentativas/.test(document.querySelector('#vf-msg').textContent));
     check('AC3 5ª: "Muitas tentativas. Tente de novo em 30 minutos."', (await text(p, '#vf-msg')) === 'Muitas tentativas. Tente de novo em 30 minutos.', await text(p, '#vf-msg'));
-    const off = await p.evaluate(() => ['#vf-codigo', '.vf-actions .btn'].map((s) => [...document.querySelectorAll(s)].every((e) => e.disabled)));
+    const off = await p.evaluate(() => ['#vf-codigo', '.vf-col:last-child .vf-card:first-child .vf-actions .btn'].map((s) => [...document.querySelectorAll(s)].every((e) => e.disabled)));
     check('AC3 campo, Confirmar e Reenviar ficam desligados', off[0] && off[1], off);
     check('AC3 banco: attempts=5 e bloqueio de ~30 min', (await q(d, `select (select attempts from public.sign_otps where user_id = $1) a, (select extract(epoch from (otp_locked_until - now()))::int from public.sign_identity where user_id = $1) s`, [U.U2.id]))[0].a === 5);
     await shot(p, 'ac3-bloqueado-390');
@@ -148,7 +150,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await q(d, `update public.sign_identity set otp_locked_until = now() + interval '2 seconds' where user_id = $1`, [U.U2.id]);
     await p.reload(); await ready(p);
     check('AC3 bloqueio de 2 s: mensagem "em 1 minutos" (arredonda para cima)', (await text(p, '.vf-msg')) === 'Muitas tentativas. Tente de novo em 1 minutos.', await text(p, '.vf-msg'));
-    await wait(p, () => !document.querySelector('.vf-actions .btn:disabled') && document.querySelector('.vf-msg').textContent === '', null, 6000);
+    await wait(p, () => !document.querySelector('.vf-col:last-child .vf-card:first-child .vf-actions .btn:disabled') && document.querySelector('.vf-msg').textContent === '', null, 6000);
     check('AC3 passado o bloqueio, a mensagem some e o botão volta sozinho', true);
     await reset15(d);
   });
@@ -158,11 +160,11 @@ const codigo = (d, email) => d.fake.codeOf(email);
     const p = d.page; await reset15(d);
     await verif(d, U.U2.email); await ready(p);
     await p.click('text=Enviar código'); await p.waitForSelector('#vf-codigo');
-    const r0 = await text(p, '.vf-actions .btn.secondary');
-    check('AC4 logo após o envio "Reenviar código" está desligado com contagem (30 s)', /^Reenviar código \((29|30) s\)$/.test(r0) && (await p.locator('.vf-actions .btn.secondary').isDisabled()), r0);
-    await p.waitForTimeout(2300);
-    const r1 = await text(p, '.vf-actions .btn.secondary');
-    check('AC4 a contagem regressiva anda (menor que antes)', Number(r1.match(/\((\d+) s\)/)[1]) < Number(r0.match(/\((\d+) s\)/)[1]) && Number(r1.match(/\((\d+) s\)/)[1]) <= 28, [r0, r1]);
+    const r0 = await text(p, '.vf-col:last-child .vf-card:first-child .vf-actions .btn.secondary');
+    check('AC4 logo após o envio "Reenviar código" está desligado com contagem (30 s)', /^Reenviar código \((29|30) s\)$/.test(r0) && (await p.locator('.vf-col:last-child .vf-card:first-child .vf-actions .btn.secondary').isDisabled()), r0);
+    await p.waitForTimeout(3300);
+    const r1 = await text(p, '.vf-col:last-child .vf-card:first-child .vf-actions .btn.secondary');
+    check('AC4 a contagem regressiva anda (menor que antes)', Number(r1.match(/\((\d+) s\)/)[1]) < Number(r0.match(/\((\d+) s\)/)[1]) && Number(r1.match(/\((\d+) s\)/)[1]) <= 29, [r0, r1]);
     await shot(p, 'ac4-contagem-390');
     await d.page.close();
   });
@@ -172,18 +174,17 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await p.click('text=Enviar código'); await p.waitForSelector('#vf-codigo');
     check('AC4b 1º envio: nada de limite ainda', (await text(p, '.vf-limit')) === '');
     // too_soon do servidor: o relógio da tela (1,2 s) libera antes dos 30 s do servidor
-    await p.waitForFunction(() => !document.querySelector('.vf-actions .btn.secondary').disabled, null, { timeout: 5000 });
-    await p.click('.vf-actions .btn.secondary');
+    await p.waitForFunction(() => !document.querySelector('.vf-col:last-child .vf-card:first-child .vf-actions .btn.secondary').disabled, null, { timeout: 5000 });
+    await p.click('.vf-col:last-child .vf-card:first-child .vf-actions .btn.secondary');
     await wait(p, () => /Aguarde \d+ segundos para reenviar\./.test(document.querySelector('#vf-msg').textContent));
     check('AC4b servidor recusa antes de 30 s: "Aguarde {s} segundos para reenviar." (s entre 1 e 30)', /^Aguarde (\d+) segundos para reenviar\.$/.test(await text(p, '#vf-msg')) && Number((await text(p, '#vf-msg')).match(/\d+/)[0]) <= 30, await text(p, '#vf-msg'));
-    for (let i = 2; i <= 3; i++) {
-      await dorme(d, U.U2.id, 31);
-      await p.waitForFunction(() => !document.querySelector('.vf-actions .btn.secondary').disabled, null, { timeout: 5000 });
-      await p.click('.vf-actions .btn.secondary');
-      await wait(p, (n) => document.querySelector('#vf-msg').textContent === '' && !document.querySelector('.vf-actions .btn[aria-busy]'), i);
-    }
+    // depois do too_soon a tela espera o prazo do servidor; recarrega para seguir (o servidor já foi "envelhecido" em 31 s)
+    await dorme(d, U.U2.id, 31); await p.reload(); await ready(p); await p.click('text=Enviar código'); await p.waitForSelector('#vf-codigo');
+    await dorme(d, U.U2.id, 31);
+    await p.waitForFunction(() => !document.querySelector('.vf-col:last-child .vf-card:first-child .vf-actions .btn.secondary').disabled, null, { timeout: 5000 });
+    await p.click('.vf-col:last-child .vf-card:first-child .vf-actions .btn.secondary');
     await wait(p, () => /Limite de reenvios atingido/.test(document.querySelector('.vf-limit').textContent));
-    check('AC4b após 3 envios: "Limite de reenvios atingido. Tente de novo em {mm} minutos." e Reenviar desligado', /^Limite de reenvios atingido\. Tente de novo em (5\d|60) minutos\.$/.test(await text(p, '.vf-limit')) && (await p.locator('.vf-actions .btn.secondary').isDisabled()), await text(p, '.vf-limit'));
+    check('AC4b após 3 envios: "Limite de reenvios atingido. Tente de novo em {mm} minutos." e Reenviar desligado', /^Limite de reenvios atingido\. Tente de novo em (5\d|60) minutos\.$/.test(await text(p, '.vf-limit')) && (await p.locator('.vf-col:last-child .vf-card:first-child .vf-actions .btn.secondary').isDisabled()), await text(p, '.vf-limit'));
     check('AC4b só 3 códigos foram gerados', (await q(d, `select count(*)::int n from public.sign_otps where user_id = $1`, [U.U2.id]))[0].n === 3);
     await shot(p, 'ac4-limite-390');
     // recarregar e tentar enviar: servidor devolve too_many e a tela mostra a mensagem
@@ -205,7 +206,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await q(d, `delete from public.sign_otps where user_id = $1`, [U.U2.id]);
     await p.fill('#vf-codigo', '123456'); await wait(p, () => /Peça um código/.test(document.querySelector('#vf-msg').textContent));
     check('AC3b sem código pedido: "Peça um código para continuar."', (await text(p, '#vf-msg')) === 'Peça um código para continuar.', await text(p, '#vf-msg'));
-    await p.fill('#vf-codigo', '12'); await p.click('.vf-actions .btn:not(.secondary)');
+    await p.fill('#vf-codigo', '12'); await p.click('.vf-col:last-child .vf-card:first-child .vf-actions .btn:not(.secondary)');
     check('AC3b Confirmar com menos de 6 dígitos: "Digite os 6 dígitos do código."', (await text(p, '#vf-msg')) === 'Digite os 6 dígitos do código.', await text(p, '#vf-msg'));
     d.fake.state.mode.rpcDrop = { sign_phone_verify: true }; await p.fill('#vf-codigo', '123456');
     await wait(p, () => /conexão/.test(document.querySelector('#vf-msg').textContent), null, 12000);
@@ -219,7 +220,8 @@ const codigo = (d, email) => d.fake.codeOf(email);
     const p = d.page; await reset15(d); await q(d, ROOT_SQL);
     for (const modo of ['down', 'timeout', '404', '500']) {
       d.fake.state.mode.certEdge = modo;
-      await verif(d, U.U2.email); await ready(p);
+      if (modo === 'down') await verif(d, U.U2.email); else await volta(p);
+      await ready(p);
       await wait(p, () => document.querySelector('.vf .banner.warn'), null, 6000);
       check(`AC5 borda "${modo}": indicador "Validação de certificado indisponível neste ambiente."`, (await text(p, '.vf .banner.warn')) === 'Validação de certificado indisponível neste ambiente.', await text(p, '.vf .banner.warn'));
       await p.click('text=Gerar desafio'); await p.waitForSelector('.vf-challenge');
@@ -227,7 +229,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
       await p.evaluate(() => { location.hash = '#/conta/perfil'; }); await wait(p, () => location.hash === '#/conta/perfil');
     }
     d.fake.state.mode.certEdge = 'timeout';
-    await verif(d, U.U2.email).catch(() => {}); await ready(p); await wait(p, () => document.querySelector('.vf .banner.warn'), null, 6000);
+    await volta(p); await wait(p, () => document.querySelector('.vf .banner.warn'), null, 6000);
     // o contato continua funcionando com a borda fora do ar
     await p.click('text=Enviar código'); await p.waitForSelector('#vf-codigo'); await p.fill('#vf-codigo', await codigo(d, U.U2.email));
     await wait(p, () => document.querySelector('.vf-ok'));
@@ -236,7 +238,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await shot(p, 'ac5-indisponivel-390');
     // borda no ar: sem indicador
     d.fake.state.mode.certEdge = undefined; await limpar(d, U.U2.id);
-    await verif(d, U.U2.email).catch(() => {}); await p.reload(); await ready(p); await p.waitForTimeout(600);
+    await volta(p); await p.waitForTimeout(600);
     check('AC5 borda no ar: nenhum indicador', (await p.locator('.vf .banner.warn').count()) === 0);
     await reset15(d);
   });
@@ -250,15 +252,15 @@ const codigo = (d, email) => d.fake.codeOf(email);
   // ---------------------------------------------------------------------------------------------------------------- AC6 certificado
   await t('AC6 certificado: vinculado, vencido e cada mensagem de erro', open, { ...PG, width: 768, cfg: comEdge }, async (d) => {
     const p = d.page; await reset15(d); await q(d, ROOT_SQL); await limpaCert(d);
-    await verif(d, U.U6.email); await ready(p); await wait(p, () => document.querySelector('.vf-actions .btn.secondary'));
+    await verif(d, U.U6.email); await ready(p); await p.waitForSelector('text=Gerar desafio'); await p.waitForTimeout(500);
     check('AC6 sem certificado e borda no ar: nenhum indicador de indisponível', (await p.locator('.vf .banner.warn').count()) === 0);
     const gerar = async () => { await p.click('text=Gerar desafio'); await p.waitForSelector('.vf-challenge'); };
     const enviar = async (arq) => { await p.setInputFiles('#vf-arquivo', arq); await p.click('text=Enviar arquivo assinado'); };
-    const msg = async () => { await wait(p, () => document.querySelector('.vf-msg') && document.querySelector('.vf-msg').textContent !== ''); return text(p, '.vf-msg'); };
+    const msg = async () => { await wait(p, () => document.querySelector('.vf-col:last-child .vf-card:last-child .vf-msg') && document.querySelector('.vf-col:last-child .vf-card:last-child .vf-msg').textContent !== ''); return text(p, '.vf-col:last-child .vf-card:last-child .vf-msg'); };
     await gerar();
     check('AC6 desafio: texto com o código, "O desafio vale 5 minutos." e botão Copiar', /Lottus Sign - vinculo de certificado digital\. Codigo: [0-9a-f]{48}/.test(await text(p, '.vf-challenge')) && (await text(p, '.vf-challenge + .vf-actions + .help, .field .help')).includes('O desafio vale 5 minutos.') && (await p.getByRole('button', { name: 'Copiar' }).count()) === 1);
     check('AC6 o campo de arquivo mostra [preencher] do formato (T-07)', /\[preencher: formato e componente de assinatura local, definidos por T-07\]/.test(await text(p, '#vf-arquivo-help')));
-    await p.click('text=Enviar arquivo assinado'); check('AC6 sem arquivo: "Escolha o arquivo assinado."', (await text(p, '.vf-msg')) === 'Escolha o arquivo assinado.');
+    await p.click('text=Enviar arquivo assinado'); check('AC6 sem arquivo: "Escolha o arquivo assinado."', (await text(p, '.vf-col:last-child .vf-card:last-child .vf-msg')) === 'Escolha o arquivo assinado.');
     const casos = [
       ['cert_cpf_mismatch', { cpf: '12345678909' }, 'O CPF do certificado é diferente do CPF do seu perfil.'],
       ['cert_chain_invalid', { chain_ok: false }, 'Não foi possível confirmar a cadeia de certificação. Use um certificado ICP-Brasil.'],
@@ -277,7 +279,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await gerar(); await enviar({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('isto nao e um certificado') });
     check('AC6 arquivo ilegível: mostra a causa de cadeia (nada de código cru)', (await msg()) === 'Não foi possível confirmar a cadeia de certificação. Use um certificado ICP-Brasil.');
     await p.setInputFiles('#vf-arquivo', { name: 'grande.bin', mimeType: 'application/octet-stream', buffer: Buffer.alloc(300 * 1024, 1) }); await p.click('text=Enviar arquivo assinado');
-    check('AC6 arquivo acima de 256 KB: "O arquivo é grande demais. O limite é 256 KB."', (await text(p, '.vf-msg')) === 'O arquivo é grande demais. O limite é 256 KB.');
+    check('AC6 arquivo acima de 256 KB: "O arquivo é grande demais. O limite é 256 KB."', (await text(p, '.vf-col:last-child .vf-card:last-child .vf-msg')) === 'O arquivo é grande demais. O limite é 256 KB.');
     await enviar(fileCert({}));
     await wait(p, () => document.querySelector('.vf-cert'), null, 8000);
     check('AC6 vinculado: selo "Certificado vinculado" e dados (titular, emissor, CPF mascarado, validade, série)', (await text(p, '.vf-level .tag + *, .vf-card:nth-of-type(1) .tag')).length >= 0 && /Certificado vinculado/.test(await p.locator('.vf-col .vf-card').nth(2).innerText()));
@@ -296,7 +298,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
     // raízes não carregadas
     await q(d, `delete from public.sign_trusted_roots`); await q(d, `delete from public.sign_cert_challenges`);
     await p.reload(); await ready(p); await gerar();
-    check('AC6 roots_loaded=false: "Nenhuma autoridade raiz confiável está carregada." + indicador + envio desligado', (await text(p, '.vf-msg')) === 'Nenhuma autoridade raiz confiável está carregada.' && (await p.locator('.vf .banner.warn').count()) === 1 && (await p.getByRole('button', { name: 'Enviar arquivo assinado' }).isDisabled()) && (await p.getByRole('link', { name: 'Suporte' }).count()) === 1);
+    check('AC6 roots_loaded=false: "Nenhuma autoridade raiz confiável está carregada." + indicador + envio desligado', (await text(p, '.vf-col:last-child .vf-card:last-child .vf-msg')) === 'Nenhuma autoridade raiz confiável está carregada.' && (await p.locator('.vf .banner.warn').count()) === 1 && (await p.getByRole('button', { name: 'Enviar arquivo assinado' }).isDisabled()) && (await p.getByRole('link', { name: 'Suporte' }).count()) === 1);
     await shot(p, 'ac6-sem-raizes-768');
     check('AC6 sem erros de JS', d.errors.length === 0, d.errors);
     await reset15(d);
@@ -304,8 +306,8 @@ const codigo = (d, email) => d.fake.codeOf(email);
   await t('AC6b cpf_required: perfil sem CPF', open, { ...PG, width: 390, cfg: comEdge }, async (d) => {
     const p = d.page; await reset15(d); await q(d, ROOT_SQL);
     await verif(d, U.U3.email); await ready(p); await p.click('text=Gerar desafio');
-    await wait(p, () => document.querySelector('.vf .vf-msg') && document.querySelector('.vf .vf-msg').textContent !== '');
-    const m = await text(p, '.vf-card:nth-of-type(1) .vf-msg, .vf-col:last-child .vf-card:last-child .vf-msg');
+    await wait(p, () => document.querySelector('.vf-col:last-child .vf-card:last-child .vf-msg') && document.querySelector('.vf-col:last-child .vf-card:last-child .vf-msg').textContent !== '');
+    const m = await text(p, '.vf-col:last-child .vf-card:last-child .vf-msg');
     check('AC6b cpf_required: "Informe seu CPF no perfil antes de usar um certificado." com saída para o perfil', m === 'Informe seu CPF no perfil antes de usar um certificado.' && (await p.getByRole('link', { name: 'Informar meu CPF' }).getAttribute('href')) === '#/conta/perfil', m);
     await reset15(d);
   });
@@ -317,8 +319,8 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await wait(p, () => location.hash === '#/entrar');
     check('AC7 sem sessão: vai para #/entrar', (await hash(p)) === '#/entrar', await hash(p)); await shot(p, 'ac7-sem-sessao-390');
     // carregando: sign_me lento
-    d.fake.state.mode.rpcDelay = { sign_me: 1500 };
-    await logged(d, { email: U.U2.email }); await p.evaluate(() => { location.hash = '#/conta/verificacao'; });
+    await login(p, U.U2.email, PW); await p.waitForSelector('.shell'); /* volta ao destino guardado: #/conta/verificacao */ await ready(p);
+    d.fake.state.mode.rpcDelay = { sign_me: 1500 }; await p.evaluate(() => { location.hash = '#/conta/verificacao'; }); await p.reload();
     await p.waitForSelector('.vf[aria-busy="true"]');
     check('AC7 carregando: aria-busy e esqueleto dos 3 cartões, sem texto de dado', (await p.locator('.vf .skel').count()) >= 6 && (await p.locator('.vf .card.vf-card').count()) === 3 && (await p.getAttribute('.vf', 'aria-busy')) === 'true');
     await shot(p, 'ac7-carregando-390');
@@ -338,7 +340,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await p.reload(); await ready(p);
     const av = (await text(p, '.vf .banner.info')) ;
     check('AC7 e-mail não confirmado: aviso "Confirme seu e-mail para poder enviar documentos."', av.includes('Confirme seu e-mail para poder enviar documentos.'), av);
-    const ligados = await p.evaluate(() => [...document.querySelectorAll('.vf button, .vf input, .vf fieldset')].filter((e) => !e.disabled).map((e) => e.tagName + '.' + e.className));
+    const ligados = await p.evaluate(() => [...document.querySelectorAll('.vf button, .vf input, .vf fieldset')].filter((e) => !e.matches(':disabled')).map((e) => e.tagName + '.' + e.className));
     check('AC7 e-mail não confirmado: todas as ações desligadas (botões, campos, canal)', ligados.length === 0, ligados);
     check('AC7 e-mail não confirmado: continua com "Voltar ao perfil"', (await p.getByRole('link', { name: 'Voltar ao perfil' }).count()) >= 1);
     await shot(p, 'ac7-nao-confirmado-390');
@@ -369,15 +371,15 @@ const codigo = (d, email) => d.fake.codeOf(email);
     await q(d, `update public.sign_identity set otp_locked_until = now() + interval '30 minutes' where user_id = $1`, [U.U2.id]); await p.reload(); await ready(p); await marca('bloqueado');
     // U1: verificado
     await limpar(d, U.U2.id); d.fake.state.mode.certEdge = undefined;
-    await p.evaluate(async (v) => { const u = await import('/js/lib/api.js?v=' + v); await u.signOut(); }, VER); await p.waitForFunction(() => location.hash === '#/entrar');
+    await sai(d);
     await logged(d, { email: U.U1.email, hash: '#/conta/verificacao' }); await ready(p); await marca('verificado');
     // U6: certificado
-    await p.evaluate(async (v) => { const u = await import('/js/lib/api.js?v=' + v); await u.signOut(); }, VER); await p.waitForFunction(() => location.hash === '#/entrar');
+    await sai(d);
     await q(d, `update public.sign_identity set cert_subject = 'CN=' || repeat('Titular Com Nome Muito Longo ', 6) where user_id = $1`, [U.U6.id]);
     await logged(d, { email: U.U6.email, hash: '#/conta/verificacao' }); await ready(p); await marca('certificado-longo');
     await q(d, `update public.sign_identity set cert_not_after = now() - interval '3 days' where user_id = $1`, [U.U6.id]); await p.reload(); await ready(p); await p.waitForTimeout(600);
     await p.click('text=Gerar desafio'); await p.waitForSelector('.vf-challenge'); await marca('vencido-desafio');
-    await p.setInputFiles('#vf-arquivo', fileCert({ cpf: '12345678909' })); await p.click('text=Enviar arquivo assinado'); await wait(p, () => document.querySelector('.vf-msg').textContent !== ''); await marca('erro-certificado');
+    await p.setInputFiles('#vf-arquivo', fileCert({ cpf: '12345678909' })); await p.click('text=Enviar arquivo assinado'); await wait(p, () => document.querySelector('.vf-col:last-child .vf-card:last-child .vf-msg').textContent !== ''); await marca('erro-certificado');
     check(`AC8 ${w}: sem erros de JS`, d.errors.length === 0, d.errors);
     await reset15(d);
   });
@@ -393,9 +395,9 @@ const codigo = (d, email) => d.fake.codeOf(email);
     ];
     const vistos = new Set();
     for (const [nome, email, prep] of estados) {
-      await d.page.evaluate(() => Object.keys(localStorage).forEach((k) => localStorage.removeItem(k)));
       await limpar(d, U.U2.id);
-      await verif(d, email); await ready(p); await prep();
+      if (nome === 'vazio') await verif(d, email); else { await sai(d); await verif(d, email); }
+      await ready(p); await prep();
       const hrefs = await p.evaluate(() => [...document.querySelectorAll('#sign a[href]')].filter((a) => a.getClientRects().length).map((a) => a.getAttribute('href')));
       check(`AC9 estado ${nome}: tem "Voltar ao perfil"`, hrefs.includes('#/conta/perfil') && (await p.getByRole('link', { name: 'Voltar ao perfil' }).count()) === 1, hrefs);
       for (const h of hrefs) {
@@ -456,7 +458,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
   await t('AC-R1 P-01: Termos e Política sem URL são só texto', open, { width: 390 }, async (d) => {
     const p = d.page; await d.go('#/criar'); await p.waitForSelector('#aceite');
     check('AC-R1 sem URL: nenhum <a> dentro do rótulo do aceite', (await p.locator('label[for=aceite] a').count()) === 0, await p.locator('label[for=aceite]').innerHTML());
-    const antes = p.url(); await p.click('text=Termos de uso', { trial: false }); await p.waitForTimeout(300);
+    const antes = p.url(); { const bx = await p.locator('.sg-nolink').first().boundingBox(); await p.mouse.click(bx.x + bx.width / 2, bx.y + bx.height / 2); } await p.waitForTimeout(300);
     check('AC-R1 clicar no texto não navega nem abre aba', p.url() === antes && d.ctx.pages().length === 1, [antes, p.url(), d.ctx.pages().length]);
     check('AC-R1 os dois textos continuam visíveis', (await text(p, 'label[for=aceite]')).includes('Termos de uso') && (await text(p, 'label[for=aceite]')).includes('Política de Privacidade'));
   });
@@ -489,6 +491,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
     const p = d.page; await reset15(d);
     await logged(d, { email: U.U1.email, hash: '#/conta/perfil' }); await wait(p, () => document.querySelector('#pf-nome'));
     await p.fill('#pf-nome', 'Ana Alterada Teste'); await p.click('nav.tabs >> text=Verificação'); await p.waitForSelector('.modal');
+    await p.waitForTimeout(500); /* a janela termina de animar (escala) antes de medir */
     const m = await p.evaluate(() => { const foot = document.querySelector('.modal-foot').getBoundingClientRect(); return { foot: [foot.left, foot.width], bts: [...document.querySelectorAll('.modal-foot .btn')].map((b) => { const r = b.getBoundingClientRect(); return { x: r.left, w: r.width, y: r.top, h: r.height, r: r.right }; }), vw: innerWidth }; });
     check('AC-R4 dois botões, cada um com a largura total do rodapé', m.bts.length === 2 && m.bts.every((b) => Math.abs(b.w - m.foot[1]) <= 1 && Math.abs(b.x - m.foot[0]) <= 1), m);
     check('AC-R4 empilhados (um embaixo do outro) e com 44 px de altura', m.bts[1].y >= m.bts[0].y + m.bts[0].h - 1 && m.bts.every((b) => b.h >= 43.5), m);
@@ -498,6 +501,7 @@ const codigo = (d, email) => d.fake.codeOf(email);
   });
 
   // ---------------------------------------------------------------------------------------------------------------- JS, desempenho
+  process.env.SIGN_GZIP = '1'; // o Cloudflare Pages comprime texto: a medição de 4G usa o mesmo
   await t('Desempenho: LCP e CLS de #/conta/verificacao em 4G simulado', open, { ...PG, width: 390 }, async (d) => {
     const p = d.page; await reset15(d); await verif(d, U.U2.email); await ready(p);
     const c = await d.ctx.newCDPSession(p); await c.send('Network.enable'); await c.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 });
@@ -509,15 +513,16 @@ const codigo = (d, email) => d.fake.codeOf(email);
     check('Desempenho: CLS <= 0,05', m.cls <= 0.05, m);
     await reset15(d);
   });
+  delete process.env.SIGN_GZIP;
   {
     const zlib = require('zlib'); const root = path.resolve(__dirname, '../../../apps/sign/js');
     const lista = []; (function ler(dir) { for (const n of fs.readdirSync(dir)) { const f = path.join(dir, n); if (fs.statSync(f).isDirectory()) { if (n !== 'vendor') ler(f); } else if (/\.js$/.test(n)) lista.push(f); } })(root);
     const gz = (b) => zlib.gzipSync(b).length;
     let agora = 0, antes = 0; const novos = {};
-    for (const f of lista) { const rel = 'apps/sign/js/' + path.relative(root, f).split(path.sep).join('/'); const b = fs.readFileSync(f); agora += gz(b); try { const old = cp.execFileSync('git', ['show', 'HEAD:' + rel], { cwd: path.resolve(__dirname, '../../..'), stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 26 }); antes += gz(old); } catch { /* arquivo novo */ } novos[rel] = gz(b); }
+    for (const f of lista) { const rel = 'apps/sign/js/' + path.relative(root, f).split(path.sep).join('/'); const b = fs.readFileSync(f); agora += gz(b); try { const old = cp.execFileSync('git', ['show', '655ac83:' + rel], { cwd: path.resolve(__dirname, '../../..'), stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 26 }); antes += gz(old); } catch { /* arquivo novo */ } novos[rel] = gz(b); }
     const delta = agora - antes;
-    console.info(`  medido: JS do app (gzip) ${(antes / 1024).toFixed(1)} kB (commit HEAD) -> ${(agora / 1024).toFixed(1)} kB (+${(delta / 1024).toFixed(1)} kB); verificacao.js ${(novos['apps/sign/js/views/verificacao.js'] / 1024).toFixed(1)} kB`);
-    check('Desempenho: o JS cresce no máximo 15 kB (gzip) em relação ao commit atual', delta <= 15 * 1024, delta);
+    console.info(`  medido: JS do app (gzip) ${(antes / 1024).toFixed(1)} kB (commit 655ac83, 1.4 aprovada) -> ${(agora / 1024).toFixed(1)} kB (+${(delta / 1024).toFixed(1)} kB); verificacao.js ${(novos['apps/sign/js/views/verificacao.js'] / 1024).toFixed(1)} kB`);
+    check('Desempenho: o JS cresce no máximo 15 kB (gzip) em relação à 1.4 aprovada (655ac83)', delta <= 15 * 1024, delta);
   }
 
   console.info('limpando: reset.sh depois'); reset('depois');

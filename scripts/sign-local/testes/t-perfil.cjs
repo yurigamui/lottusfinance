@@ -103,7 +103,7 @@ const q = async (d, sql, args) => (await d.fake.query(sql, args)).rows;
     await perfil(d, U.U3.email); await ready(p);
     await p.fill('#pf-nome', 'Carla Duplicada Teste'); await p.fill('#pf-cpf', U.U2.cpf); await p.click('.pf-save');
     await wait(p, () => document.querySelector('#pf-cpf-err:not([hidden])'));
-    check('AC5 mensagem neutra e valores preservados', (await text(p, '#pf-cpf-err')) === 'Não foi possível salvar este CPF. Confira os números ou fale com o suporte.' && (await p.inputValue('#pf-nome')) === 'Carla Duplicada Teste' && (await p.inputValue('#pf-cpf')).replace(/\D/g, '') === U.U2.cpf);
+    check('AC5 mensagem neutra e valores preservados', (await text(p, '#pf-cpf-err')) === 'Não foi possível usar este CPF. Confira o número ou fale com o suporte.' && (await p.inputValue('#pf-nome')) === 'Carla Duplicada Teste' && (await p.inputValue('#pf-cpf')).replace(/\D/g, '') === U.U2.cpf);
     check('AC5 a mensagem não revela o dono do CPF', !/Bruno|Outro/.test(await text(p, '.pf-card')));
     await restaurar((s, a) => q(d, s, a));
   });

@@ -81,7 +81,7 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
 
   await t('AC4 rotas privadas dentro do shell e saídas', open, { width: 1280 }, async (d) => {
     const p = d.page; await logged(d);
-    const SAIDA = { '#/documentos': ['Ir para Conta', '#/conta/perfil'], '#/envio/novo': ['Ir para Documentos', '#/documentos'], '#/plano': ['Ir para Documentos', '#/documentos'], '#/conta/perfil': ['Ir para Documentos', '#/documentos'], '#/conta/verificacao': ['Ir para Documentos', '#/documentos'], '#/conta/seguranca': ['Ir para Documentos', '#/documentos'], '#/inexistente': ['Ir para Documentos', '#/documentos'], '#/onboarding/1': null };
+    const SAIDA = { '#/documentos': ['Ir para Conta', '#/conta/perfil'], '#/envio/novo': ['Ir para Documentos', '#/documentos'], '#/plano': ['Ir para Documentos', '#/documentos'], '#/conta/perfil': ['Ir para Documentos', '#/documentos'], '#/conta/verificacao': ['Voltar ao perfil', '#/conta/perfil'], '#/conta/seguranca': ['Ir para Documentos', '#/documentos'], '#/inexistente': ['Ir para Documentos', '#/documentos'], '#/onboarding/1': null };
     const H1 = { '#/documentos': 'Documentos', '#/envio/novo': 'Novo envio', '#/plano': 'Plano e uso', '#/conta/perfil': 'Conta', '#/conta/verificacao': 'Conta', '#/conta/seguranca': 'Conta', '#/onboarding/1': 'Primeiros passos', '#/inexistente': 'Página não encontrada' };
     for (const r of Object.keys(SAIDA)) {
       await p.evaluate((x) => { location.hash = x; }, r); await wait(p, (x) => location.hash === x && document.querySelector('#view h1'), r);
@@ -91,7 +91,7 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
       if (r === '#/inexistente') check('AC4 rota desconhecida mostra "Não encontramos esta página."', /Não encontramos esta página\./.test(await text(p, '#view')));
       const s = SAIDA[r];
       if (!s) { check(`AC4 ${r}: sem botão de menu (saída pelo avatar)`, (await p.locator('#view a.btn, #view button').count()) === 0 && (await p.locator('.sidenav-items .nav-sec').count()) === 0); continue; }
-      const btn = r === '#/conta/perfil' ? p.locator('#view a.btn', { hasText: 'Ir para Documentos' }) : p.locator('#view a.btn'); // 1.4: o Perfil tem também "Ir para Verificação"
+      const btn = r === '#/conta/perfil' ? p.locator('#view a.btn', { hasText: 'Ir para Documentos' }) : r === '#/conta/verificacao' ? p.locator('#view a.btn', { hasText: 'Voltar ao perfil' }) : p.locator('#view a.btn'); // 1.5: a Verificação é uma tela real (vários botões) // 1.4: o Perfil tem também "Ir para Verificação"
       check(`AC4 ${r}: botão "${s[0]}"`, (await btn.count()) === 1 && (await btn.innerText()) === s[0] && (await btn.getAttribute('href')) === s[1], await btn.allInnerTexts());
       await btn.click(); await wait(p, (x) => location.hash === x, s[1]);
       check(`AC4 ${r}: o botão leva a ${s[1]}`, (await hash(p)) === s[1] && (await p.locator('.shell').count()) === 1);

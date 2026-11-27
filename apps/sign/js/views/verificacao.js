@@ -1,5 +1,5 @@
 /* Seção 1.5: Conta > Verificação (#/conta/verificacao). Prova o contato com código de 6 dígitos e vincula um certificado ICP-Brasil (opcional).
-   Tudo por DOM e textContent (setKids, nunca innerHTML). O nível vem de levelOf (shell.js), a única derivação. Nada de código, e-mail ou certificado em storage.
+   Tudo por DOM e textContent (setKids, sem HTML em texto). O nível vem de levelOf (shell.js), a única derivação. Nada de código, e-mail ou certificado em storage.
    A validação criptográfica do certificado é feita por uma função de borda que NÃO está no repositório (T-07): a tela chama o endereço
    configurável cfg.certEndpoint (desligado por padrão). Sem ele, ou se ele não responder, aparece o indicador de indisponível. */
 import { h, icon, ICON, setKids, pageHead, abasConta, toast, focusEl, safeUrl } from '../lib/ui.js?v=20261127a';
@@ -234,11 +234,12 @@ function certCard(st) {
   const { ctx } = st;
   const me = st.me;
   const box = h('section', { class: 'card vf-card', 'aria-labelledby': 'vf-cert-h' });
-  const c = { disp: null, desafio: null, expira: 0, roots: true, busy: false, msg: '', exit: null, arquivo: null };
+  const c = { disp: typeof st.edge === 'boolean' ? st.edge : null, desafio: null, expira: 0, roots: true, busy: false, msg: '', exit: null, arquivo: null };
   let msgEl = null; let gerarBtn = null; let enviarBtn = null; let fileIn = null; let copiarBtn = null;
   const timeout = () => (Number(ctx.cfg.certTimeoutMs) > 0 ? Number(ctx.cfg.certTimeoutMs) : 8000);
   const url = safeUrl(ctx.cfg.certEndpoint);
   if (!url) c.disp = false;
+  st.edge = c.disp === null ? undefined : c.disp; /* a disponibilidade sobrevive ao redesenho da página */
 
   async function porEndpoint(path, opts) { /* fetch com limite de tempo; 404 e 5xx contam como indisponível */
     const ctl = new AbortController();
@@ -250,8 +251,8 @@ function certCard(st) {
     } catch (e) { if (e.indisponivel) throw e; const err = new Error('indisponivel'); err.indisponivel = true; throw err; } finally { clearTimeout(t); }
   }
   async function conferir() {
-    if (!url || me.cert || st.off) return;
-    try { await porEndpoint('', { method: 'GET' }); if (!st.dead) { c.disp = true; paint(); } } catch (e) { if (!st.dead) { c.disp = false; paint(); } }
+    if (!url || me.cert || st.off || typeof st.edge === 'boolean') return;
+    try { await porEndpoint('', { method: 'GET' }); if (!st.dead) { c.disp = true; st.edge = true; paint(); } } catch (e) { if (!st.dead) { c.disp = false; st.edge = false; paint(); } }
   }
   st.ticks.push(() => { if (c.desafio && c.expira && Date.now() > c.expira) { c.desafio = null; c.expira = 0; c.msg = MSG.challenge_expired(); c.exit = null; paint(); } });
 
@@ -266,7 +267,7 @@ function certCard(st) {
     const k = classify(e);
     if (k === 'sessao') { ctx.sessionEnded(); return; }
     if (k === 'naoconfirmado') { st.off = true; st.redraw(); return; }
-    if (e.indisponivel) { c.disp = false; c.msg = ''; paint(); return; }
+    if (e.indisponivel) { c.disp = false; st.edge = false; c.msg = ''; paint(); return; }
     const code = String(e.code || '');
     c.msg = textoErro(e);
     if (code === 'challenge_expired') { c.desafio = null; c.expira = 0; }
@@ -283,7 +284,7 @@ function certCard(st) {
       const d = await ctx.api.certChallenge();
       if (st.dead) return;
       c.desafio = String(d.text || ''); c.expira = Date.now() + (Number(d.expires_in) || 300) * 1000; c.nonce = String(d.nonce || ''); c.roots = d.roots_loaded !== false; c.arquivo = null;
-      if (!c.roots) c.msg = MSG.roots_not_loaded();
+      if (!c.roots) { c.msg = MSG.roots_not_loaded(); c.exit = saida('roots_not_loaded'); }
       c.busy = false; paint();
       const el = box.querySelector('.vf-challenge'); if (el) focusEl(el);
     } catch (e) { if (st.dead) return; c.busy = false; falhou(e); }

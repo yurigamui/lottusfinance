@@ -81,3 +81,5 @@
 | H-3 | Pepper do hash do código no Vault | Média | Arquiteto | Release | secao-1-5 |
 | H-4 | Retenção das linhas de `sign_outbox` (só a purga do `code` está especificada) | Média | Yuri | Release | secao-1-5 |
 | H-5 | Ligar o WhatsApp exige template aprovado e `whatsapp_secret_id` (serviço pago) | Média | Yuri | Pós-v1 | secao-1-5 |
+| 1.5-A | Antes de aplicar a migração 1.5: conferir se a função de borda de produção envia o `nonce` a `_sign_cert_save` e se `sign-messenger` aceita canal `email` | Alta | Yuri/time | Release | nota-construcao-1-5 |
+| 1.5-B | Textos no singular ("mais 1 tentativas") seguem a spec literal; decidir | Baixa | Yuri | G5 | nota-construcao-1-5 |

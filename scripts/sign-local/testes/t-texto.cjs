@@ -6,7 +6,8 @@ const { open } = require('./drv.cjs');
 const { check, t, done, logged, VER } = require('./lib.cjs');
 const { U, restaurar, reset, DB } = require('./perfil-lib.cjs');
 const W = [320, 768, 1280];
-const RUIM = /\b(null|undefined|NaN)\b|\[object Object\]/;
+// 1.5: também reprova marcador sem substituir ({n}, {mm}, {s}), código de erro vazando e palavras de interface em inglês
+const RUIM = /\b(null|undefined|NaN)\b|\[object Object\]|\{(n|mm|s)\}|\b(otp_[a-z_]+|cert_[a-z_]+|too_many\w*|too_soon|channel_unavailable|email_not_confirmed|challenge_expired|cpf_in_use|cpf_locked|invalid_[a-z_]+|identity_required|roots_not_loaded|Error|Loading|Submit|Cancel|Retry|Failed)\b/;
 const q = async (d, sql, a) => (await d.fake.query(sql, a)).rows;
 
 async function varre(p, rotulo) {
@@ -75,6 +76,32 @@ async function varre(p, rotulo) {
       await logged(d, { email: u.email, hash: '#/conta/perfil' }); await p.waitForSelector('#pf-nome'); await varre(p, `Perfil ${rot} ${w}`);
     }
     await R();
+  });
+
+  // ---------- 1.5: Verificação de identidade, todos os estados, em 320, 768 e 1280 ----------
+  const EDGE = 'https://rowhslnnlzfbhmzbylbz.supabase.co/functions/v1/sign-cert-validate';
+  for (const w of W) await t(`textos da Verificação em ${w}`, open, { pg: DB, width: w, cfg: { certEndpoint: EDGE, certTimeoutMs: 1500 } }, async (d) => {
+    const p = d.page; const R = () => restaurar((s, a) => q(d, s, a));
+    const limpa = async (id) => { for (const tb of ['sign_otps', 'sign_outbox', 'sign_cert_challenges', 'sign_cpf_attempts']) await q(d, `delete from public.${tb} where user_id = $1`, [id]); await q(d, `update public.sign_identity set otp_locked_until = null where user_id = $1`, [id]); };
+    const pronto = () => p.waitForFunction(() => document.querySelector('.vf') && !document.querySelector('.vf[aria-busy="true"]') || document.querySelector('.vf .banner.danger'), null, { timeout: 15000 });
+    await R(); await limpa(U.U2.id); await q(d, `delete from public.sign_trusted_roots`); await q(d, `insert into public.sign_trusted_roots (name, pem, sha256, active) values ('Raiz de teste', 'PEM-FICTICIO', 'aa11', true)`);
+    await logged(d, { email: U.U2.email, hash: '#/conta/verificacao' }); await pronto(); await p.waitForTimeout(400); await varre(p, `Verificação vazio ${w}`);
+    await p.click('text=Enviar código'); await p.waitForSelector('#vf-codigo'); await varre(p, `Verificação código pedido ${w}`);
+    const errado = (await d.fake.codeOf(U.U2.email)) === '000000' ? '111111' : '000000';
+    for (let i = 0; i < 5; i++) { await p.fill('#vf-codigo', errado); await p.waitForFunction((n) => document.querySelector('#vf-msg').textContent.length > 0 && !document.querySelector('.vf-col:last-child .vf-card:first-child .vf-actions .btn[aria-busy]') && (n === 4 || true), i); await varre(p, `Verificação código errado ${i + 1} ${w}`); await p.waitForTimeout(150); }
+    await p.reload(); await pronto(); await varre(p, `Verificação bloqueado após recarregar ${w}`);
+    await limpa(U.U2.id); await p.reload(); await pronto(); await p.click('text=Enviar código'); await p.waitForSelector('#vf-codigo'); await p.fill('#vf-codigo', '12'); await p.click('.vf-col:last-child .vf-card:first-child .vf-actions .btn:not(.secondary)'); await varre(p, `Verificação código incompleto ${w}`);
+    await p.click('text=Gerar desafio'); await p.waitForSelector('.vf-challenge'); await varre(p, `Verificação desafio ${w}`);
+    await p.setInputFiles('#vf-arquivo', { name: 'c.json', mimeType: 'application/json', buffer: Buffer.from('{"cpf":"1"}') }); await p.click('text=Enviar arquivo assinado'); await p.waitForFunction(() => document.querySelector('.vf-msg') && document.querySelector('.vf-msg').textContent !== ''); await varre(p, `Verificação erro de certificado ${w}`);
+    d.fake.state.mode.certEdge = 'down'; await p.reload(); await pronto(); await p.waitForSelector('.vf .banner.warn'); await varre(p, `Verificação borda fora do ar ${w}`);
+    d.fake.state.mode.certEdge = undefined;
+    d.fake.state.mode.rpcDrop = { sign_me: true }; await p.reload(); await p.waitForSelector('.vf .banner.danger', { timeout: 15000 }); await varre(p, `Verificação erro de carga ${w}`); d.fake.state.mode.rpcDrop = {};
+    await q(d, `update auth.users set email_confirmed_at = null where id = $1`, [U.U2.id]); await p.reload(); await pronto(); await varre(p, `Verificação e-mail não confirmado ${w}`); await q(d, `update auth.users set email_confirmed_at = now() where id = $1`, [U.U2.id]);
+    await p.evaluate(() => { location.hash = '#/conta/verificacao?motivo=identity_required'; }); await p.reload(); await pronto(); await varre(p, `Verificação vindo de identity_required ${w}`);
+    for (const [rot, u] of [['verificado (U1)', U.U1], ['certificado válido (U6)', U.U6]]) { await p.evaluate(async (v) => { const a = await import('/js/lib/api.js?v=' + v); await a.signOut(); }, VER); await p.waitForFunction(() => location.hash === '#/entrar'); await logged(d, { email: u.email, hash: '#/conta/verificacao' }); await pronto(); await varre(p, `Verificação ${rot} ${w}`); }
+    await q(d, `update public.sign_identity set cert_not_after = now() - interval '2 days' where user_id = $1`, [U.U6.id]); await p.reload(); await pronto(); await varre(p, `Verificação certificado vencido ${w}`);
+    await q(d, `update public.sign_identity set cert_not_after = null where user_id = $1`, [U.U6.id]); await p.reload(); await pronto(); await varre(p, `Verificação certificado vencido sem data ${w}`);
+    await q(d, `delete from public.sign_trusted_roots`); await R();
   });
 
   // ---------- confirm() genérico ----------

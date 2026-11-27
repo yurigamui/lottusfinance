@@ -1670,5 +1670,7 @@ nav.tabs { display: inline-flex; flex-wrap: nowrap; overflow-x: auto; max-width:
 /* P-04: janela de confirmação em celular: botões empilhados, largura total e 44 px de altura */
 @media (max-width: 480px) {
   .modal-foot { flex-direction: column; align-items: stretch; }
-  .modal-foot .btn { width: 100%; min-height: 44px; }
+  .modal-foot .btn { width: 100%; min-height: 44px; flex: none; }
 }
+/* a grade da Verificação alinha com o título e as abas (sem centralizar de novo) a partir de 1024 px */
+@media (min-width: 1024px) { .vf { max-width: none; margin-inline: 0; } }
