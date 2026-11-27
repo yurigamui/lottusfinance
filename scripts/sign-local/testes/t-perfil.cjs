@@ -29,7 +29,7 @@ const q = async (d, sql, args) => (await d.fake.query(sql, args)).rows;
     check('AC1 CPF travado: disabled e mascarado', (await p.isDisabled('#pf-cpf')) && (await p.inputValue('#pf-cpf')) === '•••.980.270-••', await p.inputValue('#pf-cpf'));
     const v = await text(p, '#pf-mail-l + .pf-value'), c = await text(p, '#pf-cel-l + .pf-value');
     check('AC1 e-mail com selo Confirmado', v.includes(U.U1.email) && v.includes('Confirmado'), v);
-    check('AC1 celular mascarado com selo Verificado', c.includes('(11) •••••-1234') && c.includes('Verificado'), c);
+    check('AC1 celular mascarado com selo "Não verificado" (V6-01, ciclo 2: a prova do U1 foi por e-mail, não pelo celular; antes dizia "Verificado")', c.includes('(11) •••••-1234') && c.includes('Não verificado'), c);
     check('AC1 nível igual ao do cabeçalho', (await text(p, '.pf-level .tag')) === (await text(p, '.org-sub')) && (await text(p, '.org-sub')) === 'Avançada');
     check('AC1 Salvar desligado', (await p.isDisabled('.pf-save')) && (await p.getAttribute('.pf-save', 'aria-disabled')) === 'true');
     check('AC1 1 chamada de sign_me ao abrir (cache e fusão)', rpcCount(d.fake.state, 'sign_me') === 1, rpcCount(d.fake.state, 'sign_me'));

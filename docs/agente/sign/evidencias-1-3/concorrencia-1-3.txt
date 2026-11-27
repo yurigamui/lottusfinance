@@ -1,0 +1,7 @@
+CPF, 40 sessões simultâneas (3 rodadas):
+ ANTES  [{"cpf_in_use":40},{"cpf_in_use":37,"too_many_attempts":3},{"cpf_in_use":37,"too_many_attempts":3}]
+ DEPOIS [{"cpf_in_use":5,"too_many_attempts":35},{"cpf_in_use":5,"too_many_attempts":35},{"cpf_in_use":5,"too_many_attempts":35}]
+
+Deadlock verify x update de profiles.phone:
+ ANTES  {"det":{"dead":5,"reps":5,"verifyOk":4,"travou":5},"rnd":{"dead":28,"reps":200,"verifyOk":185,"outros":0}}
+ DEPOIS {"det":{"dead":0,"reps":5,"verifyOk":5,"travou":5},"rnd":{"dead":0,"reps":200,"verifyOk":200,"outros":0}}

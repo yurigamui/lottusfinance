@@ -5,9 +5,11 @@
 const { open } = require('./drv.cjs');
 const { check, t, done, logged, VER } = require('./lib.cjs');
 const { U, restaurar, reset, DB } = require('./perfil-lib.cjs');
+const { mk, cpfValido } = require('./onb-lib.cjs');
+const { login, PW } = require('./lib.cjs');
 const W = [320, 768, 1280];
 // 1.5: também reprova marcador sem substituir ({n}, {mm}, {s}), código de erro vazando e palavras de interface em inglês
-const RUIM = /\b(null|undefined|NaN)\b|\[object Object\]|\{(n|mm|s)\}|\b(otp_[a-z_]+|cert_[a-z_]+|too_many\w*|too_soon|channel_unavailable|email_not_confirmed|challenge_expired|cpf_in_use|cpf_locked|invalid_[a-z_]+|identity_required|roots_not_loaded|Error|Loading|Submit|Cancel|Retry|Failed)\b/;
+const RUIM = /\b(null|undefined|NaN)\b|\[object Object\]|\{(n|mm|s)\}|\b(otp_[a-z_]+|onboarding_[a-z_]+|cert_[a-z_]+|too_many\w*|too_soon|channel_unavailable|email_not_confirmed|challenge_expired|cpf_in_use|cpf_locked|invalid_[a-z_]+|identity_required|roots_not_loaded|Error|Loading|Submit|Cancel|Retry|Failed)\b/;
 const q = async (d, sql, a) => (await d.fake.query(sql, a)).rows;
 
 async function varre(p, rotulo) {
@@ -55,7 +57,7 @@ async function varre(p, rotulo) {
     // U1: perfil completo e travado (o caso do N-01)
     await logged(d, { email: U.U1.email, hash: '#/conta/perfil' }); await p.waitForSelector('#pf-nome'); await varre(p, `Perfil completo/travado (U1) ${w}`);
     await p.click('#avatar'); await varre(p, `menu do avatar ${w}`); await p.keyboard.press('Escape');
-    for (const h of ['#/documentos', '#/envio/novo', '#/plano', '#/conta/verificacao', '#/conta/seguranca', '#/onboarding/1', '#/inexistente']) { await ir(h); await varre(p, `${h} ${w}`); }
+    for (const h of ['#/documentos', '#/envio/novo', '#/plano', '#/conta/verificacao', '#/conta/seguranca', '#/inexistente']) { await ir(h); await varre(p, `${h} ${w}`); }
     await ir('#/conta/perfil'); await p.waitForSelector('#pf-nome');
     await p.fill('#pf-nome', 'Ana Texto Teste'); await p.click('nav.tabs >> text=Verificação'); await p.waitForSelector('.modal'); await varre(p, `modal Descartar alterações? ${w}`);
     await p.keyboard.press('Escape'); await p.waitForTimeout(300);
@@ -102,6 +104,61 @@ async function varre(p, rotulo) {
     await q(d, `update public.sign_identity set cert_not_after = now() - interval '2 days' where user_id = $1`, [U.U6.id]); await p.reload(); await pronto(); await varre(p, `Verificação certificado vencido ${w}`);
     await q(d, `update public.sign_identity set cert_not_after = null where user_id = $1`, [U.U6.id]); await p.reload(); await pronto(); await varre(p, `Verificação certificado vencido sem data ${w}`);
     await q(d, `delete from public.sign_trusted_roots`); await R();
+  });
+
+
+  // ---------- 1.3: Onboarding, os 3 passos e todos os estados, em 320, 768 e 1280 (claro e escuro) ----------
+  for (const w of W) await t(`textos do Onboarding em ${w}`, open, { pg: DB, width: w, cfg: { timeoutMs: 2000, certTimeoutMs: 1500 } }, async (d) => {
+    const p = d.page; const Q = (s, a) => q(d, s, a);
+    const novo = async (n, o) => { const u = await mk(Q, n, o); await d.fake.loadUsers(); return u; };
+    const entra = async (u) => { await d.go('#/entrar'); await login(p, u.email, PW); await p.waitForFunction(() => /^#\/(documentos|onboarding)/.test(location.hash) && document.querySelector('.shell') && !document.querySelector('.ob[aria-busy="true"]') && document.querySelector('#view h1'), null, { timeout: 12000 }); await p.waitForTimeout(300); };
+    const sai = async () => { await p.click('#avatar'); await p.click('.menu-item.danger'); await p.waitForFunction(() => location.hash === '#/entrar'); };
+    const ir = async (h) => { await p.evaluate((x) => { location.hash = x; }, h); await p.waitForTimeout(500); };
+    const pronta = () => p.waitForFunction(() => document.querySelector('.ob') && !document.querySelector('.ob[aria-busy="true"]') && document.querySelector('#ob-h'), null, { timeout: 12000 });
+    const pronto = { verif: 'email' };
+    for (const tema of ['claro', 'escuro']) {
+      if (tema === 'escuro') await p.addInitScript(() => { document.documentElement.dataset.theme = 'dark'; });
+      const T = (x) => `${x} (${tema}) ${w}`;
+      // passo 1: sugestão do cadastro, erros de campo, erro ao salvar, erro ao carregar
+      let u = await novo(401, { nome: null, cpf: null, meta: { name: 'Banco Falso S.A.' } });
+      await entra(u); await pronta(); if (tema === 'escuro') await d.setTheme('dark'); await varre(p, T('Onboarding passo 1 com sugestão'));
+      await p.fill('#pf-nome', 'Ana'); await p.fill('#pf-cpf', '123'); await p.click('.pf-save'); await varre(p, T('Onboarding passo 1 com erros de campo'));
+      d.fake.state.mode.rpcDrop = { sign_profile_save: true }; await p.fill('#pf-nome', 'Ana Erro Rede'); await p.fill('#pf-cpf', cpfValido(401)); await p.click('.pf-save'); await p.waitForSelector('.pf-msg .banner', { timeout: 9000 }); await varre(p, T('Onboarding passo 1 erro ao salvar'));
+      d.fake.state.mode.rpcDrop = { sign_me: true }; await p.reload(); await p.waitForSelector('.ob .banner.danger', { timeout: 12000 }); await varre(p, T('Onboarding erro ao carregar'));
+      d.fake.state.mode.rpcDrop = {}; await p.click('text=Tentar de novo'); await pronta();
+      // hash adiante: aviso "Falta concluir esta etapa antes."
+      await ir('#/onboarding/3'); await p.waitForSelector('.ob-aviso'); await varre(p, T('Onboarding aviso de etapa'));
+      await ir('#/onboarding/9'); await pronta(); await varre(p, T('Onboarding hash inválido'));
+      await p.fill('#pf-nome', 'Nova Pessoa Teste'); await p.fill('#pf-cpf', cpfValido(401)); await p.click('.pf-save'); await p.waitForFunction(() => location.hash === '#/onboarding/2'); await pronta(); await p.waitForTimeout(300);
+      // passo 2: vazio, código pedido, código errado, bloqueado, e-mail confirmado
+      await varre(p, T('Onboarding passo 2 vazio'));
+      await p.click('text=Enviar código'); await p.waitForSelector('#vf-codigo'); await varre(p, T('Onboarding passo 2 código pedido'));
+      const errado = (await d.fake.codeOf(u.email)) === '000000' ? '111111' : '000000';
+      for (let i = 0; i < 5; i++) { await p.fill('#vf-codigo', errado); await p.waitForFunction(() => document.querySelector('#vf-msg') && document.querySelector('#vf-msg').textContent.length > 0); await varre(p, T(`Onboarding passo 2 código errado ${i + 1}`)); await p.waitForTimeout(150); }
+      await p.reload(); await pronta(); await varre(p, T('Onboarding passo 2 bloqueado após recarregar'));
+      await Q(`delete from public.sign_otps where user_id = $1`, [u.id]); await Q(`update public.sign_identity set otp_locked_until = null where user_id = $1`, [u.id]); await p.reload(); await pronta();
+      await p.click('text=Enviar código'); await p.waitForSelector('#vf-codigo'); await p.keyboard.type(await d.fake.codeOf(u.email)); await p.waitForSelector('.vf-ok'); await varre(p, T('Onboarding passo 2 e-mail confirmado'));
+      // passo 3 com e sem erro ao concluir
+      await p.click('text=Continuar'); await p.waitForFunction(() => location.hash === '#/onboarding/3'); await pronta(); await p.waitForTimeout(500); await varre(p, T('Onboarding passo 3'));
+      await p.click('text=Gerar desafio'); await p.waitForSelector('.vf-challenge'); await varre(p, T('Onboarding passo 3 com desafio'));
+      d.fake.state.mode.rpcDrop = { sign_onboarding_done: true }; await p.click('text=Concluir'); await p.waitForSelector('.ob-msg .banner', { timeout: 15000 }); await varre(p, T('Onboarding passo 3 erro ao concluir'));
+      d.fake.state.mode.rpcDrop = {};
+      await Q(`update public.sign_identity set phone_verified_at = null, phone_channel = null where user_id = $1`, [u.id]); await p.click('.ob-msg >> text=Tentar de novo'); await p.waitForSelector('.ob-aviso'); await varre(p, T('Onboarding onboarding_incomplete (aviso)'));
+      await Q(`update public.sign_identity set phone_verified_at = now(), phone_channel = 'email' where user_id = $1`, [u.id]); await p.reload(); await pronta(); await ir('#/onboarding/3'); await pronta(); await p.click('text=Pular certificado'); await p.waitForSelector('.toast'); await varre(p, T('Onboarding concluído + toast')); await sai();
+      // celular verificado, só certificado (vencido, válido), e-mail não confirmado
+      u = await novo(402, { verif: 'phone' }); await entra(u); await pronta(); await ir('#/onboarding/2'); await pronta(); await varre(p, T('Onboarding passo 2 celular verificado')); await ir('#/onboarding/3'); await pronta(); await varre(p, T('Onboarding passo 3 celular verificado')); await sai();
+      u = await novo(403, { cert: 'ok' }); await entra(u); await pronta(); await varre(p, T('Onboarding passo 3 só certificado')); await ir('#/onboarding/2'); await pronta(); await varre(p, T('Onboarding passo 2 só certificado')); await sai();
+      u = await novo(404, { cert: 'vencido' }); await entra(u); await pronta(); await varre(p, T('Onboarding com certificado vencido')); await sai();
+      u = await novo(405, { nome: null, cpf: null, verif: 'email' }); await entra(u); await pronta(); await ir('#/onboarding/3'); await p.waitForSelector('.ob-aviso'); await varre(p, T('Onboarding /3 com perfil incompleto'));
+      await Q(`update auth.users set email_confirmed_at = null where id = $1`, [u.id]); await p.reload(); await p.waitForSelector('.ob .banner', { timeout: 12000 }); await varre(p, T('Onboarding e-mail não confirmado'));
+      await p.click('text=Reenviar e-mail'); await p.waitForSelector('.pf-msg .banner'); await varre(p, T('Onboarding e-mail não confirmado após reenvio'));
+      await ir('#/conta/verificacao'); await p.waitForTimeout(800); await varre(p, T('Verificação e-mail não confirmado (um só aviso)'));
+      await Q(`update auth.users set email_confirmed_at = now() where id = $1`, [u.id]);
+      // Perfil e Verificação com as mudanças do ciclo 2 (V6-01 e V6-05)
+      await sai(); u = await novo(406, { cert: 'ok', verif: 'email', done: true }); await Q(`update public.profiles set phone = '5511987651234' where id = $1`, [u.id]); await Q(`update public.sign_identity set phone = '5511987651234' where user_id = $1`, [u.id]);
+      await entra(u); await ir('#/conta/perfil'); await p.waitForSelector('#pf-cel-l'); await varre(p, T('Perfil celular não verificado (e-mail verificado)')); await ir('#/conta/verificacao'); await p.waitForSelector('.vf-cert'); await varre(p, T('Verificação com titular mascarado'));
+      await sai();
+    }
   });
 
   // ---------- confirm() genérico ----------

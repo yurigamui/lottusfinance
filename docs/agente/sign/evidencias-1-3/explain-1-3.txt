@@ -1,0 +1,28 @@
+# Purga (consulta 1, banco DEPOIS)
+Update on sign_outbox
+  ->  Index Scan using sign_outbox_created_at_idx on sign_outbox
+        Index Cond: ((created_at < (now() - '1 day'::interval)) AND (created_at >= (now() - '30 days'::interval)))
+        Filter: (status = 'queued'::text)
+
+# Purga (consulta 2, banco DEPOIS)
+Update on sign_outbox
+  ->  Index Scan using sign_outbox_created_at_idx on sign_outbox
+        Index Cond: ((created_at < (now() - '00:15:00'::interval)) AND (created_at >= (now() - '1 day'::interval)))
+        Filter: (params ? 'code'::text)
+
+# Purga (consulta 1, banco ANTES, sem o índice)
+Update on sign_outbox
+  ->  Seq Scan on sign_outbox
+        Filter: ((status = 'queued'::text) AND (created_at < (now() - '1 day'::interval)) AND (created_at >= (now() - '30 days'::interval)))
+
+# sign_onboarding_done: leitura por chave
+Index Scan using profiles_pkey on profiles (actual time=0.010..0.011 rows=1 loops=1)
+  Index Cond: (id = 'ee000000-0000-4000-8000-000000000500'::uuid)
+  Buffers: shared hit=3
+Planning Time: 0.035 ms
+Execution Time: 0.019 ms
+Index Scan using sign_identity_pkey on sign_identity (actual time=0.006..0.007 rows=1 loops=1)
+  Index Cond: (user_id = 'ee000000-0000-4000-8000-000000000500'::uuid)
+  Buffers: shared hit=3
+Planning Time: 0.052 ms
+Execution Time: 0.014 ms

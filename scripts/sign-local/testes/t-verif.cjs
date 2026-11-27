@@ -258,7 +258,7 @@ const sai = async (d) => { await d.page.evaluate(async (v) => { const u = await 
     const enviar = async (arq) => { await p.setInputFiles('#vf-arquivo', arq); await p.click('text=Enviar arquivo assinado'); };
     const msg = async () => { await wait(p, () => document.querySelector('.vf-col:last-child .vf-card:last-child .vf-msg') && document.querySelector('.vf-col:last-child .vf-card:last-child .vf-msg').textContent !== ''); return text(p, '.vf-col:last-child .vf-card:last-child .vf-msg'); };
     await gerar();
-    check('AC6 desafio: texto com o código, "O desafio vale 5 minutos." e botão Copiar', /Lottus Sign - vinculo de certificado digital\. Codigo: [0-9a-f]{48}/.test(await text(p, '.vf-challenge')) && (await text(p, '.vf-challenge + .vf-actions + .help, .field .help')).includes('O desafio vale 5 minutos.') && (await p.getByRole('button', { name: 'Copiar' }).count()) === 1);
+    check('AC6 desafio (V6-08, acentos): texto com o código, "O desafio vale 5 minutos." e botão Copiar', /Lottus Sign - vínculo de certificado digital\. Código: [0-9a-f]{48}/.test(await text(p, '.vf-challenge')) && (await text(p, '.vf-challenge + .vf-actions + .help, .field .help')).includes('O desafio vale 5 minutos.') && (await p.getByRole('button', { name: 'Copiar' }).count()) === 1);
     check('AC6 o campo de arquivo mostra [preencher] do formato (T-07)', /\[preencher: formato e componente de assinatura local, definidos por T-07\]/.test(await text(p, '#vf-arquivo-help')));
     await p.click('text=Enviar arquivo assinado'); check('AC6 sem arquivo: "Escolha o arquivo assinado."', (await text(p, '.vf-col:last-child .vf-card:last-child .vf-msg')) === 'Escolha o arquivo assinado.');
     const casos = [

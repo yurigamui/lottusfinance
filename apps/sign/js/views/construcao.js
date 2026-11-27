@@ -1,6 +1,6 @@
-/* Telas provisórias: destinos que ainda não existem (1.2, 1.3, Partes 2 a 5) e rota desconhecida. Sempre com saída.
+/* Telas provisórias: destinos que ainda não existem (1.2, Partes 2 a 5) e rota desconhecida. Sempre com saída.
    Públicas (recuperar, nova-senha, rota desconhecida sem sessão): .sg-single. Privadas: dentro do shell (1.0). */
-import { h, mount, setKids, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261127a';
+import { h, mount, setKids, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261128a';
 
 function pagina(ctx, title, text, actions) {
   mount(ctx.root, h('div', { class: 'sg-page sg-single' },
@@ -59,6 +59,5 @@ export const privadas = {
   envio: privada({ h1: 'Novo envio', sub: 'Envie um documento para assinatura.', saida: PARA_DOC }),
   plano: privada({ h1: 'Plano e uso', sub: 'Acompanhe o uso do seu plano.', saida: PARA_DOC }),
   conta: privada({ h1: 'Conta', sub: 'Seus dados, verificação e segurança.', saida: PARA_DOC, abas: true }),
-  onboarding: privada({ h1: 'Primeiros passos', sub: 'Vamos preparar sua conta.', saida: null, minimal: true }),
   naoencontradaApp: privada({ h1: 'Página não encontrada', sub: 'Não encontramos esta página.', vazio: 'Esta página não existe.', saida: PARA_DOC }),
 };

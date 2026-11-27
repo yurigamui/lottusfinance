@@ -1,10 +1,11 @@
 /* Lottus Sign: entrada. Cria o cliente, trata o link do e-mail (hash) ANTES do roteador e inicia as rotas. */
-import { createRouter, ONBOARDING, DEFAULT_AFTER, isAuthHash } from './lib/router.js?v=20261127a';
-import * as api from './lib/api.js?v=20261127a';
-import { entrar } from './views/entrar.js?v=20261127a';
-import { construcao, naoencontrada, privadas } from './views/construcao.js?v=20261127a';
-import { perfil } from './views/perfil.js?v=20261127a';
-import { verificacao } from './views/verificacao.js?v=20261127a';
+import { createRouter, ONBOARDING, DEFAULT_AFTER, isAuthHash } from './lib/router.js?v=20261128a';
+import * as api from './lib/api.js?v=20261128a';
+import { entrar } from './views/entrar.js?v=20261128a';
+import { construcao, naoencontrada, privadas } from './views/construcao.js?v=20261128a';
+import { perfil } from './views/perfil.js?v=20261128a';
+import { verificacao } from './views/verificacao.js?v=20261128a';
+import { onboarding } from './views/onboarding.js?v=20261128a';
 
 /* R-6: o hash do link do e-mail (#access_token=... ou #error_code=...) nunca é rota. Lê uma vez e apaga. */
 function takeAuthHash() {
@@ -39,6 +40,7 @@ async function processAuthHash(router) {
       } else {
         let feito = false;
         try { feito = !!(await api.me()).onboarding_done; } catch (e) { feito = false; }
+        if (!feito) router.markEntry(); /* 1.3: vindo do link do e-mail, abre no primeiro passo pendente */
         setHash(feito ? DEFAULT_AFTER : ONBOARDING);
       }
     }
@@ -51,7 +53,7 @@ async function main() {
   const cfg = window.LOTTUS_CONFIG || {};
   api.initApi(cfg);
   const root = document.getElementById('sign');
-  const router = createRouter({ root, api, cfg, views: { entrar, construcao, naoencontrada, ...privadas, perfil, verificacao } });
+  const router = createRouter({ root, api, cfg, views: { entrar, construcao, naoencontrada, ...privadas, onboarding, perfil, verificacao } });
   /* o listener do hash do Auth vem antes do roteador (B-1) */
   window.addEventListener('hashchange', () => { processAuthHash(router); });
   const pending = processAuthHash(router);

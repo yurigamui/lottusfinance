@@ -1,5 +1,5 @@
 /* Seção 1.0: esqueleto da área logada (menu, barra superior, aviso e #view). Montado por DOM; texto do usuário só por textContent. */
-import { h, mount, setKids, icon, ICON, focusH1 } from '../lib/ui.js?v=20261127a';
+import { h, mount, setKids, icon, ICON, focusH1 } from '../lib/ui.js?v=20261128a';
 
 /* Itens do menu. Só entra quem tem built:true; as seções futuras ligam o seu item sem mudar a estrutura. */
 export const NAV = [

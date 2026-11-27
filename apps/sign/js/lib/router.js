@@ -1,11 +1,13 @@
 /* Lottus Sign: roteador por hash. Guarda de rota, retorno à origem (lista branca) e foco/título a cada rota. */
-import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261127a';
-import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261127a';
+import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261128a';
+import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261128a';
 
 export const WHITELIST = ['#/documentos', '#/envio/novo', '#/plano', '#/conta/perfil', '#/conta/verificacao', '#/conta/seguranca'];
 export const DE_KEY = 'lottus.sign.de';
 export const DEFAULT_AFTER = '#/documentos';
 export const ONBOARDING = '#/onboarding/1';
+/* 1.3: #/onboarding e #/onboarding/x (passo inexistente) caem na view, que corrige o hash por replace */
+const ONB_RE = /^#\/onboarding(\/.*)?$/;
 
 /* view: nome da view; pub: rota pública; gate: false = não redireciona ao onboarding pendente */
 const ROUTES = {
@@ -14,6 +16,8 @@ const ROUTES = {
   '#/recuperar': { view: 'construcao', pub: true },
   '#/nova-senha': { view: 'construcao', pub: true },
   '#/onboarding/1': { view: 'onboarding', gate: false },
+  '#/onboarding/2': { view: 'onboarding', gate: false },
+  '#/onboarding/3': { view: 'onboarding', gate: false },
   '#/documentos': { view: 'documentos' },
   '#/envio/novo': { view: 'envio' },
   '#/plano': { view: 'plano' },
@@ -42,6 +46,7 @@ export function createRouter({ root, api, views, cfg }) {
   let guard = null; // { dirty(): boolean, keep(): void } da tela com alterações não salvas (1.4)
   let confirming = false;
   let reverting = false; // V-02: o hashchange causado por desfazer a navegação é ignorado
+  let entrada = false; // 1.3: o próximo ctx leva entrada=true quando o router manda ao onboarding (login, gate, link do e-mail)
   let sgN = 0; // número da visita, gravado em history.state para saber se o usuário foi para trás ou para frente
   const navIdx = () => (window.navigation && window.navigation.currentEntry ? window.navigation.currentEntry.index : -1); // Navigation API quando existe
   const stamp = () => { if (!current) return; current.sg = ++sgN; current.idx = navIdx(); try { history.replaceState({ sg: current.sg }, '', location.href); } catch (e) { /* sem history.state */ } };
@@ -59,6 +64,7 @@ export function createRouter({ root, api, views, cfg }) {
     else location.hash = hash;
   }
 
+  const toOnboarding = () => { entrada = true; go(ONBOARDING, true); };
   const dirty = () => !!(guard && guard.dirty());
   const setGuard = (g) => { guard = g || null; };
 
@@ -95,7 +101,7 @@ export function createRouter({ root, api, views, cfg }) {
 
   async function afterLogin() {
     const me = await api.me();
-    if (!me.onboarding_done) { go(ONBOARDING, true); return; }
+    if (!me.onboarding_done) { toOnboarding(); return; }
     const de = session.get(DE_KEY);
     session.del(DE_KEY);
     go(safeDe(de), true);
@@ -124,7 +130,7 @@ export function createRouter({ root, api, views, cfg }) {
       return;
     }
     const my = ++seq;
-    const r = ROUTES[hash];
+    const r = ROUTES[hash] || (ONB_RE.test(hash) ? ROUTES[ONBOARDING] : undefined);
     const stale = () => my !== seq;
     const sess = await api.getSession();
     if (stale()) return;
@@ -142,7 +148,7 @@ export function createRouter({ root, api, views, cfg }) {
       try {
         const me = await api.me();
         if (stale()) return;
-        if (!me.onboarding_done) { go(ONBOARDING, true); return; }
+        if (!me.onboarding_done) { toOnboarding(); return; }
       } catch (e) {
         if (stale()) return;
         if (e.code === 'email_not_confirmed') { await api.signOut(); flash = 'sessao'; go('#/entrar', true); return; }
@@ -153,7 +159,8 @@ export function createRouter({ root, api, views, cfg }) {
     const view = views[name];
     const uid = sess && sess.user ? sess.user.id : '';
     if (current && current.uid && current.uid !== uid) guard = null; /* outro usuário: a tela anterior não segura a navegação */
-    const ctx = { root, route: hash, tab: r && r.tab, hasSession: !!sess, session: sess, flash: null, api, cfg, go, afterLogin, safeDe, setGuard, canLeave, sessionEnded };
+    const ctx = { root, route: hash, tab: r && r.tab, hasSession: !!sess, session: sess, flash: null, api, cfg, go, afterLogin, safeDe, setGuard, canLeave, sessionEnded, entrada, first: current === null };
+    entrada = false;
     if (name === 'entrar') { ctx.flash = flash; flash = null; }
     if (view.shell) {
       /* rota privada: o shell permanece; só #view troca */
@@ -221,5 +228,5 @@ export function createRouter({ root, api, views, cfg }) {
     handle();
   }
 
-  return { start, go, setFlash, afterLogin, hold, release, reset };
+  return { start, go, setFlash, afterLogin, hold, release, reset, markEntry: () => { entrada = true; } };
 }

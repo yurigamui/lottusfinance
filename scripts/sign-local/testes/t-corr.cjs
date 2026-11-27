@@ -58,7 +58,7 @@ const rd = (f) => fs.readFileSync(path.join(APP, f), 'utf8');
     await p.evaluate((h) => { location.hash = h; }, `#access_token=${tk.access_token}&refresh_token=${tk.refresh_token}&type=signup`);
     await wait(p, () => location.hash === '#/onboarding/1' && document.querySelector('.shell'));
     check('AC16 hash do Auth apagado da URL', !/access_token|refresh_token/.test(p.url()), p.url());
-    check('AC16 resultado #/onboarding/1 dentro do shell', (await hash(p)) === '#/onboarding/1' && (await text(p, '#view h1')) === 'Primeiros passos');
+    check('AC16 resultado #/onboarding/1 dentro do shell', (await hash(p)) === '#/onboarding/1' && (await text(p, '#view h1')) === 'Seus dados');
     check('AC16 "Página não encontrada" nunca apareceu', (await p.evaluate(() => window.__nf)) === false);
   });
   await t('AC16 B-1 link vencido em hashchange', open, { width: 1280 }, async (d) => {

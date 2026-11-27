@@ -7,6 +7,8 @@ fs.mkdirSync(SHOTS, { recursive: true });
 const wait = (p, fn, arg, ms) => p.waitForFunction(fn, arg, { timeout: ms || 6000 });
 const L = [320, 360, 390, 768, 1024, 1280, 1920, 2560];
 const ROTAS = ['#/documentos', '#/envio/novo', '#/plano', '#/conta/perfil', '#/conta/verificacao', '#/conta/seguranca', '#/onboarding/1', '#/inexistente'];
+// 1.3: o onboarding é real; quem já terminou (conta usada nestes testes) é levado a Documentos. Ele é testado à parte com a conta pendente (AC4b, AC21b, AC5).
+const ROTAS_FEITO = ROTAS.filter((x) => x !== '#/onboarding/1');
 const mainCount = (p) => p.evaluate(() => document.querySelectorAll('main').length);
 const tokenKeys = (p) => p.evaluate(() => Object.keys(localStorage).filter((k) => /^sb-.*-auth-token$/.test(k)));
 const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: b.width, h: b.height }; }, sel);
@@ -81,8 +83,8 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
 
   await t('AC4 rotas privadas dentro do shell e saídas', open, { width: 1280 }, async (d) => {
     const p = d.page; await logged(d);
-    const SAIDA = { '#/documentos': ['Ir para Conta', '#/conta/perfil'], '#/envio/novo': ['Ir para Documentos', '#/documentos'], '#/plano': ['Ir para Documentos', '#/documentos'], '#/conta/perfil': ['Ir para Documentos', '#/documentos'], '#/conta/verificacao': ['Voltar ao perfil', '#/conta/perfil'], '#/conta/seguranca': ['Ir para Documentos', '#/documentos'], '#/inexistente': ['Ir para Documentos', '#/documentos'], '#/onboarding/1': null };
-    const H1 = { '#/documentos': 'Documentos', '#/envio/novo': 'Novo envio', '#/plano': 'Plano e uso', '#/conta/perfil': 'Conta', '#/conta/verificacao': 'Conta', '#/conta/seguranca': 'Conta', '#/onboarding/1': 'Primeiros passos', '#/inexistente': 'Página não encontrada' };
+    const SAIDA = { '#/documentos': ['Ir para Conta', '#/conta/perfil'], '#/envio/novo': ['Ir para Documentos', '#/documentos'], '#/plano': ['Ir para Documentos', '#/documentos'], '#/conta/perfil': ['Ir para Documentos', '#/documentos'], '#/conta/verificacao': ['Voltar ao perfil', '#/conta/perfil'], '#/conta/seguranca': ['Ir para Documentos', '#/documentos'], '#/inexistente': ['Ir para Documentos', '#/documentos'] };
+    const H1 = { '#/documentos': 'Documentos', '#/envio/novo': 'Novo envio', '#/plano': 'Plano e uso', '#/conta/perfil': 'Conta', '#/conta/verificacao': 'Conta', '#/conta/seguranca': 'Conta', '#/inexistente': 'Página não encontrada' };
     for (const r of Object.keys(SAIDA)) {
       await p.evaluate((x) => { location.hash = x; }, r); await wait(p, (x) => location.hash === x && document.querySelector('#view h1'), r);
       const ok = (await p.locator('.shell').count()) === 1 && (await p.locator('#view h1').count()) === 1 && (await text(p, '#view h1')) === H1[r] && (await p.locator('#view .page-head').count()) === 1;
@@ -97,13 +99,22 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
       check(`AC4 ${r}: o botão leva a ${s[1]}`, (await hash(p)) === s[1] && (await p.locator('.shell').count()) === 1);
     }
     check('AC4 sem erros de JS/CSP', d.errors.length === 0, d.errors);
+    await p.evaluate(() => { location.hash = '#/onboarding/1'; }); await wait(p, () => location.hash === '#/documentos' && document.querySelector('#view h1'));
+    check('AC4 (1.3) quem já terminou o onboarding e abre #/onboarding/1 vai a Documentos', (await hash(p)) === '#/documentos');
+  });
+
+  await t('AC4b onboarding dentro do shell reduzido com a conta pendente', open, { width: 1280 }, async (d) => {
+    const p = d.page; await logged(d, { email: 'ok@teste.example' });
+    check('AC4b #/onboarding/1: dentro do shell, h1 "Seus dados" e .page-head', (await p.locator('.shell').count()) === 1 && (await text(p, '#view h1')) === 'Seus dados' && (await p.locator('#view .page-head').count()) === 1);
+    check('AC4b #/onboarding/1: sem botão de menu e sem item de navegação (saída pelo avatar)', (await p.locator('.sidenav-items .nav-sec').count()) === 0 && (await p.locator('#avatar').count()) === 1);
+    check('AC4b nenhum "null" ou "undefined" perdido na tela', !/\b(null|undefined)\b/.test(await text(p, '#sign')));
   });
 
   await t('AC5 onboarding com shell reduzido', open, { width: 1280 }, async (d) => {
     const p = d.page; await logged(d, { email: 'ok@teste.example' });
     check('AC5 login com onboarding pendente cai em #/onboarding/1', (await hash(p)) === '#/onboarding/1');
     check('AC5 menu sem itens', (await p.locator('nav.sidenav-items .nav-sec').count()) === 0);
-    check('AC5 h1 Primeiros passos', (await text(p, '#view h1')) === 'Primeiros passos');
+    check('AC5 h1 do passo 1 do onboarding (1.3): Seus dados', (await text(p, '#view h1')) === 'Seus dados');
     await p.click('#avatar');
     check('AC5 avatar tem Conta e Sair', (await p.getByRole('link', { name: 'Conta' }).count()) >= 1 && await p.getByRole('button', { name: 'Sair' }).isVisible());
     await p.getByRole('button', { name: 'Sair' }).click();
@@ -201,7 +212,7 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
     const p = d.page; await logged(d);
     for (const w of L) {
       await p.setViewportSize({ width: w, height: w >= 1280 ? 900 : 800 });
-      for (const r of ROTAS) {
+      for (const r of ROTAS_FEITO) {
         await p.evaluate((x) => { location.hash = x; }, r); await wait(p, (x) => location.hash === x && document.querySelector('#view h1'), r);
         await p.waitForTimeout(60);
         const o = await overflow(p);
@@ -209,7 +220,19 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
         await p.screenshot({ path: `${SHOTS}/rota-${w}-${r.replace(/[#/]+/g, '_')}.png`, animations: 'disabled', caret: 'hide' });
       }
     }
-    check(`AC21 ${L.length * ROTAS.length} capturas (1 por largura e rota), sem corte em nenhuma`, fs.readdirSync(SHOTS).filter((f) => f.startsWith('rota-')).length === L.length * ROTAS.length);
+    check(`AC21 ${L.length * ROTAS_FEITO.length} capturas (1 por largura e rota), sem corte em nenhuma`, fs.readdirSync(SHOTS).filter((f) => f.startsWith('rota-')).length === L.length * ROTAS_FEITO.length);
+  });
+
+  await t('AC21b onboarding (1.3) por largura com a conta pendente: sem corte', open, { width: 390 }, async (d) => {
+    const p = d.page; await logged(d, { email: 'ok@teste.example' });
+    for (const w of L) {
+      await p.setViewportSize({ width: w, height: w >= 1280 ? 900 : 800 });
+      await p.evaluate((x) => { location.hash = x; }, '#/onboarding/1'); await wait(p, () => location.hash === '#/onboarding/1' && document.querySelector('#ob-h'));
+      await p.waitForTimeout(100);
+      const o = await overflow(p);
+      check(`AC21b ${w} #/onboarding/1: sem corte`, !o.hscroll && !o.over.length, o);
+      await p.screenshot({ path: `${SHOTS}/onb-rota-${w}-_onboarding_1.png`, animations: 'disabled', caret: 'hide' });
+    }
   });
 
   await t('AC22 cinco itens em 320', open, { width: 320, height: 568 }, async (d) => {
@@ -301,7 +324,7 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
     await via('aba Verificação', 'nav.tabs >> text=Verificação', '#/conta/verificacao');
     await via('aba Segurança', 'nav.tabs >> text=Segurança', '#/conta/seguranca');
     await via('aba Perfil', 'nav.tabs >> text=Perfil', '#/conta/perfil');
-    for (const r of ROTAS.filter((x) => x !== '#/onboarding/1').concat(['#/onboarding/1'])) {
+    for (const r of ROTAS_FEITO) {
       await p.evaluate((x) => { location.hash = x; }, r); await wait(p, (x) => location.hash === x && document.querySelector('#view h1'), r);
       const h1 = await text(p, '#view h1');
       await p.reload(); await p.waitForSelector('.shell #view h1'); await p.waitForTimeout(200);

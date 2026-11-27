@@ -41,6 +41,12 @@ export function maskCpf(v) {
   return d.length === 11 ? '•••.' + d.slice(3, 6) + '.' + d.slice(6, 9) + '-••' : '';
 }
 
+/* V6-05: o titular do certificado (ex.: "CN=NOME:12345678909") nunca mostra o CPF inteiro; mesma regra do servidor (_sign_mask_cpf_text).
+   Só troca sequências de 11 dígitos (com ou sem pontuação); CNPJ de 14 dígitos fica como está. */
+export function maskSubject(v) {
+  return String(v == null ? '' : v).replace(/(?<!\d)\d{3}\.?(\d{3})\.?(\d{3})-?\d{2}(?!\d)/g, '•••.$1.$2-••');
+}
+
 /* celular com código do país (5511987651234) -> (11) •••••-1234; só DDD e os 4 últimos dígitos aparecem */
 export function maskPhone(v) {
   let d = onlyDigits(v);

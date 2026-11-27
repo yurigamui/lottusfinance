@@ -34,7 +34,7 @@ async function criar(p, { email, nome = 'Ana Teste', pw = 'uma-senha-longa', ace
     check('rota #/onboarding/1', (await hash(p)) === '#/onboarding/1');
     check('sign_me chamada', authCalls(d, /rpc\/sign_me/).length >= 1);
     await p.click('#avatar'); /* spec 1.0: onboarding dentro do shell reduzido; Sair fica no menu do avatar */
-    check('tela provisória com Sair', (await text(p, 'h1')) === 'Primeiros passos' && await p.getByRole('button', { name: 'Sair' }).isVisible());
+    check('1.3: o onboarding real (passo 1 "Seus dados") com Sair no avatar', (await text(p, 'h1')) === 'Seus dados' && await p.getByRole('button', { name: 'Sair' }).isVisible());
   });
 
   await t('AC3 retorno à origem', open, {}, async (d) => {

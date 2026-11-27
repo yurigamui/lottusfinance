@@ -67,7 +67,7 @@ export function onSignedOut(cb) {
 /* Erro de RPC (PostgREST) -> Error com code/status/name. A mensagem crua nunca vai para a tela; ela só serve ao classify. */
 function rpcError(e, status) {
   const err = new Error(String(e.message || ''));
-  err.code = /email_not_confirmed/.test(err.message) ? 'email_not_confirmed' : (e.code || '');
+  err.code = /email_not_confirmed/.test(err.message) ? 'email_not_confirmed' : /onboarding_incomplete/.test(err.message) ? 'onboarding_incomplete' : (e.code || '');
   err.status = e.status ?? status;
   err.name = e.name || 'Error';
   return err;
@@ -131,6 +131,14 @@ export async function phoneVerify(code) {
 }
 export const certChallenge = () => callRpc('sign_cert_challenge', {});
 
+/* 1.3: conclui o onboarding. O servidor decide (perfil completo e identidade verificada); sem isso lança Error com code 'onboarding_incomplete'.
+   Devolve sign_me e o põe no cache. */
+export async function onboardingDone() {
+  const d = await callRpc('sign_onboarding_done', {});
+  meCache = { t: Date.now(), v: d };
+  return d;
+}
+
 /* O sign_me em cache fica velho depois de uma verificação ou de um vínculo: a próxima leitura vai ao servidor. */
 export function forgetMe() { meCache = null; meFlight = null; }
 
@@ -142,13 +150,14 @@ let draft = null;
 export const setDraft = (uid, data) => { draft = uid ? { uid, data } : null; };
 export const takeDraft = (uid) => { const d = draft && draft.uid === uid ? draft.data : null; draft = null; return d; };
 
-/* Classifica um erro em: naoconfirmado | sessao | limite | credenciais | senha | existe | nome | cpf | cpf_travado | cpf_usado | cpf_limite | entrada | rede | geral */
+/* Classifica um erro em: naoconfirmado | incompleto | sessao | limite | credenciais | senha | existe | nome | cpf | cpf_travado | cpf_usado | cpf_limite | entrada | rede | geral */
 export function classify(e) {
   if (!e) return null;
   const code = String(e.code || e.error_code || '');
   const msg = String(e.message || '');
   const st = e.status;
   if (code === 'email_not_confirmed' || /email not confirmed|email_not_confirmed/i.test(msg)) return 'naoconfirmado';
+  if (code === 'onboarding_incomplete' || /onboarding_incomplete/.test(msg)) return 'incompleto';
   if (/invalid_name/.test(msg)) return 'nome';
   if (/invalid_cpf/.test(msg)) return 'cpf';
   if (/cpf_locked/.test(msg)) return 'cpf_travado';

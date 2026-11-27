@@ -308,8 +308,10 @@ const wrong = (c) => (c === '000000' ? '111111' : '000000');
     await dorme(U.U2.id, 40);
     const outro = await rpc('sign_phone_send', { p_phone: '(11) 97777-6666', p_channel: 'whatsapp' }, U.U2.email);
     const m1 = await sm(U.U2);
-    check('AC-B10 envio para OUTRO telefone: ok, phone_verified_at e phone_channel nulos na mesma transação, verified=false', outro.body.ok === true && m1.verified === false && m1.phone_verified === false && m1.contact_kind === null
-      && (await q(`select phone_verified_at, phone_channel, phone from public.sign_identity where user_id = $1`, [U.U2.id]))[0].phone_channel === null, m1);
+    check('AC-B10 (V6-03, ciclo 2) envio para OUTRO telefone: ok e a verificação existente PERMANECE (phone, phone_verified_at e phone_channel intactos até confirmar o novo)', outro.body.ok === true && m1.verified === true && m1.phone_verified === true && m1.contact_kind === 'phone'
+      && (await q(`select phone_channel, phone from public.sign_identity where user_id = $1`, [U.U2.id]))[0].phone === '5511988887777', m1);
+    const vNovo = await rpc('sign_phone_verify', { p_code: await codigo(D, U.U2.id) }, U.U2.email);
+    check('AC-B10 (V6-03) confirmar o código do outro telefone passa a verificação ao NOVO contato (phone = 5511977776666)', vNovo.body.ok === true && vNovo.body.phone === '5511977776666' && vNovo.body.contact_kind === 'phone', vNovo.body);
     // e-mail → outro destino
     const e1 = await verificar(U.U2, 'email');
     check('AC-B10 preparo: U2 verificado por e-mail', e1.body.contact_kind === 'email');
@@ -320,7 +322,7 @@ const wrong = (c) => (c === '000000' ? '111111' : '000000');
     check('AC-B10 trocar profiles.phone NÃO derruba quem está verificado por e-mail (contato é o e-mail)', (await sm(U.U2)).verified === true);
     await dorme(U.U2.id, 40);
     await rpc('sign_phone_send', { p_phone: '(11) 98888-7777', p_channel: 'whatsapp' }, U.U2.email);
-    check('AC-B10 verificado por e-mail e envio por whatsapp (outro destino): cai', (await sm(U.U2)).verified === false);
+    check('AC-B10 (V6-03, ciclo 2) verificado por e-mail e envio por whatsapp (outro destino): continua verificado por e-mail até confirmar', (await sm(U.U2)).verified === true && (await sm(U.U2)).contact_kind === 'email');
     // telefone verificado + profiles.phone muda (qualquer escritor)
     const ph = await verificar(U.U2, 'whatsapp', '(11) 98888-7777');
     check('AC-B10 preparo 3: whatsapp verificado', ph.body.verified === true);
