@@ -65,7 +65,7 @@
         rowHref: (c) => `#/clientes/${c.kind}/${c.id}`,
         columns: [
           { key: 'name', label: 'Cliente', searchText: (c) => `${c.name} ${c.legal_name || ''} ${c.email || ''} ${c.doc || ''} ${B.cnpj(c.doc || '')}`, render: (c) => `<b>${esc(c.name)}</b><div class="small muted">${esc(B.cnpj(c.doc || ''))}${c.owner_name ? ' · ' + esc(c.owner_name) : ''}</div>` },
-          { key: 'plan', label: 'Plano', searchText: (c) => `${c.product} ${c.plan}`, render: (c) => `${esc(c.product)}<div class="small muted">${esc(c.plan)}${c.plan_requested ? ' · pediu ' + esc(c.plan_requested) : ''}</div>` },
+          { key: 'plan', label: 'Plano', searchText: (c) => `${c.product} ${c.plan}`, render: (c) => `${esc(c.product)}<div class="small muted">${esc(c.plan)}${c.plan_requested && c.plan_requested !== c.plan ? ' · pediu ' + esc(c.plan_requested) : ''}</div>` },
           { key: 'mrr', label: 'Mensal', num: true, searchText: () => '', render: (c) => `<b>${brl(c.mrr)}</b>` },
           { key: 'status', label: 'Situação', searchText: (c) => (STATUS[c.status] || [c.status])[0], render: (c) => `${statusTag(c.status)}${rowMore([['Uso', esc(usage(c))], ['Último acesso', esc(c.last_access ? ago(c.last_access) : 'nunca')], ['Saúde', health(c.health)]])}` },
         ],

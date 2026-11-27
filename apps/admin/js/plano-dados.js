@@ -38,14 +38,21 @@
     const raw = String((e && (e.message || e.msg)) || e || '');
     if (ERRORS[raw]) return ERRORS[raw];
     const key = Object.keys(ERRORS).find((k) => raw.includes(k));
-    return key ? ERRORS[key] : B.message(e);
+    if (key) return ERRORS[key];
+    if (/JWT expired|jwt expired|invalid JWT|PGRST30[0-9]/i.test(raw)) return 'Sua sessão expirou. Entre de novo.';
+    if (/violates (check )?constraint|check constraint|23514|23505|23502|23503|22003|22P02/i.test(raw + ' ' + String((e && e.code) || ''))) return 'Algum valor não é permitido. Revise os campos.';
+    if (/permission denied|42501|row-level security/i.test(raw + ' ' + String((e && e.code) || ''))) return 'Você não tem permissão para isso.';
+    if (/Failed to fetch|NetworkError|Load failed|network request failed|timeout/i.test(raw)) return 'Sem conexão com o servidor. Tente de novo.';
+    return B.message(e);
   }
+  /** Dia de vencimento exibido: sempre de 1 a 28. */
+  const dueDay = (x) => Math.min(28, Math.max(1, Math.trunc(Number(x)) || 1));
 
   const PRODUCT_OF = { funder: 'partners', sign: 'sign', partners: 'partners', wealth: 'wealth' };
   const productOf = (kind) => PRODUCT_OF[kind] || kind;
 
   B.plan = {
-    MISSING_TEXT, isMissing, errorMessage, productOf, ERRORS,
+    MISSING_TEXT, isMissing, errorMessage, dueDay, productOf, ERRORS,
     catalog: () => rpc('bo_plan_catalog'),
     customer: (product, subject) => rpc('bo_customer_plan', { p_product: productOf(product), p_subject: subject }),
     overrides: (product, subject) => rpc('bo_price_override_list', { p_product: productOf(product), p_subject: subject }),

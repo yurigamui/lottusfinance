@@ -155,7 +155,7 @@
         body: `<div class="stack"><div class="field"><label>Recebido em</label><input class="input" type="date" id="pd" value="${today()}"></div>
           <div class="field"><label>Forma</label><select class="input" id="pm">${METHODS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div></div>`,
         foot: '<button class="btn secondary" data-close>Cancelar</button><button class="btn" data-ok>Confirmar</button>' });
-      box.querySelector('[data-close]').onclick = closeModal;
+      box.querySelector('.modal-foot [data-close]').onclick = closeModal;
       box.querySelector('[data-ok]').onclick = (e) => run(e.target, () => rpc('bo_inv_pay', { p_id: i.id, p_paid_at: box.querySelector('#pd').value || null, p_method: box.querySelector('#pm').value }), 'Recebimento registrado').then(() => { closeModal(); B.reload(); }).catch(() => {});
     }
     async function sendReminder(i, btn) {
@@ -200,7 +200,8 @@
         // Esc, ✕ e fundo também voltam à ficha (onClose do modal); só se a pessoa ainda está em A receber (trocar de tela já leva a outro lugar)
         onClose: () => { if (!i && ret && /^#\/faturas(\/|$)/.test(location.hash)) location.hash = ret; },
         foot: '<button class="btn secondary" data-close>Cancelar</button><button class="btn" data-ok>Salvar</button>' });
-      box.querySelector('[data-close]').onclick = () => { closeModal(); if (!i && ret) location.hash = ret; };
+      // Cancelar (rodapé): fecha; o onClose acima devolve à ficha quando a fatura nova veio dela
+      box.querySelector('.modal-foot [data-close]').onclick = closeModal;
       box.querySelectorAll('input, textarea').forEach((x) => x.addEventListener('input', () => fieldError(x, '')));
       box.querySelector('[data-ok]').onclick = async (e) => {
         const g = (s) => box.querySelector(s).value;
@@ -229,8 +230,8 @@
       ${head('Régua de cobrança', 'Os e-mails de cobrança saem sozinhos, todos os dias às 9h20 (Brasília), para faturas em aberto com e-mail do cliente.')}
       <div class="card dash-row"><h2>Geração automática das faturas</h2>
         <p>${autoOn
-          ? `Todo dia 2, às 10h (Brasília), o sistema gera as faturas do mês anterior (taxa de plataforma dos fundos e mensalidade do Sign), com vencimento no dia <b>${esc(s.due_day)}</b> do mês seguinte à competência. Quem já tem fatura da competência não é duplicado.`
-          : `Prevista para todo dia 2, com vencimento no dia <b>${esc(s.due_day)}</b>. ${esc(B.plan.MISSING_TEXT)} Até lá, use "Gerar faturas do mês" em A receber.`}</p>
+          ? `Todo dia 2, às 10h (Brasília), o sistema gera as faturas do mês anterior (taxa de plataforma dos fundos e mensalidade do Sign), com vencimento no dia <b>${esc(B.plan.dueDay(s.due_day))}</b> do mês seguinte à competência. Quem já tem fatura da competência não é duplicado.`
+          : `Prevista para todo dia 2, com vencimento no dia <b>${esc(B.plan.dueDay(s.due_day))}</b>. ${esc(B.plan.MISSING_TEXT)} Até lá, use "Gerar faturas do mês" em A receber.`}</p>
         <p class="small muted">Régua de e-mails: ${s.remind_enabled ? '<b>ligada</b>' : '<b>desligada</b>'}. ${autoOn ? 'As faturas geradas automaticamente ainda não entram nos e-mails da régua (pendência em análise): para cobrá-las, use Cobrar em A receber.' : ''} Nenhuma conta é bloqueada nem rebaixada sozinha por atraso.</p></div>
       <div class="grid-2 dash-row">
         <div class="card"><h2>Quando enviar</h2>
@@ -239,7 +240,7 @@
         <div class="card"><h2>Ajustes</h2>
           <div class="stack">
             <label class="row" style="gap:10px;justify-content:flex-start"><input type="checkbox" id="on" ${s.remind_enabled ? 'checked' : ''} ${admin ? '' : 'disabled'}> <span>Enviar cobranças automáticas</span></label>
-            <div class="field"><label>Dia de vencimento das faturas geradas</label><input class="input" id="dd" type="number" min="1" max="28" value="${esc(s.due_day)}" ${admin ? '' : 'disabled'}><div class="help">Vencem neste dia do mês seguinte à competência.</div></div>
+            <div class="field"><label>Dia de vencimento das faturas geradas</label><input class="input" id="dd" type="number" min="1" max="28" value="${esc(B.plan.dueDay(s.due_day))}" ${admin ? '' : 'disabled'}><div class="help">Vencem neste dia do mês seguinte à competência.</div></div>
             <div class="field"><label>Como pagar (aparece no e-mail)</label><textarea class="input" id="pi" rows="4" placeholder="${esc(s.pix_key ? 'Em branco: usa a chave Pix CNPJ ' + s.pix_key : 'Ex.: Pix, chave CNPJ 00.000.000/0001-00 · Banco X')}" ${admin ? '' : 'disabled'}>${esc(s.pay_instructions || '')}</textarea></div>
             ${admin ? '<div><button class="btn" id="save">Salvar</button></div>' : '<p class="small muted">Só administradores alteram.</p>'}
           </div></div>

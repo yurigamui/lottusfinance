@@ -201,7 +201,7 @@
           <dt>Teste grátis até</dt><dd>R$ ${esc(mi(Number(S.free_pl_limit || 0)))} de patrimônio</dd>
           <dt>Faixas</dt><dd>${tiers.length ? tiers.map((t) => `<div>${esc(t)}</div>`).join('') : '—'}</dd>
           <dt>Prazo para cadastrar o cartão</dt><dd>${esc(S.grace_days)} dias</dd>
-          <dt>Vencimento das faturas</dt><dd>dia ${esc(S.due_day)} do mês seguinte</dd></dl></div>
+          <dt>Vencimento das faturas</dt><dd>dia ${esc(B.plan.dueDay(S.due_day))} do mês seguinte</dd></dl></div>
         <div class="card"><h2>Lottus Wealth</h2>${B.ui.table({ rows: wealth, pageSize: 25, search: false, cardTitle: 'code', emptyText: 'Nenhum plano.', columns: [
           { key: 'code', label: 'Plano', render: (p) => `<b>${esc(WEALTH[p.code] || p.code)}</b>` },
           { key: 'price_month', label: 'Por mês', num: true, render: (p) => brl(p.price_month) },

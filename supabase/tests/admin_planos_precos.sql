@@ -136,11 +136,11 @@ end $$;
 do $$ declare w uuid := 'a0000000-0000-0000-0000-000000000001'; begin
   perform pg_temp.chk('E1 sem override devolve o preço de tabela', public._effective_price('wealth', w, 79) = 79);
   insert into public.price_overrides (product, subject_kind, subject_id, kind, value, reason, valid_from, valid_until)
-    values ('wealth', 'wealth_user', w, 'discount_pct', 10, 'desconto de teste', current_date - 5, current_date + 5);
+    values ('wealth', 'wealth_user', w, 'discount_pct', 10, 'desconto de teste', public._today_br() - 5, public._today_br() + 5);
   perform pg_temp.chk('E2 desconto 10% vigente: 79 -> 71,10', public._effective_price('wealth', w, 79) = 71.10);
-  perform pg_temp.chk('E3 antes da validade volta ao preço de tabela', public._effective_price('wealth', w, 79, current_date - 6) = 79);
-  perform pg_temp.chk('E4 depois da validade volta ao preço de tabela', public._effective_price('wealth', w, 79, current_date + 6) = 79);
-  perform pg_temp.chk('E5 último dia da validade ainda vale', public._effective_price('wealth', w, 79, current_date + 5) = 71.10);
+  perform pg_temp.chk('E3 antes da validade volta ao preço de tabela', public._effective_price('wealth', w, 79, public._today_br() - 6) = 79);
+  perform pg_temp.chk('E4 depois da validade volta ao preço de tabela', public._effective_price('wealth', w, 79, public._today_br() + 6) = 79);
+  perform pg_temp.chk('E5 último dia da validade ainda vale', public._effective_price('wealth', w, 79, public._today_br() + 5) = 71.10);
   perform pg_temp.chk('E6 _w_price_for aplica o override; _w_price intacto', public._w_price_for(w, 'pro') = 71.10 and public._w_price('pro') = 79);
   update public.price_overrides set revoked_at = now() where subject_id = w;
   perform pg_temp.chk('E7 revogado não vale', public._effective_price('wealth', w, 79) = 79);
@@ -179,7 +179,7 @@ do $$ declare sg uuid := '50000000-0000-0000-0000-000000000001'; w1 uuid := 'a00
   fc uuid := 'f0000000-0000-0000-0000-000000000002'; begin
   perform pg_temp.act('admin');
   perform pg_temp.run(format($q$select public.bo_set_plan('{"product":"sign","subject":"%s","plan":"profissional"}')$q$, sg), 'authenticated');
-  perform pg_temp.chk('S1 sign: troca essencial -> profissional', (select msg from t_last) is null and (select plan from public.sign_accounts where id = sg) = 'profissional' and (select plan_since from public.sign_accounts where id = sg) = current_date);
+  perform pg_temp.chk('S1 sign: troca essencial -> profissional', (select msg from t_last) is null and (select plan from public.sign_accounts where id = sg) = 'profissional' and (select plan_since from public.sign_accounts where id = sg) = public._today_br());
   perform pg_temp.chk('S2 sign: evento upgrade com MRR efetivo antes/depois (override 50% ativo: 19,50 -> 49,50)', (select event || mrr_before || '>' || mrr_after from public.customer_events where ref_id = sg order by id desc limit 1) = 'upgrade19.50>49.50');
   perform pg_temp.chk('S3 sign: mesmo plano é idempotente (sem novo evento)', (public.bo_set_plan(jsonb_build_object('product', 'sign', 'subject', sg, 'plan', 'profissional'))->>'unchanged')::boolean
     and (select count(*) from public.customer_events where ref_id = sg) = 1);
@@ -269,13 +269,13 @@ end $$;
 do $$ declare o jsonb; begin
   delete from public.bill_invoices;
   insert into public.bill_invoices (number, customer_kind, customer_name, amount, due_date, status, source) values
-    ('F-T-1', 'funder', 'Cliente Exemplo 1', 100, current_date - 3, 'open', 'manual'),
-    ('F-T-2', 'sign', 'Cliente Exemplo 2', 250.50, current_date - 15, 'open', 'manual'),
-    ('F-T-3', 'sign', 'Cliente Exemplo 3', 80, current_date - 16, 'open', 'manual'),
-    ('F-T-4', 'sign', 'Paga', 70, current_date - 40, 'paid', 'manual'),
-    ('F-T-5', 'sign', 'A vencer', 60, current_date + 2, 'open', 'manual'),
-    ('F-T-6', 'sign', 'Vence hoje', 60, current_date, 'open', 'manual'),
-    ('F-T-7', 'sign', 'Cancelada', 60, current_date - 20, 'cancelled', 'manual');
+    ('F-T-1', 'funder', 'Cliente Exemplo 1', 100, public._today_br() - 3, 'open', 'manual'),
+    ('F-T-2', 'sign', 'Cliente Exemplo 2', 250.50, public._today_br() - 15, 'open', 'manual'),
+    ('F-T-3', 'sign', 'Cliente Exemplo 3', 80, public._today_br() - 16, 'open', 'manual'),
+    ('F-T-4', 'sign', 'Paga', 70, public._today_br() - 40, 'paid', 'manual'),
+    ('F-T-5', 'sign', 'A vencer', 60, public._today_br() + 2, 'open', 'manual'),
+    ('F-T-6', 'sign', 'Vence hoje', 60, public._today_br(), 'open', 'manual'),
+    ('F-T-7', 'sign', 'Cancelada', 60, public._today_br() - 20, 'cancelled', 'manual');
   perform pg_temp.act('analyst');
   o := public.bo_overdue_list();
   perform pg_temp.chk('O1 só abertas vencidas (3), total 430,50', (o->>'total')::int = 3 and (o->>'total_amount')::numeric = 430.50);
@@ -289,6 +289,76 @@ do $$ declare o jsonb; begin
   perform pg_temp.act('analyst');
   perform pg_temp.chk('O7 carência configurável (20 dias)', (select stage from jsonb_to_recordset(public.bo_overdue_list()->'items') as x(number text, stage text) where number = 'F-T-3') = 'grace');
   update public.billing_settings set grace_days = 15 where id = 1;
+end $$;
+
+-- ---- Correções do relatório do verificador (M2, M3, M4, B2, B3, B5, B6) ----
+do $$ declare fa uuid := 'f0000000-0000-0000-0000-000000000001'; fb uuid := 'f0000000-0000-0000-0000-000000000002'; fx uuid := 'f0000000-0000-0000-0000-000000000003';
+  s2 uuid := '50000000-0000-0000-0000-000000000002'; s3 uuid := '50000000-0000-0000-0000-000000000003'; s4 uuid := '50000000-0000-0000-0000-000000000004';
+  w2 uuid := 'a0000000-0000-0000-0000-000000000002'; ov uuid; r jsonb; n0 int; z text; cp jsonb; ol jsonb; begin
+  -- M3: trocar contrato -> tabela revoga o fee_rate ativo
+  perform pg_temp.act('admin');
+  perform pg_temp.chk('X1 admin cria fee_rate 0,0009 em fundo de contrato', pg_temp.err(format($q$select public.bo_price_override_set('{"product":"partners","subject":"%s","kind":"fee_rate","value":0.0009,"reason":"negociação anual"}')$q$, fa), 'authenticated') is null);
+  select id into ov from public.price_overrides where subject_id = fa and revoked_at is null;
+  perform pg_temp.chk('X2 fee_rate aparece como vigente enquanto é contrato', public.bo_customer_plan('partners', fa)->'override'->>'kind' = 'fee_rate');
+  r := public.bo_set_plan(jsonb_build_object('product', 'partners', 'subject', fa, 'plan', 'tier'));
+  perform pg_temp.chk('X3 trocar para tabela revoga o fee_rate com motivo registrado', (select revoked_at is not null and revoke_reason = 'plano trocado para tabela por faixa' from public.price_overrides where id = ov)
+    and (r->>'overrides_revoked')::int = 1);
+  perform pg_temp.chk('X4 revogação do fee_rate entra no log da equipe', (select count(*) from public.staff_actions where action = 'price_override_revoke' and target_id = ov::text) = 1);
+  perform pg_temp.chk('X5 bo_customer_plan não mostra override depois da troca', public.bo_customer_plan('partners', fa)->'override' = 'null'::jsonb);
+  -- fee_rate preso a fundo de tabela (inserido direto): não conta como vigente
+  insert into public.price_overrides (product, subject_kind, subject_id, kind, value, reason) values ('partners', 'funder', fb, 'fee_rate', 0.0005, 'resíduo de teste');
+  cp := public.bo_customer_plan('partners', fb);
+  perform pg_temp.chk('X6 fee_rate em fundo na tabela: override nulo e marcado como inaplicável', cp->'override' = 'null'::jsonb and cp->'override_inapplicable'->>'kind' = 'fee_rate');
+  perform pg_temp.chk('X7 lista: active_now falso para fee_rate inaplicável', not (public.bo_price_override_list('partners', fb)->0->>'active_now')::boolean);
+  update public.price_overrides set revoked_at = now() where subject_id = fb and revoked_at is null;
+  -- M2: contrato já existente: atualiza taxa e mínimo; mesmo valor é unchanged
+  n0 := (select count(*) from public.staff_actions where action = 'set_plan');
+  r := public.bo_set_plan(jsonb_build_object('product', 'partners', 'subject', fa, 'plan', 'contract', 'rate_aa', 0.001, 'min_monthly', 100));
+  perform pg_temp.chk('X8 vira contrato', not (r->>'unchanged')::boolean and (select origin from public.funder_billing where funder_id = fa) = 'invite');
+  r := public.bo_set_plan(jsonb_build_object('product', 'partners', 'subject', fa, 'plan', 'contract', 'rate_aa', 0.001, 'min_monthly', 100));
+  perform pg_temp.chk('X9 mesmo contrato e mesmos valores: unchanged, sem log novo', (r->>'unchanged')::boolean and (select count(*) from public.staff_actions where action = 'set_plan') = n0 + 1);
+  r := public.bo_set_plan(jsonb_build_object('product', 'partners', 'subject', fa, 'plan', 'contract', 'rate_aa', 0.0012, 'min_monthly', 150));
+  perform pg_temp.chk('X10 contrato existente atualiza taxa e mínimo', not (r->>'unchanged')::boolean and (select rate_aa from public.platform_fee_plans where funder_id = fa) = 0.0012
+    and (select min_monthly from public.platform_fee_plans where funder_id = fa) = 150 and (select count(*) from public.staff_actions where action = 'set_plan') = n0 + 2);
+  -- M4: troca de plano do Sign limpa o pedido pendente
+  perform pg_temp.chk('X11 pré-condição: conta com pedido pendente', true);
+  update public.sign_accounts set plan_requested = 'empresa', requested_at = now() where id = s2;
+  perform public.bo_set_plan(jsonb_build_object('product', 'sign', 'subject', s2, 'plan', 'empresa'));
+  perform pg_temp.chk('X12 plano novo = pedido: plan_requested e requested_at limpos', (select plan_requested is null and requested_at is null from public.sign_accounts where id = s2));
+  update public.sign_accounts set plan_requested = 'essencial', requested_at = now() where id = s2;
+  perform public.bo_set_plan(jsonb_build_object('product', 'sign', 'subject', s2, 'plan', 'profissional'));
+  perform pg_temp.chk('X13 troca para outro plano também limpa o pedido', (select plan_requested is null and requested_at is null from public.sign_accounts where id = s2));
+  -- B6: due_day limitado a 1..28 no catálogo e no cliente
+  update public.billing_settings set due_day = 40 where id = 1;
+  perform pg_temp.chk('X14 catálogo e cliente: due_day 40 -> 28', (public.bo_plan_catalog()->'partners'->>'due_day')::int = 28 and (public.bo_customer_plan('sign', s2)->>'due_day')::int = 28);
+  update public.billing_settings set due_day = 0 where id = 1;
+  perform pg_temp.chk('X15 due_day 0 -> 1', (public.bo_plan_catalog()->'partners'->>'due_day')::int = 1);
+  update public.billing_settings set due_day = 10 where id = 1;
+  -- B2: sem próxima cobrança quando preço efetivo <= 0 ou isento
+  perform pg_temp.chk('X16 next_billing nulo: Sign isento, Sign grátis sem override, Partners isento',
+    public.bo_customer_plan('sign', s4)->'next_billing' = 'null'::jsonb and public.bo_customer_plan('partners', fx)->'next_billing' = 'null'::jsonb
+    and (select (public.bo_customer_plan('sign', s3)->'next_billing') = 'null'::jsonb or (public.bo_customer_plan('sign', s3)->>'effective_price')::numeric > 0));
+  perform pg_temp.chk('X17 next_billing preenchido quando há preço > 0', public.bo_customer_plan('sign', s2)->'next_billing'->>'ref_month' is not null);
+  -- B3: data de Brasília, mesmo com o fuso da sessão adiantado ou atrasado (em pelo menos um deles current_date difere de _today_br)
+  foreach z in array array['Pacific/Kiritimati', 'Pacific/Pago_Pago'] loop
+    perform set_config('TimeZone', z, false);
+    perform public.bo_price_override_set(jsonb_build_object('product', 'wealth', 'subject', w2, 'kind', 'fixed', 'value', 190, 'valid_until', public._today_br()::text, 'reason', 'teste fuso ' || z));
+    perform pg_temp.chk('X18 ' || z || ': valid_from padrão = hoje em Brasília e validade de hoje aceita', (select valid_from = public._today_br() and valid_until = public._today_br() from public.price_overrides where subject_id = w2 and revoked_at is null));
+    perform pg_temp.chk('X19 ' || z || ': next_billing usa o mês de Brasília', (public.bo_customer_plan('wealth', w2)->'next_billing'->>'ref_month')::date = date_trunc('month', public._today_br())::date);
+    delete from public.bill_invoices;
+    insert into public.bill_invoices (number, customer_kind, customer_name, amount, due_date, status, source) values
+      ('F-Z-1', 'sign', 'Ontem', 10, public._today_br() - 1, 'open', 'manual'), ('F-Z-2', 'sign', 'Hoje', 10, public._today_br(), 'open', 'manual');
+    ol := public.bo_overdue_list();
+    perform pg_temp.chk('X20 ' || z || ': atraso conta pela data de Brasília', (ol->>'total')::int = 1 and (ol->'items'->0->>'days_overdue')::int = 1);
+  end loop;
+  perform set_config('TimeZone', 'UTC', false);
+  -- B5: total e valor sobre todas as faturas; lista limitada a 200
+  delete from public.bill_invoices;
+  insert into public.bill_invoices (number, customer_kind, customer_name, amount, due_date, status, source)
+    select 'F-B5-' || i, 'sign', 'Cliente ' || i, 2, public._today_br() - 1 - (i % 30), 'open', 'manual' from generate_series(1, 205) i;
+  ol := public.bo_overdue_list();
+  perform pg_temp.chk('X21 total 205 e valor 410 sobre todas; itens limitados a 200', (ol->>'total')::int = 205 and (ol->>'total_amount')::numeric = 410 and jsonb_array_length(ol->'items') = 200);
+  delete from public.bill_invoices;
 end $$;
 
 -- ---- proteção e grants ----

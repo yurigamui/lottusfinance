@@ -88,7 +88,7 @@ create table if not exists public.price_overrides (
   subject_id uuid not null,
   kind text not null check (kind in ('fixed', 'discount_pct', 'fee_rate')),
   value numeric(14, 6) not null check (value >= 0),
-  valid_from date not null default current_date,
+  valid_from date not null default public._today_br(),
   valid_until date,
   reason text not null check (char_length(trim(reason)) >= 5),
   created_by uuid,
@@ -106,6 +106,7 @@ create unique index if not exists price_overrides_one_active on public.price_ove
 create index if not exists price_overrides_subject_idx on public.price_overrides (product, subject_id, created_at desc);
 create index if not exists price_overrides_validity_idx on public.price_overrides (valid_until) where revoked_at is null;
 
+alter table public.price_overrides alter column valid_from set default public._today_br();   -- data de Brasília (B3)
 alter table public.price_overrides enable row level security;   -- sem política: authenticated e anon não leem nem gravam; só as RPCs
 revoke all on table public.price_overrides from public, anon, authenticated;
 drop trigger if exists price_overrides_guard_delete on public.price_overrides;
@@ -115,7 +116,7 @@ create trigger price_overrides_guard_truncate before truncate on public.price_ov
 
 -- ============ 2. Internas de cálculo ============
 -- override vigente na data p_on (não revogado, dentro da validade)
-create or replace function public._effective_price(p_product text, p_subject uuid, p_list_price numeric, p_on date default current_date)
+create or replace function public._effective_price(p_product text, p_subject uuid, p_list_price numeric, p_on date default public._today_br())
 returns numeric language plpgsql stable security definer set search_path = '' as $$
 declare o public.price_overrides;
 begin
@@ -130,7 +131,7 @@ begin
     else p_list_price end;
 end $$;
 
-create or replace function public._override_fee_rate(p_funder uuid, p_on date default current_date)
+create or replace function public._override_fee_rate(p_funder uuid, p_on date default public._today_br())
 returns numeric language sql stable security definer set search_path = '' as $$
   select o.value from public.price_overrides o
    where o.product = 'partners' and o.subject_id = p_funder and o.kind = 'fee_rate' and o.revoked_at is null
@@ -139,7 +140,7 @@ $$;
 
 -- Condições e valor mensal do fundo na data p_on, espelhando o corpo real de _platform_fee_run (usado só para exibição e validação nas RPCs;
 -- o teste confere que dá o mesmo valor que a rotina). rate_aa é fração ao ano.
-create or replace function public._partners_fee_calc(p_funder uuid, p_on date default current_date)
+create or replace function public._partners_fee_calc(p_funder uuid, p_on date default public._today_br())
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare v_origin text; v_pl numeric; v_rate numeric := 0; v_min numeric := 0; v_applied numeric; v_list numeric; v_amt numeric;
 begin
@@ -161,7 +162,7 @@ end $$;
 -- preço de tabela do Wealth para um usuário, com override (gratis = 0). Sem override devolve exatamente _w_price(plano).
 create or replace function public._w_price_for(p_user uuid, p_plan text)
 returns numeric language sql stable security definer set search_path = '' as $$
-  select public._effective_price('wealth', p_user, public._w_price(p_plan), current_date);
+  select public._effective_price('wealth', p_user, public._w_price(p_plan), public._today_br());
 $$;
 
 -- dados do sujeito para as RPCs: existe?, plano, preço de tabela e taxa de tabela
@@ -182,7 +183,7 @@ begin
   elsif p_product = 'partners' then
     select * into f from public.funders where id = p_subject;
     if not found then return null; end if;
-    c := public._partners_fee_calc(p_subject, current_date);
+    c := public._partners_fee_calc(p_subject, public._today_br());
     return jsonb_build_object('plan', case when c->>'origin' = 'self' then 'tier' else 'contract' end, 'plan_name', c->>'origin',
                               'list_price', (c->>'list_amount')::numeric, 'list_rate', (c->>'rate_aa')::numeric,
                               'exempt', coalesce((select exempt from public.funder_billing where funder_id = p_subject), false),
@@ -269,7 +270,7 @@ begin
   return jsonb_build_object(
     'sign', coalesce((select jsonb_agg(jsonb_build_object('code', code, 'name', name, 'price_month', price_month, 'docs_included', docs_included,
                       'extra_doc_price', extra_doc_price) order by sort, code) from public.sign_plans where active), '[]'::jsonb),
-    'partners', jsonb_build_object('free_pl_limit', b.free_pl_limit, 'tiers', b.tiers, 'grace_days', b.grace_days, 'due_day', b.due_day),
+    'partners', jsonb_build_object('free_pl_limit', b.free_pl_limit, 'tiers', b.tiers, 'grace_days', b.grace_days, 'due_day', least(greatest(coalesce(b.due_day, 10), 1), 28)),
     'wealth', jsonb_build_array(jsonb_build_object('code', 'gratis', 'price_month', public._w_price('gratis')),
                                 jsonb_build_object('code', 'pro', 'price_month', public._w_price('pro')),
                                 jsonb_build_object('code', 'fund', 'price_month', public._w_price('fund'))));
@@ -277,27 +278,34 @@ end $$;
 
 create or replace function public.bo_customer_plan(p_product text, p_subject uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare s public.staff_users := public._staff('analyst'); sub jsonb; o public.price_overrides; v_list numeric; v_eff numeric; v_dd int; v_ref date; c jsonb;
+declare s public.staff_users := public._staff('analyst'); sub jsonb; o public.price_overrides; v_list numeric; v_eff numeric; v_dd int; v_ref date; c jsonb; v_shown numeric; v_inapp boolean := false;
 begin
   if p_product is null or p_product not in ('partners', 'sign', 'wealth') then raise exception 'invalid_product'; end if;
   sub := public._price_subject(p_product, p_subject);
   if sub is null then raise exception 'subject_not_found'; end if;
   v_list := (sub->>'list_price')::numeric;
   select * into o from public.price_overrides where product = p_product and subject_id = p_subject and revoked_at is null
-     and valid_from <= current_date and (valid_until is null or valid_until >= current_date);
-  if p_product = 'partners' then v_eff := (public._partners_fee_calc(p_subject, current_date)->>'amount')::numeric;
-  elsif p_product = 'sign' then v_eff := public._effective_price('sign', p_subject, coalesce((sub->>'custom_price')::numeric, v_list), current_date);
-  else v_eff := public._effective_price('wealth', p_subject, v_list, current_date);
+     and valid_from <= public._today_br() and (valid_until is null or valid_until >= public._today_br());
+  if p_product = 'partners' then v_eff := (public._partners_fee_calc(p_subject, public._today_br())->>'amount')::numeric;
+  elsif p_product = 'sign' then v_eff := public._effective_price('sign', p_subject, coalesce((sub->>'custom_price')::numeric, v_list), public._today_br());
+  else v_eff := public._effective_price('wealth', p_subject, v_list, public._today_br());
   end if;
+  -- fee_rate de fundo na tabela por faixa não se aplica (M3): não aparece como vigente
+  if o.id is not null and o.kind = 'fee_rate' and p_product = 'partners' and sub->>'origin' = 'self' then v_inapp := true; end if;
+  v_shown := case when (sub->>'exempt')::boolean then 0 else v_eff end;
   select least(greatest(coalesce(due_day, 10), 1), 28) into v_dd from public.billing_settings where id = 1;
-  v_ref := date_trunc('month', current_date)::date;   -- competência em andamento: pós-paga, fatura gerada no dia 2 do mês seguinte
+  v_dd := coalesce(v_dd, 10);
+  v_ref := date_trunc('month', public._today_br())::date;   -- competência em andamento: pós-paga, fatura gerada no dia 2 do mês seguinte
   return jsonb_build_object('product', p_product, 'subject', p_subject, 'name', sub->>'name', 'plan', sub->>'plan', 'plan_name', sub->>'plan_name',
     'exempt', (sub->>'exempt')::boolean, 'list_price', v_list, 'custom_price', sub->'custom_price',
-    'override', case when o.id is null then null else jsonb_build_object('id', o.id, 'kind', o.kind, 'value', o.value, 'valid_from', o.valid_from,
+    'due_day', v_dd,
+    'override_inapplicable', case when v_inapp then jsonb_build_object('id', o.id, 'kind', o.kind, 'value', o.value, 'reason', o.reason) else null end,
+    'override', case when o.id is null or v_inapp then null else jsonb_build_object('id', o.id, 'kind', o.kind, 'value', o.value, 'valid_from', o.valid_from,
         'valid_until', o.valid_until, 'reason', o.reason, 'created_by_name', o.created_by_name, 'created_at', o.created_at) end,
-    'effective_price', case when (sub->>'exempt')::boolean then 0 else v_eff end,
-    'next_billing', jsonb_build_object('ref_month', v_ref, 'invoice_on', (v_ref + interval '1 month')::date + 1,
-                                       'due_date', (v_ref + interval '1 month')::date + (v_dd - 1)));
+    'effective_price', v_shown,
+    'next_billing', case when coalesce(v_shown, 0) <= 0 then null   -- a geração automática não fatura preço <= 0 nem isento (B2)
+      else jsonb_build_object('ref_month', v_ref, 'invoice_on', (v_ref + interval '1 month')::date + 1,
+                              'due_date', (v_ref + interval '1 month')::date + (v_dd - 1)) end);
 end $$;
 
 create or replace function public.bo_price_override_list(p_product text, p_subject uuid)
@@ -307,7 +315,8 @@ begin
   if p_product is null or p_product not in ('partners', 'sign', 'wealth') then raise exception 'invalid_product'; end if;
   return coalesce((select jsonb_agg(to_jsonb(x) order by x.created_at desc) from (
     select id, product, kind, value, valid_from, valid_until, reason, created_by_name, created_at, revoked_at, revoke_reason,
-           (revoked_at is null and valid_from <= current_date and (valid_until is null or valid_until >= current_date)) as active_now
+           (revoked_at is null and valid_from <= public._today_br() and (valid_until is null or valid_until >= public._today_br())
+            and not (kind = 'fee_rate' and exists (select 1 from public.funder_billing fb where fb.funder_id = p_subject and fb.origin = 'self'))) as active_now
       from public.price_overrides where product = p_product and subject_id = p_subject order by created_at desc limit 50) x), '[]'::jsonb);
 end $$;
 
@@ -321,11 +330,11 @@ begin
   if v_kind is null or v_kind not in ('fixed', 'discount_pct', 'fee_rate') or (v_kind = 'fee_rate' and v_product <> 'partners') then raise exception 'invalid_kind'; end if;
   begin
     v_subject := (p->>'subject')::uuid; v_value := (p->>'value')::numeric;
-    v_from := coalesce(nullif(p->>'valid_from', '')::date, current_date); v_until := nullif(p->>'valid_until', '')::date;
+    v_from := coalesce(nullif(p->>'valid_from', '')::date, public._today_br()); v_until := nullif(p->>'valid_until', '')::date;
   exception when others then raise exception 'invalid_value'; end;
   if v_subject is null or v_value is null or v_value < 0 or v_value >= 100000000 or (v_kind = 'discount_pct' and v_value > 100) then raise exception 'invalid_value'; end if;
   if char_length(v_reason) < 5 then raise exception 'reason_required'; end if;
-  if v_until is not null and (v_until < v_from or v_until < current_date) then raise exception 'invalid_period'; end if;
+  if v_until is not null and (v_until < v_from or v_until < public._today_br()) then raise exception 'invalid_period'; end if;
   sub := public._price_subject(v_product, v_subject);
   if sub is null then raise exception 'subject_not_found'; end if;
   if v_kind = 'fee_rate' and sub->>'origin' is distinct from 'invite' then raise exception 'fee_rate_needs_contract'; end if;
@@ -384,6 +393,7 @@ returns jsonb language plpgsql security definer set search_path = '' as $$
 declare s public.staff_users := public._staff('admin');
   v_product text := p->>'product'; v_subject uuid; v_plan text := p->>'plan'; v_ok boolean; v_rate numeric; v_min numeric;
   a public.sign_accounts; w public.w_profiles; n_price numeric; o_price numeric; v_event text; v_old text;
+  v_cur_origin text; pp public.platform_fee_plans; v_rev record; v_revoked int := 0;
 begin
   if v_product is null or v_product not in ('partners', 'sign', 'wealth') then raise exception 'invalid_product'; end if;
   begin v_subject := (p->>'subject')::uuid; exception when others then raise exception 'subject_not_found'; end;
@@ -396,7 +406,8 @@ begin
     if a.plan = v_plan then return jsonb_build_object('product', v_product, 'subject', v_subject, 'plan', v_plan, 'unchanged', true); end if;
     o_price := case when a.exempt then 0 else public._effective_price('sign', v_subject, (select price_month from public.sign_plans where code = a.plan)) end;
     n_price := case when a.exempt then 0 else public._effective_price('sign', v_subject, (select price_month from public.sign_plans where code = v_plan)) end;
-    update public.sign_accounts set plan = v_plan, plan_since = current_date, updated_at = now() where id = v_subject;
+    update public.sign_accounts set plan = v_plan, plan_since = public._today_br(), updated_at = now(),
+      plan_requested = null, requested_at = null where id = v_subject;   -- M4: o pedido pendente deixa de valer ao trocar o plano
     v_event := case when n_price > o_price then 'upgrade' when n_price < o_price then 'downgrade' else 'note' end;
     insert into public.customer_events (kind, ref_id, event, mrr_before, mrr_after, text)
     values ('sign', v_subject, v_event, o_price, n_price, 'Plano alterado de ' || a.plan || ' para ' || v_plan || ' por ' || coalesce(nullif(trim(s.name), ''), 'equipe Lottus'));
@@ -412,39 +423,56 @@ begin
   else
     if not exists (select 1 from public.funders where id = v_subject) then raise exception 'subject_not_found'; end if;
     if v_plan is null or v_plan not in ('tier', 'contract') then raise exception 'invalid_plan'; end if;
+    select coalesce(b.origin, 'invite') into v_cur_origin from (select 1) d left join public.funder_billing b on b.funder_id = v_subject;
+    select * into pp from public.platform_fee_plans where funder_id = v_subject;
+    v_old := case when v_cur_origin = 'self' then 'tier' else 'contract' end;
     if v_plan = 'contract' then
       begin v_rate := (p->>'rate_aa')::numeric; v_min := (p->>'min_monthly')::numeric; exception when others then raise exception 'invalid_value'; end;
       if v_rate is null or v_min is null or v_rate < 0 or v_rate > 1 or v_min < 0 then raise exception 'invalid_value'; end if;   -- rate_aa é fração ao ano (0,001 = 0,1%)
+      -- M2: já é contrato com os mesmos valores -> nada a fazer; com valores novos, atualiza taxa e mínimo
+      if v_cur_origin = 'invite' and pp.funder_id is not null and pp.active and pp.rate_aa = v_rate and pp.min_monthly = v_min then
+        return jsonb_build_object('product', v_product, 'subject', v_subject, 'plan', v_plan, 'unchanged', true);
+      end if;
       update public.platform_fee_plans set rate_aa = v_rate, min_monthly = v_min, active = true where funder_id = v_subject;
       if not exists (select 1 from public.platform_fee_plans where funder_id = v_subject) then
         insert into public.platform_fee_plans (funder_id, rate_aa, min_monthly, active) values (v_subject, v_rate, v_min, true);
       end if;
     else
       update public.platform_fee_plans set active = false where funder_id = v_subject;
+      -- M3: fee_rate só vale em contrato; ao ir para a tabela por faixa, o override de taxa ativo é revogado
+      for v_rev in update public.price_overrides set revoked_at = now(), revoked_by = s.user_id, revoke_reason = 'plano trocado para tabela por faixa'
+                    where product = 'partners' and subject_id = v_subject and kind = 'fee_rate' and revoked_at is null returning id loop
+        perform public._staff_log(s, 'price_override_revoke', 'price_override', v_rev.id::text, null,
+          jsonb_build_object('product', 'partners', 'subject', v_subject, 'reason', 'plano trocado para tabela por faixa'));
+        v_revoked := v_revoked + 1;
+      end loop;
     end if;
     update public.funder_billing set origin = case v_plan when 'contract' then 'invite' else 'self' end where funder_id = v_subject;
     if not exists (select 1 from public.funder_billing where funder_id = v_subject) then
       insert into public.funder_billing (funder_id, origin) values (v_subject, case v_plan when 'contract' then 'invite' else 'self' end);
     end if;
-    v_old := null;
   end if;
   perform public._staff_log(s, 'set_plan', v_product, v_subject::text, null,
-    jsonb_build_object('plan', v_plan, 'previous_plan', v_old, 'payment_ok', p->'payment_ok', 'rate_aa', p->'rate_aa', 'min_monthly', p->'min_monthly'));
-  return jsonb_build_object('product', v_product, 'subject', v_subject, 'plan', v_plan, 'unchanged', false);
+    jsonb_build_object('plan', v_plan, 'previous_plan', v_old, 'payment_ok', p->'payment_ok', 'rate_aa', p->'rate_aa', 'min_monthly', p->'min_monthly',
+                       'overrides_revoked', v_revoked));
+  return jsonb_build_object('product', v_product, 'subject', v_subject, 'plan', v_plan, 'unchanged', false, 'overrides_revoked', v_revoked);
 end $$;
 
 -- D3: faturas abertas vencidas; dentro da carência (grace_days) x além dela. Sem bloqueio nem rebaixa automáticos.
 create or replace function public.bo_overdue_list()
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare s public.staff_users := public._staff('analyst'); g int; v_today date := current_date;
+declare s public.staff_users := public._staff('analyst'); g int; v_today date := public._today_br(); v_total int; v_sum numeric; v_items jsonb;
 begin
   select coalesce(grace_days, 15) into g from public.billing_settings where id = 1;
-  return (select jsonb_build_object('grace_days', g, 'total', count(*), 'total_amount', coalesce(sum(x.amount), 0),
-            'items', coalesce(jsonb_agg(jsonb_build_object('id', x.id, 'number', x.number, 'customer_kind', x.customer_kind, 'customer_name', x.customer_name,
+  g := coalesce(g, 15);
+  -- B5: total e valor somam TODAS as faturas em atraso; a lista traz as 200 mais antigas
+  select count(*), coalesce(sum(amount), 0) into v_total, v_sum from public.bill_invoices where status = 'open' and due_date < v_today;
+  select coalesce(jsonb_agg(jsonb_build_object('id', x.id, 'number', x.number, 'customer_kind', x.customer_kind, 'customer_name', x.customer_name,
               'funder_id', x.funder_id, 'sign_account_id', x.sign_account_id, 'ref_month', x.ref_month, 'amount', x.amount, 'due_date', x.due_date,
               'days_overdue', v_today - x.due_date, 'stage', case when v_today - x.due_date <= g then 'grace' else 'beyond_grace' end,
-              'reminders_paused', x.reminders_paused) order by x.due_date, x.id), '[]'::jsonb))
-          from (select * from public.bill_invoices where status = 'open' and due_date < v_today order by due_date, id limit 200) x);
+              'reminders_paused', x.reminders_paused) order by x.due_date, x.id), '[]'::jsonb) into v_items
+    from (select * from public.bill_invoices where status = 'open' and due_date < v_today order by due_date, id limit 200) x;
+  return jsonb_build_object('grace_days', g, 'total', v_total, 'total_amount', v_sum, 'shown', least(v_total, 200), 'items', v_items);
 end $$;
 
 -- ============ 6. Grants ============

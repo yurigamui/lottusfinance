@@ -57,10 +57,16 @@
     const refresh = () => { if (o.onInput && step === 1) { const r = o.onInput(el) || {}; next.disabled = !!r.block; } };
     el.addEventListener('input', () => { showErr(''); refresh(); });
     el.addEventListener('change', () => { showErr(''); refresh(); });
+    // Enter num campo de uma linha, no passo 1, equivale a Continuar
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && step === 1 && !busy && e.target && e.target.tagName === 'INPUT' && !next.disabled) { e.preventDefault(); next.click(); }
+    });
+    s2.setAttribute('aria-live', 'polite');
     refresh();
     back.onclick = () => {
       if (busy) return;
-      if (step === 2) { step = 1; s2.hidden = true; s1.hidden = false; back.textContent = 'Cancelar'; next.textContent = o.nextLabel; next.classList.toggle('danger', !!o.danger && !!o.single); showErr(''); refresh(); return; }
+      if (step === 2) { step = 1; s2.hidden = true; s1.hidden = false; back.textContent = 'Cancelar'; next.textContent = o.nextLabel; next.classList.toggle('danger', !!o.danger && !!o.single); showErr(''); refresh();
+        const f1 = s1.querySelector('input, select, textarea'); if (f1) f1.focus({ preventScroll: true }); return; }
       closeModal();
     };
     next.onclick = async () => {
@@ -71,8 +77,9 @@
         if (!v) { const bad = el.querySelector('[aria-invalid=true]'); if (bad) bad.focus(); return; }
         values = v;
         if (!o.single) {
-          step = 2; s1.hidden = true; s2.hidden = false; s2.innerHTML = o.review(v);
+          step = 2; s1.hidden = true; s2.hidden = false; s2.innerHTML = `<h3 class="pf-rev-title" tabindex="-1">Revise antes de confirmar</h3>${o.review(v)}`;
           back.textContent = 'Voltar'; next.textContent = o.confirmLabel; next.disabled = false;
+          s2.querySelector('.pf-rev-title').focus({ preventScroll: true });
           return;
         }
       }
@@ -115,14 +122,19 @@
       else if (product === 'wealth') opts = (cat.wealth || []).map((p) => ({ code: p.code, label: `${WEALTH_NAMES[p.code] || p.code} · ${brl(p.price_month)}/mês`, price: num(p.price_month), name: WEALTH_NAMES[p.code] || p.code }));
       else opts = [{ code: 'tier', label: 'Tabela por faixa de patrimônio', name: 'Tabela por faixa de patrimônio' }, { code: 'contract', label: 'Contrato (taxa e mínimo combinados)', name: 'Contrato (condições combinadas)' }];
       const cur = cp.plan;
+      const curContract = product === 'partners' && cur === 'contract'; // fundo em contrato pode ajustar taxa e mínimo
       const S = cat.partners;
+      const rate0 = curContract && cp.list_rate != null && Number.isFinite(num(cp.list_rate)) ? Math.round(num(cp.list_rate) * 1e6) / 1e4 : null; // fração/ano -> % a.a.
+      const minRaw = cp.min_monthly != null ? cp.min_monthly : cp.list_min;
+      const min0 = curContract && minRaw != null && Number.isFinite(num(minRaw)) ? num(minRaw) : null;
+      const fmtIn = (n) => (n == null ? '' : String(n).replace('.', ','));
       const pl = product === 'partners' && c && c.usage != null ? num(c.usage) : null;
       const contractFields = product === 'partners' ? `<div data-contract hidden class="stack">
-        ${field('pf-rate', 'Taxa (% ao ano sobre o patrimônio)', '<input class="input" id="pf-rate" inputmode="decimal" autocomplete="off" placeholder="Ex.: 0,10">')}
-        ${field('pf-min', 'Mensalidade mínima (R$)', '<input class="input" id="pf-min" inputmode="decimal" autocomplete="off" placeholder="Ex.: 500,00">')}</div>` : '';
+        ${field('pf-rate', 'Taxa (% ao ano sobre o patrimônio)', '<input class="input" id="pf-rate" inputmode="decimal" autocomplete="off" placeholder="Ex.: 0,10" value="${fmtIn(rate0)}">')}
+        ${field('pf-min', 'Mensalidade mínima (R$)', '<input class="input" id="pf-min" inputmode="decimal" autocomplete="off" placeholder="Ex.: 500,00" value="${fmtIn(min0)}">')}</div>` : '';
       const el = wizard({
         title: 'Trocar plano', subtitle: esc(c ? c.name : ''),
-        form: `${field('pf-plan', 'Novo plano', `<select class="input" id="pf-plan"><option value="">Escolha um plano…</option>${opts.map((p) => `<option value="${esc(p.code)}"${p.code === cur ? ' disabled' : ''}>${esc(p.label)}${p.code === cur ? ' (atual)' : ''}</option>`).join('')}</select>`)}
+        form: `${field('pf-plan', 'Novo plano', `<select class="input" id="pf-plan"><option value="">Escolha um plano…</option>${opts.map((p) => `<option value="${esc(p.code)}"${p.code === cur && !(curContract && p.code === 'contract') ? ' disabled' : ''}>${esc(p.label)}${p.code === cur ? ' (atual)' : ''}</option>`).join('')}</select>`)}
           ${contractFields}<div class="pf-preview" data-preview role="status"></div>`,
         nextLabel: 'Continuar', confirmLabel: 'Confirmar troca', okText: 'Plano alterado',
         onInput(m) {
@@ -135,6 +147,11 @@
             if (sel === 'tier') { est = tierEstimate(S, pl); line = est == null ? 'O valor passa a seguir a tabela por faixa e é calculado no fechamento do mês.' : `Estimativa pela tabela com o patrimônio de hoje: <b>${brl(est)}</b> por mês.`; }
             else {
               const r = B.parseMoney(m.querySelector('#pf-rate').value), mn = B.parseMoney(m.querySelector('#pf-min').value);
+              if (curContract && sel === 'contract' && r != null && mn != null && Number.isFinite(r) && Number.isFinite(mn)
+                && (rate0 == null || Math.round(r * 1e4) === Math.round(rate0 * 1e4)) && (min0 == null || Math.round(mn * 100) === Math.round(min0 * 100)) && (rate0 != null || min0 != null)) {
+                box.innerHTML = `Preço de tabela hoje: <b>${brl(cp.list_price)}</b> por mês. <span class="muted">Altere a taxa ou o mínimo para continuar.</span>`;
+                return { block: true };
+              }
               if (pl != null && Number.isFinite(r) && r != null && Number.isFinite(mn) && mn != null && r >= 0 && mn >= 0) { est = Math.max(round2((pl * (r / 100)) / 12), mn); line = `Estimativa com o patrimônio de hoje: <b>${brl(est)}</b> por mês.`; }
               else line = 'Informe a taxa e a mensalidade mínima para ver a estimativa.';
             }
@@ -148,7 +165,7 @@
           const sel = m.querySelector('#pf-plan'); fieldError(sel, '');
           const o = opts.find((x) => x.code === sel.value);
           if (!o) { fieldError(sel, 'Escolha o novo plano.'); return null; }
-          if (o.code === cur) { fieldError(sel, 'Escolha um plano diferente do atual.'); return null; }
+          if (o.code === cur && !curContract) { fieldError(sel, 'Escolha um plano diferente do atual.'); return null; }
           const v = { plan: o.code, name: o.name };
           if (product === 'partners' && o.code === 'contract') {
             const r = readNumber(m.querySelector('#pf-rate'), { what: 'a taxa', max: 100, maxMsg: 'A taxa máxima é 100% ao ano.', decimals: 4 });
@@ -185,6 +202,13 @@
     const pl = product === 'partners' && c && c.usage != null ? num(c.usage) : null;
     const today = B.today();
     /** Preço efetivo e redução contra a tabela, na mesma regra do servidor. */
+    /** Redução acima de 20% da tabela, em centavos inteiros (limite exato passa; sem erro de ponto flutuante). */
+    const over20 = (kind, v) => {
+      const listC = Math.round(list * 100);
+      if (!(listC > 0) || (kind !== 'fixed' && kind !== 'discount_pct')) return false;
+      const effC = kind === 'fixed' ? Math.round(v * 100) : Math.round(round2(base * (1 - v / 100)) * 100);
+      return (listC - effC) * 100 > 20 * listC;
+    };
     const calc = (kind, v) => {
       if (kind === 'fixed') return { eff: v, red: list > 0 ? ((list - v) / list) * 100 : 0 };
       if (kind === 'discount_pct') return { eff: round2(base * (1 - v / 100)), red: list > 0 ? ((list - base * (1 - v / 100)) / list) * 100 : 0 };
@@ -218,7 +242,7 @@
         const red = r.red;
         const txt = red > 0 ? `desconto de <b>${esc(pctTxt(Math.round(red * 100) / 100, 2))}</b> sobre a tabela` : red < 0 ? `acréscimo de <b>${esc(pctTxt(Math.round(-red * 100) / 100, 2))}</b> sobre a tabela` : 'igual à tabela';
         box.innerHTML = `Preço efetivo: <b>${brl(r.eff)}</b> por mês · ${txt} (${brl(list)}).`;
-        if (red > 20) {
+        if (over20(kind, v)) {
           warn.hidden = false;
           if (!admin) { warn.textContent = 'Acima de 20% exige administrador. Peça a um administrador para definir este preço.'; return { block: true }; }
           warn.textContent = 'Desconto acima de 20%: só administradores podem definir. Fica registrado na auditoria.';
@@ -241,7 +265,9 @@
         fieldError(reason, '');
         const rs = reason.value.trim();
         if (rs.length < 5) { fieldError(reason, 'Explique o motivo (pelo menos 5 caracteres).'); ok = false; }
-        if (ok && (kind === 'fixed' || kind === 'discount_pct') && !admin && calc(kind, v).red > 20) { fieldError(inp, 'Acima de 20% exige administrador.'); ok = false; }
+        if (ok && kind === 'discount_pct' && v === 0) { fieldError(inp, 'Nada a alterar: desconto de 0% não muda a tabela.'); ok = false; }
+        if (ok && kind === 'fixed' && Math.round(v * 100) === Math.round(list * 100)) { fieldError(inp, 'Nada a alterar: o valor é igual ao preço de tabela.'); ok = false; }
+        if (ok && (kind === 'fixed' || kind === 'discount_pct') && !admin && over20(kind, v)) { fieldError(inp, 'Acima de 20% exige administrador.'); ok = false; }
         if (!ok) return null;
         return { kind, shown: v, value: kind === 'fee_rate' ? Math.round(v * 1e4) / 1e6 : v, valid_until: u || null, reason: rs };
       },
@@ -316,8 +342,14 @@
     }
     if (!live()) return;
     const mayOverride = can(me, 'approver'), mayPlan = can(me, 'admin');
-    const o = cp.override;
-    const nb = cp.next_billing || {};
+    const o = cp.override || cp.override_inapplicable || null;
+    const nb = cp.next_billing || null;
+    // taxa personalizada de fundo que voltou à tabela por faixa não tem efeito: não é "vigente"
+    const noEffect = !!o && (!cp.override || cp.applies === false || o.applies === false || (o.kind === 'fee_rate' && product === 'partners' && cp.plan === 'tier'));
+    const asked = c.plan_requested && c.plan_requested !== cp.plan && c.plan_requested !== c.plan ? c.plan_requested : null;
+    const zero = !!cp.exempt || !(num(cp.effective_price) > 0);
+    const nextRow = zero ? '<dt>Próxima cobrança</dt><dd>Sem cobrança prevista (plano grátis ou isento)</dd>'
+      : nb && nb.ref_month ? `<dt>Próxima cobrança</dt><dd>Competência ${esc(monthTxt(nb.ref_month))}<div class="small muted">Fatura gerada em ${esc(date(nb.invoice_on))} · vence em ${esc(date(nb.due_date))}</div></dd>` : '';
     const refresh = () => { B._fichaTab = 'plano'; B.reload(); };
     const histErr = hist && hist.__err;
     const rows = Array.isArray(hist) ? hist : [];
@@ -330,12 +362,12 @@
       <p class="small muted">Valores por mês, em reais. A fatura é gerada no começo do mês seguinte à competência.</p>
       <dl class="kv">
         <dt>Plano atual</dt><dd>${esc(planLabel(cp))}</dd>
-        ${c.plan_requested ? `<dt>Pediu troca para</dt><dd>${esc(c.plan_requested)}</dd>` : ''}
+        ${asked ? `<dt>Pediu troca para</dt><dd>${esc(asked)}</dd>` : ''}
         <dt>Preço de tabela</dt><dd>${brl(cp.list_price)}${product === 'partners' ? '<div class="small muted">Calculado com o patrimônio de hoje.</div>' : ''}</dd>
         ${cp.custom_price != null ? `<dt>Preço combinado na conta</dt><dd>${brl(cp.custom_price)}<div class="small muted">Campo antigo, editado em Preços e planos.</div></dd>` : ''}
-        <dt>Preço personalizado</dt><dd>${o ? `<b>${esc(overrideText(o))}</b><div class="small muted">${esc(validity(o))}</div><div>Motivo: ${esc(o.reason)}</div><div class="small muted">Definido por ${esc(o.created_by_name || 'equipe Lottus')} em ${esc(dateTime(o.created_at))}</div>` : '<span class="muted">Nenhum. Vale a tabela.</span>'}</dd>
+        <dt>Preço personalizado</dt><dd>${o ? `<b>${esc(overrideText(o))}</b>${noEffect ? '<div><span class="tag warning">Sem efeito no plano atual</span></div><div class="small muted">Este fundo segue a tabela por faixa; a taxa personalizada só vale em contrato.</div>' : ''}${o.valid_from ? `<div class="small muted">${esc(validity(o))}</div>` : ''}<div>Motivo: ${esc(o.reason)}</div>${o.created_at ? `<div class="small muted">Definido por ${esc(o.created_by_name || 'equipe Lottus')} em ${esc(dateTime(o.created_at))}</div>` : ''}` : '<span class="muted">Nenhum. Vale a tabela.</span>'}</dd>
         <dt>Preço efetivo</dt><dd><b>${brl(cp.effective_price)}</b>${cp.exempt ? '<div class="small muted">Conta isenta: não é cobrada.</div>' : ''}</dd>
-        <dt>Próxima cobrança</dt><dd>${nb.ref_month ? `Competência ${esc(monthTxt(nb.ref_month))}<div class="small muted">Fatura gerada em ${esc(date(nb.invoice_on))} · vence em ${esc(date(nb.due_date))}</div>` : '—'}</dd>
+        ${nextRow}
       </dl>
       ${acts.length ? `<div class="pf-actions u-m16t">${acts.join('')}</div>` : ''}
       ${permNote ? `<p class="small muted u-m16t">${esc(permNote)}</p>` : ''}</div>
@@ -345,7 +377,7 @@
     const on = (k, fn) => { const b = box.querySelector(`[data-pf=${k}]`); if (b) b.onclick = fn; };
     on('plan', () => planDialog(full, cp, refresh));
     on('ov', () => overrideDialog(full, cp, me, refresh));
-    on('rev', () => revokeDialog(full, cp, refresh));
+    on('rev', () => revokeDialog(full, Object.assign({}, cp, { override: o }), refresh));
   }
 
   B.planoFicha = { render, overrideText, planLabel, tierEstimate };

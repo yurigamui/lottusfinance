@@ -1196,6 +1196,8 @@ table.stack-m td.st-actions { text-align: right; }
 .pf-actions .btn, .pf-btn { white-space: normal; min-height: 44px; overflow-wrap: anywhere; }
 .pf-preview { padding: 10px 14px; border-radius: 12px; background: var(--field); overflow-wrap: anywhere; min-width: 0; }
 .pf-preview:empty { display: none; }
+.pf-rev-title { margin: 0 0 8px; font-size: 1rem; }
+.pf-rev-title:focus { outline: none; }
 .od-info p { margin: 0 0 4px; overflow-wrap: anywhere; }
 .od-info p:last-child { margin-bottom: 0; }
 .modal .field .help { overflow-wrap: anywhere; }
