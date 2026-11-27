@@ -1,9 +1,9 @@
 /* Seções 1.4 e 1.3: formulário de nome e CPF de Conta > Perfil (modo 'perfil') e do passo 1 do onboarding (modo 'onboarding').
    Um só lugar para campos, validação, mensagens, trava de CPF e sign_profile_save. Só DOM e textContent; rascunho só em memória. */
-import { h, icon, ICON, setKids, focusEl } from '../lib/ui.js?v=20261128a';
-import { normName, INVISIVEL, LIMITS, onlyDigits, cpfOk, fmtCpf, maskCpf, isEmail } from '../lib/fmt.js?v=20261128a';
-import { classify } from '../lib/api.js?v=20261128a';
-import { updateMe } from './shell.js?v=20261128a';
+import { h, icon, ICON, setKids, focusEl } from '../lib/ui.js?v=20261129a';
+import { normName, INVISIVEL, LIMITS, onlyDigits, cpfOk, fmtCpf, maskCpf, isEmail } from '../lib/fmt.js?v=20261129a';
+import { classify } from '../lib/api.js?v=20261129a';
+import { updateMe } from './shell.js?v=20261129a';
 
 export const T = {
   sub: 'Seus dados, verificação e segurança.',

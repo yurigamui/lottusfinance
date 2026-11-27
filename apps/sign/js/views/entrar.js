@@ -1,7 +1,7 @@
 /* Seção 1.1: Entrar e criar conta (e-mail e senha), confirmação de e-mail e reenvio. */
-import { h, mount, setKids, setTitle, focusEl, safeUrl, brandLogo, safeStore } from '../lib/ui.js?v=20261128a';
-import { normEmail, isEmail, normName, nameOk, passwordMissing, LIMITS } from '../lib/fmt.js?v=20261128a';
-import { classify } from '../lib/api.js?v=20261128a';
+import { h, mount, setKids, setTitle, focusEl, safeUrl, brandLogo, safeStore } from '../lib/ui.js?v=20261129a';
+import { normEmail, isEmail, normName, nameOk, passwordMissing, LIMITS } from '../lib/fmt.js?v=20261129a';
+import { classify } from '../lib/api.js?v=20261129a';
 
 const T = {
   login: 'E-mail ou senha incorretos.',
@@ -14,7 +14,6 @@ const T = {
   aceite: 'Aceite os Termos e a Política para criar a conta.',
   sessao: 'Sua sessão terminou. Entre de novo para continuar.',
   sessaoDados: 'Sua sessão terminou. Entre de novo; seus dados continuam aqui.',
-  vencido: 'Este link venceu ou já foi usado. Peça um novo.',
   invalido: 'Não foi possível usar este link. Entre com seu e-mail e senha ou, se o link venceu, peça um novo.',
   reenviado: 'Enviamos de novo. Verifique também a caixa de spam.',
   limiteReenvio: 'Você atingiu o limite de reenvios. Tente em 1 hora.',
@@ -22,7 +21,7 @@ const T = {
 const senhaCurta = (n) => `A senha precisa ter pelo menos ${LIMITS.passwordMin} caracteres. Faltam ${n}.`;
 
 const KEY_RESEND = 'lottus.sign.resend';
-const KEY_REC = 'lottus.sign.rec_email';
+export const KEY_REC = 'lottus.sign.rec_email';
 const local = safeStore('localStorage');
 const sess = safeStore('sessionStorage');
 
@@ -65,7 +64,7 @@ function field({ id, label, type, autocomplete, help, value, maxlength, extra })
 function fieldNode(f, inner) {
   return h('div', { class: 'field' }, h('label', { for: f.id }, f.label), inner || f.input, f.helpEl, f.err, f.extra);
 }
-function setErr(f, msg) {
+export function setErr(f, msg) {
   f.err.hidden = !msg;
   f.err.textContent = msg || '';
   if (msg) { f.input.setAttribute('aria-invalid', 'true'); f.input.setAttribute('aria-describedby', (f.base ? f.base + ' ' : '') + f.err.id); } else {
@@ -74,25 +73,27 @@ function setErr(f, msg) {
   }
   return !!msg;
 }
-function pwField(id, label, autocomplete, help, extra) {
+/* rot: [mostrar, ocultar] (padrão Mostrar/Ocultar; a 1.2 usa "Mostrar senha"/"Ocultar senha" e a classe .long da caixa) */
+export function pwField(id, label, autocomplete, help, extra, rot) {
   const f = field({ id, label, type: 'password', autocomplete, help, extra });
-  const btn = h('button', { class: 'sg-toggle', type: 'button', 'aria-controls': id, 'aria-pressed': 'false' }, 'Mostrar');
+  const [mostrar, ocultar] = rot || ['Mostrar', 'Ocultar'];
+  const btn = h('button', { class: 'sg-toggle', type: 'button', 'aria-controls': id, 'aria-pressed': 'false' }, mostrar);
   btn.addEventListener('click', () => {
     const show = f.input.type === 'password';
     f.input.type = show ? 'text' : 'password';
-    btn.textContent = show ? 'Ocultar' : 'Mostrar';
+    btn.textContent = show ? ocultar : mostrar;
     btn.setAttribute('aria-pressed', show ? 'true' : 'false');
   });
-  f.node = fieldNode(f, h('div', { class: 'sg-pw' }, f.input, btn));
+  f.node = fieldNode(f, h('div', { class: rot ? 'sg-pw long' : 'sg-pw' }, f.input, btn));
   return f;
 }
-function textField(o) { const f = field(o); f.node = fieldNode(f); return f; }
+export function textField(o) { const f = field(o); f.node = fieldNode(f); return f; }
 
 /* região de mensagens: a única com anúncio automático para o leitor de tela */
 function makeMsgs() {
   return { flash: h('div', { class: 'sg-msg', role: 'status' }), err: h('div', { class: 'sg-msg', role: 'alert' }) };
 }
-function alertBox(kind, ...kids) { return h('div', { class: 'sg-alert ' + kind }, ...kids); }
+export function alertBox(kind, ...kids) { return h('div', { class: 'sg-alert ' + kind }, ...kids); }
 /* B-1: só um alerta por vez (o mais recente): mostrar um limpa o outro */
 function showOk(m, text) { setKids(m.err, ); setKids(m.flash, alertBox('ok', text)); }
 function showErr(m, text, retry) {
@@ -103,7 +104,7 @@ function showErr(m, text, retry) {
 }
 function clearMsgs(m) { setKids(m.err, ); setKids(m.flash, ); }
 
-function busy(btn, on, label) {
+export function busy(btn, on, label) {
   btn.disabled = on;
   if (on) { btn.setAttribute('aria-busy', 'true'); btn.classList.add('loading'); } else { btn.removeAttribute('aria-busy'); btn.classList.remove('loading'); }
   if (label) btn.textContent = label;
@@ -219,11 +220,11 @@ function drawForm(card, focusFirst) {
   };
   form.addEventListener('submit', (ev) => { ev.preventDefault(); run(); });
 
-  const forgot = criar ? null : h('a', { class: 'sg-link', href: '#/recuperar', onclick: () => { const v = normEmail(email.input.value); if (v) sess.set(KEY_REC, v); } }, 'Esqueci a senha');
+  const forgot = criar ? null : h('a', { class: 'sg-link', href: '#/recuperar', onclick: () => { const v = normEmail(email.input.value); if (isEmail(v)) sess.set(KEY_REC, v); } }, 'Esqueci a senha');
 
   /* aviso vindo de fora (sessão terminou, link vencido ou inválido) */
   if (st.flash === 'sessao' || st.flash === 'sessaoDados') m.flash.append(alertBox('warn', st.flash === 'sessao' ? T.sessao : T.sessaoDados));
-  if (st.flash === 'vencido' || st.flash === 'invalido') {
+  if (st.flash === 'invalido') {
     const rb = h('button', { class: 'btn secondary', type: 'button' }, 'Reenviar e-mail');
     const rclick = async () => {
       const e = normEmail(email.input.value);
@@ -233,7 +234,7 @@ function drawForm(card, focusFirst) {
       if (await doResend(e, m, rb, rclick, () => { vtext.textContent = T.reenviado; box.className = 'sg-alert ok'; }, (txt) => { vtext.textContent = baseTxt + ' ' + txt; box.className = 'sg-alert err'; })) { cool(rb); }
     };
     rb.addEventListener('click', rclick);
-    const baseTxt = st.flash === 'invalido' ? T.invalido : T.vencido;
+    const baseTxt = T.invalido;
     const vtext = h('span', null, baseTxt);
     const box = alertBox('err', vtext, rb);
     m.flash.append(box);

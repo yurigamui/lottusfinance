@@ -40,6 +40,18 @@ export async function resend(email) {
   try { return await sb.auth.resend({ type: 'signup', email, options: { emailRedirectTo: redirectTo() } }); } catch (e) { return { error: e }; }
 }
 
+/* 1.2: recuperação de senha. Só o Auth (custo zero); a senha nunca é registrada nem guardada aqui. Devolvem { error } e nunca lançam. */
+export async function recover(email) {
+  try { return await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTo() }); } catch (e) { return { error: e }; }
+}
+export async function updatePassword(password) {
+  try { return await sb.auth.updateUser({ password }); } catch (e) { return { error: e }; }
+}
+/* encerra as OUTRAS sessões e mantém esta (sem SIGNED_OUT) */
+export async function signOutOthers() {
+  try { return await sb.auth.signOut({ scope: 'others' }); } catch (e) { return { error: e }; }
+}
+
 export async function setSessionFrom(access_token, refresh_token) {
   meCache = null;
   try { return await sb.auth.setSession({ access_token, refresh_token }); } catch (e) { return { error: e }; }
@@ -150,7 +162,7 @@ let draft = null;
 export const setDraft = (uid, data) => { draft = uid ? { uid, data } : null; };
 export const takeDraft = (uid) => { const d = draft && draft.uid === uid ? draft.data : null; draft = null; return d; };
 
-/* Classifica um erro em: naoconfirmado | incompleto | sessao | limite | credenciais | senha | existe | nome | cpf | cpf_travado | cpf_usado | cpf_limite | entrada | rede | geral */
+/* Classifica um erro em: naoconfirmado | incompleto | sessao | limite | credenciais | senha | mesma | existe | nome | cpf | cpf_travado | cpf_usado | cpf_limite | entrada | rede | geral */
 export function classify(e) {
   if (!e) return null;
   const code = String(e.code || e.error_code || '');
@@ -167,6 +179,7 @@ export function classify(e) {
   if (st === 401 || /^PGRST30\d$/.test(code) || /\bJWT\b|jwt expired/i.test(msg)) return 'sessao';
   if (st === 429 || /over_\w*rate_limit|rate limit|too many/i.test(code + ' ' + msg)) return 'limite';
   if (code === 'invalid_credentials' || /invalid login/i.test(msg)) return 'credenciais';
+  if (code === 'same_password' || /different from the old password/i.test(msg)) return 'mesma';
   if (code === 'weak_password' || /password should be|weak password/i.test(msg)) return 'senha';
   if (code === 'user_already_exists' || /already registered|already been registered/i.test(msg)) return 'existe';
   if (e.name === 'AuthRetryableFetchError' || st === 0 || (!st && /fetch|network|abort|load failed/i.test(msg))) return 'rede';

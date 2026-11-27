@@ -1,12 +1,12 @@
 /* Seção 1.3: Onboarding (#/onboarding/1 a 3): 1 Seus dados, 2 Verificar contato, 3 Certificado (opcional) e concluir.
    Reaproveita perfil-form.js, verificacao-contato.js e o certCard de verificacao.js. Quem decide concluir é o servidor (sign_onboarding_done).
    Só DOM e textContent. Nada em storage além do hash. */
-import { h, icon, ICON, setKids, pageHead, toast, focusH1, focusEl } from '../lib/ui.js?v=20261128a';
-import { classify } from '../lib/api.js?v=20261128a';
-import { levelOf, updateMe } from './shell.js?v=20261128a';
-import { perfilForm, naoConfirmado } from './perfil-form.js?v=20261128a';
-import { contatoCard, NIVEIS, tag } from './verificacao-contato.js?v=20261128a';
-import { certCard } from './verificacao.js?v=20261128a';
+import { h, icon, ICON, setKids, pageHead, toast, focusH1, focusEl } from '../lib/ui.js?v=20261129a';
+import { classify } from '../lib/api.js?v=20261129a';
+import { levelOf, updateMe } from './shell.js?v=20261129a';
+import { perfilForm, naoConfirmado } from './perfil-form.js?v=20261129a';
+import { contatoCard, NIVEIS, tag } from './verificacao-contato.js?v=20261129a';
+import { certCard } from './verificacao.js?v=20261129a';
 
 const T = {
   rotulos: ['Seus dados', 'Verificar contato', 'Certificado (opcional)'], /* rótulos das etapas e h1 de cada passo */
@@ -97,7 +97,7 @@ function passo3(st, draw) {
   async function concluir() {
     if (busy) return;
     busy = true; setKids(msg);
-    for (const b of [pular, fim]) { b.disabled = true; }
+    for (const b of [pular, fim]) { if (b) b.disabled = true; }
     fim.setAttribute('aria-busy', 'true');
     try {
       const m = await ctx.api.onboardingDone();
@@ -108,7 +108,7 @@ function passo3(st, draw) {
     } catch (e) {
       if (st.dead) return;
       busy = false;
-      for (const b of [pular, fim]) { b.disabled = false; } fim.removeAttribute('aria-busy');
+      for (const b of [pular, fim]) { if (b) b.disabled = false; } fim.removeAttribute('aria-busy');
       const k = classify(e);
       if (k === 'sessao') { ctx.sessionEnded(); return; }
       if (k === 'incompleto') { /* o servidor discorda: primeiro passo pendente, com aviso */
@@ -123,7 +123,8 @@ function passo3(st, draw) {
       focusEl(msg);
     }
   }
-  const pular = h('button', { class: 'btn secondary', type: 'button', onclick: () => concluir() }, 'Pular certificado');
+  /* B-3: "Pular certificado" só existe sem certificado vinculado; com certificado, só "Concluir" */
+  const pular = st.me.cert ? null : h('button', { class: 'btn secondary', type: 'button', onclick: () => concluir() }, 'Pular certificado');
   const fim = h('button', { class: 'btn', type: 'button', onclick: () => concluir() }, 'Concluir');
   return [h('div', { class: 'ob-grid' }, certCard(st), resumo(st)), msg,
     h('div', { class: 'ob-actions' }, h('a', { class: 'btn secondary ob-back', href: hashDe(2) }, T.voltar), pular, fim)];
@@ -148,15 +149,16 @@ async function carregar(st, box, fresh) {
   const { ctx } = st;
   box.setAttribute('aria-busy', 'true');
   setKids(box, ...skeleton());
+  const pn = (Number((/^#\/onboarding\/([123])$/.exec(ctx.route) || [])[1]) || 1) - 1; /* B-1: o erro de carga mostra o título do passo pedido, não sempre o do passo 1 */
   let me;
   try { me = await ctx.api.me({ fresh }); } catch (e) {
     if (st.dead) return;
     const k = classify(e);
     if (k === 'sessao') { ctx.sessionEnded(); return; }
     box.removeAttribute('aria-busy');
-    if (k === 'naoconfirmado') { st.off = true; st.me = { channels: { email: true } }; setKids(box, pageHead(T.rotulos[0], T.sub[0]), h('div', { class: 'ob-off' }, ...naoConfirmado(st.ctx))); return; }
+    if (k === 'naoconfirmado') { st.off = true; st.me = { channels: { email: true } }; setKids(box, pageHead(T.rotulos[pn], T.sub[pn]), h('div', { class: 'ob-off' }, ...naoConfirmado(st.ctx))); return; }
     const retry = h('button', { class: 'btn secondary sm', type: 'button', onclick: () => { retry.setAttribute('aria-busy', 'true'); retry.disabled = true; carregar(st, box, true); } }, T.retry);
-    setKids(box, pageHead(T.rotulos[0], T.sub[0]), h('div', { class: 'banner danger', role: 'alert' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, T.carregar), retry));
+    setKids(box, pageHead(T.rotulos[pn], T.sub[pn]), h('div', { class: 'banner danger', role: 'alert' }, icon(ICON.alerta, 'ico'), h('div', { class: 'grow' }, T.carregar), retry));
     focusEl(retry);
     return;
   }

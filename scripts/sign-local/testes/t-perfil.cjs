@@ -28,7 +28,7 @@ const q = async (d, sql, args) => (await d.fake.query(sql, args)).rows;
     check('AC1 nome preenchido', (await p.inputValue('#pf-nome')) === U.U1.name);
     check('AC1 CPF travado: disabled e mascarado', (await p.isDisabled('#pf-cpf')) && (await p.inputValue('#pf-cpf')) === '•••.980.270-••', await p.inputValue('#pf-cpf'));
     const v = await text(p, '#pf-mail-l + .pf-value'), c = await text(p, '#pf-cel-l + .pf-value');
-    check('AC1 e-mail com selo Confirmado', v.includes(U.U1.email) && v.includes('Confirmado'), v);
+    check('AC1 e-mail com selo Confirmado (B-5: "E-mail confirmado" quando o contato verificado é o e-mail)', v.includes(U.U1.email) && /onfirmado/.test(v), v);
     check('AC1 celular mascarado com selo "Não verificado" (V6-01, ciclo 2: a prova do U1 foi por e-mail, não pelo celular; antes dizia "Verificado")', c.includes('(11) •••••-1234') && c.includes('Não verificado'), c);
     check('AC1 nível igual ao do cabeçalho', (await text(p, '.pf-level .tag')) === (await text(p, '.org-sub')) && (await text(p, '.org-sub')) === 'Avançada');
     check('AC1 Salvar desligado', (await p.isDisabled('.pf-save')) && (await p.getAttribute('.pf-save', 'aria-disabled')) === 'true');
@@ -326,11 +326,16 @@ const q = async (d, sql, args) => (await d.fake.query(sql, args)).rows;
     await p.goto(d.origin + '/#/entrar'); const n2 = await p.evaluate(() => history.length);
     check('AC-R8 o redirecionamento não empilha entrada a mais que a carga normal', n <= n2 + 0, [n, n2]);
     await p.goto(d.origin + '/#/recuperar'); await p.waitForSelector('#sign h1'); const h1 = await p.evaluate(() => history.length);
-    await p.getByRole('link', { name: 'Voltar ao início' }).click(); await wait(p, () => location.hash === '#/entrar');
-    check('AC-R9 "Voltar ao início" usa replace (history.length igual)', (await p.evaluate(() => history.length)) === h1, h1);
+    /* 1.2: #/recuperar deixou de ser a tela provisória "Em construção"; a saída é "Voltar ao Entrar" (replace). A tela provisória pública que resta é a 404. */
+    await p.getByRole('link', { name: 'Voltar ao Entrar' }).click(); await wait(p, () => location.hash === '#/entrar');
+    check('AC-R9 "Voltar ao Entrar" (recuperar) usa replace (history.length igual)', (await p.evaluate(() => history.length)) === h1, h1);
+    await p.goto(d.origin + '/#/rota-que-nao-existe'); await p.waitForSelector('#sign h1'); const h3 = await p.evaluate(() => history.length);
+    await p.getByRole('link', { name: 'Ir para o início' }).click(); await wait(p, () => location.hash === '#/entrar');
+    check('AC-R9 "Ir para o início" (404 pública) usa replace', (await p.evaluate(() => history.length)) === h3, h3);
     await logged(d, { email: U.U1.email }); await p.evaluate(() => { location.hash = '#/recuperar'; }); await p.waitForSelector('#sign .sg-single');
-    const h2 = await p.evaluate(() => history.length); await p.getByRole('button', { name: 'Sair' }).click(); await wait(p, () => location.hash === '#/entrar');
-    check('AC-R9 "Sair" usa replace', (await p.evaluate(() => history.length)) === h2, h2);
+    check('1.2: usuário já logado que abre #/recuperar vê o formulário (rota pública sem redirecionamento)', (await text(p, 'h1')) === 'Recuperar senha' && (await hash(p)) === '#/recuperar');
+    const h2 = await p.evaluate(() => history.length); await p.getByRole('link', { name: 'Voltar ao Entrar' }).click(); await wait(p, () => location.hash === '#/documentos');
+    check('AC-R9 "Voltar ao Entrar" com sessão ativa: replace, e o Entrar leva a Documentos', (await p.evaluate(() => history.length)) === h2, h2);
   });
 
 

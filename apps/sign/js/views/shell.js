@@ -1,5 +1,5 @@
 /* Seção 1.0: esqueleto da área logada (menu, barra superior, aviso e #view). Montado por DOM; texto do usuário só por textContent. */
-import { h, mount, setKids, icon, ICON, focusH1 } from '../lib/ui.js?v=20261128a';
+import { h, mount, setKids, icon, ICON, focusH1 } from '../lib/ui.js?v=20261129a';
 
 /* Itens do menu. Só entra quem tem built:true; as seções futuras ligam o seu item sem mudar a estrutura. */
 export const NAV = [
@@ -83,6 +83,7 @@ function paintMe(st, me) {
   const email = String(me.email || st.email || '');
   st.orgName.textContent = name || email;
   st.orgName.title = name || email; /* V-07: o nome é cortado em 2 linhas na vista; o inteiro fica no title */
+  st.orgName.classList.toggle('is-email', !name); /* B-2: e-mail não quebra no meio; reticências (CSS) */
   st.orgSub.textContent = levelOf(me);
   st.orgSub.hidden = false;
   st.avatar.textContent = initialsOf(name, email);
@@ -133,7 +134,7 @@ export function ensureShell(ctx, { minimal = false, ownMe = false } = {}) {
   st.nav = h('nav', { class: 'sidenav-items', 'aria-label': 'Menu principal' });
   st.side = h('aside', { class: 'sidenav' }, h('a', { class: 'sidenav-mark', href: '#/documentos', 'aria-label': 'Lottus, início' }), st.nav);
 
-  st.orgName = h('div', { class: 'org-name' }, st.email);
+  st.orgName = h('div', { class: 'org-name is-email', title: st.email }, st.email);
   st.orgSub = h('div', { class: 'org-sub', hidden: true });
   const org = h('div', { class: 'org' },
     h('a', { class: 'org-link', href: '#/documentos', tabindex: '-1' }, h('span', { class: 'org-mark logo', role: 'img', 'aria-label': 'Lottus' })),

@@ -183,13 +183,10 @@ async function criar(p, { email, nome = 'Ana Teste', pw = 'uma-senha-longa', ace
     const p = d.page;
     await p.goto(d.origin + '/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');
     await p.waitForSelector('h1');
+    /* 1.2 (AC13): o link vencido vai a #/nova-senha com "Pedir novo link" (antes ia a #/entrar com "Reenviar e-mail"; o reenvio do e-mail de confirmação segue em t-corr AC15, via link de cadastro inválido) */
     check('texto de link vencido', /Este link venceu ou já foi usado\. Peça um novo\./.test(await text(p, '#sign')));
-    check('botão Reenviar e-mail', await p.getByRole('button', { name: 'Reenviar e-mail' }).isVisible());
-    check('hash limpo e na tela Entrar', (await hash(p)) === '#/entrar' && !/error/.test(p.url()), p.url());
-    await p.fill('#email', 'ok@teste.example');
-    await p.getByRole('button', { name: 'Reenviar e-mail' }).click();
-    await p.waitForSelector('text=Enviamos de novo. Verifique também a caixa de spam.');
-    check('reenvio a partir do link vencido', authCalls(d, /resend/).length === 1);
+    check('botão Pedir novo link', await p.getByRole('link', { name: 'Pedir novo link' }).isVisible());
+    check('hash limpo e na tela de nova senha (estado link inválido)', (await hash(p)) === '#/nova-senha' && !/error/.test(p.url()) && (await text(p, 'h1')) === 'Link inválido', p.url());
   });
 
   await t('AC12 link de recuperação', open, {}, async (d) => {
@@ -198,7 +195,7 @@ async function criar(p, { email, nome = 'Ana Teste', pw = 'uma-senha-longa', ace
     await wait(p, () => location.hash === '#/nova-senha');
     check('vai a #/nova-senha', (await hash(p)) === '#/nova-senha');
     check('sem formulário de entrar', (await p.locator('#email').count()) === 0 && (await p.locator('#senha').count()) === 0);
-    check('tela provisória com saída', (await p.getByRole('button', { name: 'Sair' }).count()) === 1);
+    check('1.2: tela "Criar nova senha" com saída "Voltar ao Entrar"', (await text(p, 'h1')) === 'Criar nova senha' && (await p.getByRole('link', { name: 'Voltar ao Entrar' }).count()) === 1);
   });
 
   await t('AC15 sessão válida e saída em outra aba', open, {}, async (d) => {

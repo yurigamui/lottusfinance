@@ -2,12 +2,12 @@
    Tudo por DOM e textContent (setKids, sem HTML em texto). O nível vem de levelOf (shell.js), a única derivação. Nada de código, e-mail ou certificado em storage.
    A validação criptográfica do certificado é feita por uma função de borda que NÃO está no repositório (T-07): a tela chama o endereço
    configurável cfg.certEndpoint (desligado por padrão). Sem ele, ou se ele não responder, aparece o indicador de indisponível. */
-import { h, icon, ICON, setKids, pageHead, abasConta, toast, focusEl, safeUrl } from '../lib/ui.js?v=20261128a';
-import { maskCpf, maskSubject } from '../lib/fmt.js?v=20261128a';
-import { classify } from '../lib/api.js?v=20261128a';
-import { levelOf, updateMe } from './shell.js?v=20261128a';
-import { suporte } from './perfil-form.js?v=20261128a';
-import { T, MSG, textoErro, fmtData, NIVEIS, tag, contatoCard } from './verificacao-contato.js?v=20261128a';
+import { h, icon, ICON, setKids, pageHead, abasConta, toast, focusEl, safeUrl } from '../lib/ui.js?v=20261129a';
+import { maskCpf, maskSubject } from '../lib/fmt.js?v=20261129a';
+import { classify } from '../lib/api.js?v=20261129a';
+import { levelOf, updateMe } from './shell.js?v=20261129a';
+import { suporte } from './perfil-form.js?v=20261129a';
+import { T, MSG, textoErro, fmtData, NIVEIS, tag, contatoCard } from './verificacao-contato.js?v=20261129a';
 
 const SAIDA_PERFIL = () => h('a', { class: 'btn secondary', href: '#/conta/perfil' }, 'Voltar ao perfil');
 
@@ -149,7 +149,7 @@ export function certCard(st) {
     kids.push(h('p', { class: 'vf-empty' }, T.certAjuda));
     if (c.disp === false || !c.roots) kids.push(indicador());
     const off = st.off || c.busy;
-    gerarBtn = h('button', { class: 'btn secondary', type: 'button', disabled: off || null, 'aria-busy': c.busy && !c.desafio ? 'true' : null, onclick: () => gerar() }, 'Gerar desafio');
+    gerarBtn = h('button', { class: 'btn secondary', type: 'button', disabled: off || c.disp === false || !c.roots || null, 'aria-busy': c.busy && !c.desafio ? 'true' : null, onclick: () => gerar() }, 'Gerar desafio');
     kids.push(h('div', { class: 'vf-actions' }, gerarBtn));
     if (c.desafio) {
       const livre = c.disp === false || !c.roots || st.off;

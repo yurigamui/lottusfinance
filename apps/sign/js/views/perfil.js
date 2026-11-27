@@ -1,10 +1,10 @@
 /* Seção 1.4: Conta > Perfil (#/conta/perfil). Nome sempre editável; CPF só se preenche (nunca se troca por aqui: R5).
    O formulário vive em perfil-form.js (o mesmo do passo 1 do onboarding). Tudo por DOM e textContent. */
-import { h, icon, ICON, setKids, pageHead, abasConta, toast, focusEl } from '../lib/ui.js?v=20261128a';
-import { maskPhone } from '../lib/fmt.js?v=20261128a';
-import { classify } from '../lib/api.js?v=20261128a';
-import { levelOf, updateMe } from './shell.js?v=20261128a';
-import { T, suporte, naoConfirmado, perfilForm } from './perfil-form.js?v=20261128a';
+import { h, icon, ICON, setKids, pageHead, abasConta, toast, focusEl } from '../lib/ui.js?v=20261129a';
+import { maskPhone } from '../lib/fmt.js?v=20261129a';
+import { classify } from '../lib/api.js?v=20261129a';
+import { levelOf, updateMe } from './shell.js?v=20261129a';
+import { T, suporte, naoConfirmado, perfilForm } from './perfil-form.js?v=20261129a';
 
 const NIVEIS = { Simples: ['tag', 'conta'], 'Avançada': ['tag brand', 'check'], Qualificada: ['tag success', 'check'] };
 
@@ -36,10 +36,12 @@ function drawForm(st, box) {
   /* V6-01: só é "Celular verificado" quando a prova foi por celular; verificação por e-mail não rotula o número como verificado */
   const phone = me.phone ? maskPhone(me.phone) : '';
   const celOk = me.phone_verified && me.contact_kind === 'phone';
+  const porEmail = !!me.phone_verified && me.contact_kind === 'email';
   const tel = readOnly('pf-cel', 'Celular', phone || 'Não informado',
-    phone ? (celOk ? tag('tag success', 'check', 'Verificado') : tag('tag muted', 'alerta', 'Não verificado')) : null,
+    phone ? (celOk ? tag('tag success', 'check', 'Celular verificado') : tag('tag muted', 'alerta', 'Não verificado')) : null,
+    phone && porEmail ? h('div', { class: 'help' }, 'Este celular ainda não foi verificado. O contato verificado é o e-mail.') : null, /* B-5: o celular guardado não é o contato verificado */
     h('a', { class: 'pf-link', href: '#/conta/verificacao' }, 'Verificar contato'));
-  const mail = readOnly('pf-mail', 'E-mail', h('span', { class: 'pf-mail' }, me.email || ''), tag('tag success', 'check', 'Confirmado'),
+  const mail = readOnly('pf-mail', 'E-mail', h('span', { class: 'pf-mail' }, me.email || ''), tag('tag success', 'check', porEmail ? 'E-mail confirmado' : 'Confirmado'),
     h('div', { class: 'help' }, 'Para trocar o e-mail, ', h('span', { class: 'nw' }, suporte(ctx.cfg, 'Troca de e-mail no Lottus Sign', 'fale com o suporte'), '.')));
 
   const f = perfilForm({

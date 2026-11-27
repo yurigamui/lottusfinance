@@ -1,9 +1,9 @@
 /* Seções 1.5 e 1.3: cartão "Contato de assinatura" (código de 6 dígitos) de Conta > Verificação e do passo 2 do onboarding, mais os textos e
    mensagens de erro da verificação (uma só origem). Só DOM e textContent; nada de código ou e-mail em storage. */
-import { h, icon, ICON, setKids, toast, focusEl } from '../lib/ui.js?v=20261128a';
-import { maskPhone, onlyDigits } from '../lib/fmt.js?v=20261128a';
-import { classify } from '../lib/api.js?v=20261128a';
-import { updateMe } from './shell.js?v=20261128a';
+import { h, icon, ICON, setKids, toast, focusEl } from '../lib/ui.js?v=20261129a';
+import { maskPhone, onlyDigits } from '../lib/fmt.js?v=20261129a';
+import { classify } from '../lib/api.js?v=20261129a';
+import { updateMe } from './shell.js?v=20261129a';
 
 export const T = {
   titulo: 'Verificação de identidade',

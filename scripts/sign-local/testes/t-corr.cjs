@@ -27,28 +27,28 @@ const rd = (f) => fs.readFileSync(path.join(APP, f), 'utf8');
 
   await t('AC15 M-3 reenvio no link vencido', open, { width: 390, cfg: { resendCooldownMs: 1500 } }, async (d) => {
     const p = d.page;
-    await p.goto(d.origin + '/#error_code=otp_expired'); await p.waitForSelector('#sign h1');
+    await p.goto(d.origin + '/#access_token=lixo&type=signup'); await p.waitForSelector('text=Não foi possível usar este link'); /* 1.2: o link vencido de recuperação vai a #/nova-senha; o reenvio do e-mail de confirmação fica no aviso de link de cadastro inválido */
     await p.fill('#email', 'ok@teste.example');
     const btn = p.getByRole('button', { name: 'Reenviar e-mail' });
     await btn.click();
     await p.waitForSelector('text=Enviamos de novo. Verifique também a caixa de spam.');
     const b = p.locator('.sg-alert button');
     check('AC15 o botão continua visível e desligado com "Reenviar em N s"', (await b.count()) === 1 && (await b.isVisible()) && (await b.isDisabled()) && /^Reenviar em \d+ s$/.test(await b.innerText()), await b.allInnerTexts());
-    check('AC15 a mensagem vira "Enviamos de novo..." no mesmo alerta', /Enviamos de novo\. Verifique também a caixa de spam\./.test(await text(p, '.sg-alert')) && !/venceu/.test(await text(p, '.sg-alert')));
+    check('AC15 a mensagem vira "Enviamos de novo..." no mesmo alerta', /Enviamos de novo\. Verifique também a caixa de spam\./.test(await text(p, '.sg-alert')) && !/Não foi possível usar este link/.test(await text(p, '.sg-alert')));
     await p.waitForFunction(() => { const x = document.querySelector('.sg-alert button'); return x && !x.disabled && x.textContent === 'Reenviar e-mail'; }, null, { timeout: 5000 });
     check('AC15 passado o intervalo (1,5 s) volta a "Reenviar e-mail"', (await b.isEnabled()) && (await b.innerText()) === 'Reenviar e-mail');
     check('AC15 1 chamada de reenvio ao servidor', authCalls(d, /resend/).length === 1);
   });
   await t('AC15 M-3 429 e falha de rede', open, { width: 390, cfg: { resendCooldownMs: 1500, timeoutMs: 1500 } }, async (d) => {
     const p = d.page; d.fake.state.mode.rl429 = { resend: true };
-    await p.goto(d.origin + '/#error_code=otp_expired'); await p.waitForSelector('#sign h1');
+    await p.goto(d.origin + '/#access_token=lixo&type=signup'); await p.waitForSelector('text=Não foi possível usar este link');
     await p.fill('#email', 'ok@teste.example'); await p.getByRole('button', { name: 'Reenviar e-mail' }).click();
     await p.waitForSelector('text=Você atingiu o limite de reenvios. Tente em 1 hora.');
     check('AC15 429: o botão continua e a mensagem aparece', (await p.getByRole('button', { name: 'Reenviar e-mail' }).count()) === 1 && (await p.getByRole('button', { name: 'Reenviar e-mail' }).isEnabled()));
     d.fake.state.mode.rl429 = {}; d.fake.state.mode.down = true;
     await p.getByRole('button', { name: 'Reenviar e-mail' }).click();
     await p.waitForSelector('text=Não foi possível concluir agora. Verifique sua conexão.', { timeout: 8000 });
-    check('AC15 falha de rede: o botão continua', (await p.getByRole('button', { name: 'Reenviar e-mail' }).count()) === 1 && /venceu/.test(await text(p, '#sign')));
+    check('AC15 falha de rede: o botão continua', (await p.getByRole('button', { name: 'Reenviar e-mail' }).count()) === 1 && /Não foi possível usar este link/.test(await text(p, '#sign')));
   });
 
   await t('AC16 B-1 hash do Auth em hashchange', open, { width: 1280 }, async (d) => {
@@ -66,8 +66,8 @@ const rd = (f) => fs.readFileSync(path.join(APP, f), 'utf8');
     await p.evaluate(() => { window.__nf = false; new MutationObserver(() => { if (/Página não encontrada/.test(document.body.innerText)) window.__nf = true; }).observe(document.body, { subtree: true, childList: true, characterData: true }); });
     await p.evaluate(() => { location.hash = '#error=access_denied&error_code=otp_expired'; });
     await p.waitForSelector('text=Este link venceu ou já foi usado. Peça um novo.');
-    check('AC16 aparece o aviso de link vencido e o botão de reenvio', await p.getByRole('button', { name: 'Reenviar e-mail' }).isVisible());
-    check('AC16 hash apagado e rota #/entrar', (await hash(p)) === '#/entrar' && !/error/.test(p.url()), p.url());
+    check('AC16 aparece o aviso de link vencido e o botão "Pedir novo link" (1.2: vai a #/nova-senha)', await p.getByRole('link', { name: 'Pedir novo link' }).isVisible());
+    check('AC16 hash apagado e rota #/nova-senha', (await hash(p)) === '#/nova-senha' && !/error/.test(p.url()), p.url());
     check('AC16 sem "Página não encontrada"', (await p.evaluate(() => window.__nf)) === false);
     await p.evaluate(() => { location.hash = '#qualquer-ancora'; }); await p.waitForTimeout(300);
     check('AC16 âncora estranha não vira rota nem derruba a tela', (await p.locator('h1').count()) === 1 && !/não encontrada/i.test(await text(p, '#sign')));
@@ -86,7 +86,7 @@ const rd = (f) => fs.readFileSync(path.join(APP, f), 'utf8');
     await p.waitForTimeout(500);
     check('AC17 em hashchange também: sem "E-mail confirmado" e hash apagado', !/E-mail confirmado/.test(await text(p, '#sign')) && !/access_token/.test(p.url()) && /Não foi possível usar este link/.test(await text(p, '#sign')));
     await p.goto(d.origin + '/#access_token=lixo&type=recovery'); await p.waitForSelector('text=Este link venceu ou já foi usado');
-    check('AC17 recuperação com token inválido cai no aviso de link vencido', await p.getByRole('button', { name: 'Reenviar e-mail' }).isVisible());
+    check('AC17 recuperação com token inválido cai no aviso de link vencido (1.2: "Pedir novo link")', await p.getByRole('link', { name: 'Pedir novo link' }).isVisible());
   });
 
   await t('AC18 B-3 aria-pressed do Mostrar', open, { width: 390 }, async (d) => {

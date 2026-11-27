@@ -12,6 +12,40 @@ const W = [320, 768, 1280];
 const RUIM = /\b(null|undefined|NaN)\b|\[object Object\]|\{(n|mm|s)\}|\b(otp_[a-z_]+|onboarding_[a-z_]+|cert_[a-z_]+|too_many\w*|too_soon|channel_unavailable|email_not_confirmed|challenge_expired|cpf_in_use|cpf_locked|invalid_[a-z_]+|identity_required|roots_not_loaded|Error|Loading|Submit|Cancel|Retry|Failed)\b/;
 const q = async (d, sql, a) => (await d.fake.query(sql, a)).rows;
 
+// 1.2: Recuperar senha e Nova senha, todos os estados alcançáveis (Auth em memória). A senha digitada nunca pode aparecer no texto da página.
+const SENHA = 'minha-senha-nova-123';
+async function senhaTelas(d, w) {
+  const p = d.page; let n = 0;
+  const abre = async (hash) => { await p.goto(d.origin + '/?t=' + (++n) + hash); await p.waitForSelector('#sign h1'); };
+  const link = async (o) => { await p.goto(d.origin + '/?t=' + (++n) + d.fake.recoveryHash('pronto@teste.example', o)); await p.waitForSelector('#sign h1'); await p.waitForTimeout(150); };
+  const semSenha = async (rot) => { const v = await p.evaluate((x) => document.body.innerText.includes(x) || document.documentElement.outerHTML.includes(x), SENHA); check(`senha digitada não aparece no texto nem no HTML (${rot} ${w})`, !v); };
+  d.fake.state.mode = {};
+  await abre('#/recuperar'); await varre(p, `Recuperar senha (formulário) ${w}`);
+  await p.click('form button[type=submit]'); await varre(p, `Recuperar: campo vazio ${w}`);
+  await p.fill('#email', 'isso-nao-e'); await p.click('form button[type=submit]'); await varre(p, `Recuperar: e-mail inválido ${w}`);
+  await p.fill('#email', 'pronto@teste.example'); await p.click('form button[type=submit]'); await p.waitForSelector('text=Verifique seu e-mail'); await varre(p, `Recuperar: tela neutra com contagem ${w}`);
+  await abre('#/recuperar'); d.fake.state.mode = { rl429: { recover: true } }; await p.evaluate(() => sessionStorage.clear()); await p.fill('#email', 'pronto@teste.example'); await p.click('form button[type=submit]'); await p.waitForSelector('.sg-alert'); await varre(p, `Recuperar: limite do Auth (429) ${w}`);
+  d.fake.state.mode = { down: true }; await p.click('form button[type=submit]'); await p.waitForSelector('text=Sem conexão', { timeout: 9000 }); await varre(p, `Recuperar: rede caída ${w}`);
+  d.fake.state.mode = {};
+  await abre('#/nova-senha'); await p.waitForSelector('text=Para trocar a senha'); await varre(p, `Recuperar: aviso sem sessão (vindo de #/nova-senha) ${w}`);
+  d.fake.state.mode = { delay: 1500 }; await p.goto(d.origin + '/?t=' + (++n) + d.fake.recoveryHash('pronto@teste.example')); await p.waitForSelector('text=Verificando o link…'); await varre(p, `Nova senha: Verificando o link… ${w}`);
+  await p.waitForSelector('#nova', { timeout: 9000 }); d.fake.state.mode = {};
+  await varre(p, `Nova senha: formulário ${w}`);
+  await p.fill('#nova', 'abc'); await p.fill('#confirma', 'abcd'); await varre(p, `Nova senha: senha curta, medidor e confirmação diferente ${w}`);
+  await p.fill('#nova', 'abcdefghi'); await varre(p, `Nova senha: falta 1 caractere ${w}`);
+  for (const pw of ['abcdefghijkl', 'Abcdefghij12345!']) { await p.fill('#nova', pw); await p.fill('#confirma', pw); await varre(p, `Nova senha: medidor (${pw.length} caracteres) ${w}`); }
+  await p.fill('#nova', SENHA); await p.fill('#confirma', SENHA); await p.getByRole('button', { name: 'Mostrar senha' }).first().click(); await semSenha('com a senha visível no campo'); await varre(p, `Nova senha: senha visível ${w}`);
+  for (const [modo, rot] of [[{ weak: true }, 'senha fraca'], [{ same: true }, 'mesma senha'], [{ rl429: { update: true } }, '429']]) {
+    d.fake.state.mode = modo; await p.click('form button[type=submit]'); await p.waitForTimeout(400); await varre(p, `Nova senha: ${rot} ${w}`); await semSenha(rot);
+  }
+  d.fake.state.mode = { down: true }; await p.click('form button[type=submit]'); await p.waitForSelector('text=Sem conexão', { timeout: 9000 }); await varre(p, `Nova senha: rede caída ${w}`);
+  d.fake.state.mode = { expired: true }; await p.click('form button[type=submit]'); await p.waitForSelector('text=Link inválido'); await varre(p, `Nova senha: 401 na troca (Link inválido) ${w}`);
+  d.fake.state.mode = {}; await link({ expired: true }); await varre(p, `Nova senha: link vencido (otp_expired) ${w}`);
+  await link({ used: true }); await varre(p, `Nova senha: link já usado (setSession falha) ${w}`);
+  d.fake.state.mode = { others500: true }; await link({}); await p.fill('#nova', SENHA); await p.fill('#confirma', SENHA); await p.click('form button[type=submit]'); await p.waitForSelector('.toast'); await varre(p, `Nova senha: sucesso com aviso de sessões não encerradas ${w}`); await semSenha('sucesso');
+  d.fake.state.mode = {}; d.fake.seed();
+}
+
 async function varre(p, rotulo) {
   const achados = await p.evaluate((src) => {
     const re = new RegExp(src);
@@ -44,8 +78,8 @@ async function varre(p, rotulo) {
     await p.fill('#email', 'novo3@teste.example'); await p.fill('#nome', 'Nova Pessoa Teste'); await p.fill('#senha', 'uma-senha-longa'); await p.check('#aceite'); await p.click('form button[type=submit]');
     await p.waitForSelector('text=Confirme seu e-mail'); await varre(p, `Confirme seu e-mail ${w}`);
     await p.waitForTimeout(1000); await p.getByRole('button', { name: 'Reenviar e-mail' }).click(); await p.waitForTimeout(400); await varre(p, `Confirme seu e-mail após reenvio ${w}`);
-    await p.goto(d.origin + '/#error_code=otp_expired'); await p.waitForSelector('#sign h1'); await varre(p, `link vencido ${w}`);
-    await p.goto(d.origin + '/#/recuperar'); await p.waitForSelector('#sign h1'); await varre(p, `provisória pública (recuperar) ${w}`);
+    await p.goto(d.origin + '/#error_code=otp_expired'); await p.waitForSelector('#sign h1'); await varre(p, `link vencido (1.2: Link inválido) ${w}`);
+    await senhaTelas(d, w);
     await p.goto(d.origin + '/#/nada-aqui'); await p.waitForSelector('#sign h1'); await varre(p, `404 público ${w}`);
   });
 
@@ -108,7 +142,7 @@ async function varre(p, rotulo) {
 
 
   // ---------- 1.3: Onboarding, os 3 passos e todos os estados, em 320, 768 e 1280 (claro e escuro) ----------
-  for (const w of W) await t(`textos do Onboarding em ${w}`, open, { pg: DB, width: w, cfg: { timeoutMs: 2000, certTimeoutMs: 1500 } }, async (d) => {
+  for (const w of W) await t(`textos do Onboarding em ${w}`, open, { pg: DB, width: w, cfg: { timeoutMs: 2000, certTimeoutMs: 1500, certEndpoint: EDGE } }, async (d) => {
     const p = d.page; const Q = (s, a) => q(d, s, a);
     const novo = async (n, o) => { const u = await mk(Q, n, o); await d.fake.loadUsers(); return u; };
     const entra = async (u) => { await d.go('#/entrar'); await login(p, u.email, PW); await p.waitForFunction(() => /^#\/(documentos|onboarding)/.test(location.hash) && document.querySelector('.shell') && !document.querySelector('.ob[aria-busy="true"]') && document.querySelector('#view h1'), null, { timeout: 12000 }); await p.waitForTimeout(300); };

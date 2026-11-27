@@ -15,6 +15,11 @@
 //          POST {nonce, signed_b64} lê o arquivo como JSON de campos do certificado e chama _sign_cert_save no banco isolado (o resultado
 //          do vínculo é do banco; a validação criptográfica NÃO é simulada). state.mode.certEdge: 'down' (derruba a conexão), 'timeout' (não responde),
 //          '404', '500' ou ausente (funciona). Só no repasse.
+// 1.2 (Recuperar senha): POST /auth/v1/recover (registra e-mail e redirect_to; responde 200 {} sempre; modos rl429.recover e down; com revealExisting um
+//      e-mail desconhecido devolve 400 user_not_found), PUT /auth/v1/user (modos weak, same, expired, rl429.update; sucesso troca a senha e conta),
+//      POST /auth/v1/logout (registra o scope da query; modo others500), emissor de link: fake.recoveryHash(email, {expired|used|bad}) e
+//      fake.recovery.* (o token de recuperação vale UMA vez: a 1ª consulta GET /auth/v1/user o consome, a 2ª dá 401, como o link que já foi usado).
+//      state.calls: contadores consultáveis { recover: [{email, redirect_to}], update, logout: [scope], user } (zerados por seed()).
 // Dados fictícios: contas @teste.example.
 const http = require('http');
 
@@ -46,6 +51,8 @@ function create(opts = {}) {
     state.users.set('pronto@teste.example', { id: 'u-2', email: 'pronto@teste.example', password: 'senha-correta-1', confirmed: true, onboarding_done: true });
     state.users.set('pendente@teste.example', { id: 'u-3', email: 'pendente@teste.example', password: 'senha-correta-1', confirmed: false, onboarding_done: false });
     state.mode = {}; state.log.length = 0;
+    state.calls = { recover: [], update: 0, logout: [], user: 0 };
+    state.recUsed = new Set(); state.recN = 0;
   };
   seed();
 
@@ -156,12 +163,41 @@ function create(opts = {}) {
         if (state.mode.rl429 && state.mode.rl429.resend) return rl(res);
         return send(res, 200, { message_id: 'x' });
       }
-      if (p === '/auth/v1/user') {
+      if (p === '/auth/v1/recover') {
+        if (state.mode.rl429 && state.mode.rl429.recover) return rl(res);
+        const email = String(body.email || '').toLowerCase();
+        state.calls.recover.push({ email, redirect_to: url.searchParams.get('redirect_to') });
+        if (state.mode.revealExisting && !state.users.get(email)) return authErr(res, 'User not found', 400, 'user_not_found');
+        return send(res, 200, {});
+      }
+      if (p === '/auth/v1/user' && req.method === 'PUT') {
+        if (state.mode.rl429 && state.mode.rl429.update) return rl(res);
         const c = parse(tok);
         const u = c && byId(c.sub);
+        if (state.mode.expired || !u) return authErr(res, 'invalid JWT', 401, 'bad_jwt');
+        if (state.mode.weak) return send(res, 422, { code: 422, error_code: 'weak_password', msg: 'Password is known to be weak and easy to guess, please choose a different one.', weak_password: { reasons: ['pwned'] } });
+        const pw = String(body.password || '');
+        if (state.mode.same || (u.password && pw === u.password)) return authErr(res, 'New password should be different from the old password.', 422, 'same_password');
+        if (pw.length < 6) return authErr(res, 'Password should be at least 6 characters.', 422, 'weak_password');
+        state.calls.update += 1;
+        u.password = pw;
+        if (pool) await pool.query(`update auth.users set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf')) where id = $1`, [u.id, pw]);
+        return send(res, 200, userObj(u));
+      }
+      if (p === '/auth/v1/user') {
+        state.calls.user += 1;
+        const c = parse(tok);
+        const u = c && byId(c.sub);
+        /* link de recuperação: o token (claim rec) vale uma vez; a 1ª leitura o consome e a 2ª já é "link usado" */
+        if (u && c.rec) { if (state.recUsed.has('rec:' + c.rec)) return authErr(res, 'invalid JWT', 401, 'bad_jwt'); state.recUsed.add('rec:' + c.rec); }
         return u ? send(res, 200, userObj(u)) : authErr(res, 'invalid JWT', 401, 'bad_jwt');
       }
-      if (p === '/auth/v1/logout') return send(res, 204);
+      if (p === '/auth/v1/logout') {
+        const scope = url.searchParams.get('scope') || 'global';
+        state.calls.logout.push(scope);
+        if (state.mode.others500 && scope === 'others') return send(res, 500, { message: 'boom' });
+        return send(res, 204);
+      }
       if (p === '/functions/v1/sign-cert-validate') {
         const m = state.mode.certEdge;
         if (m === 'down') return req.socket.destroy();
@@ -194,6 +230,20 @@ function create(opts = {}) {
 
   /* token de sessão para simular o link do e-mail (#access_token=...&refresh_token=...) */
   const mint = (email) => { const s = session(state.users.get(email)); return { access_token: s.access_token, refresh_token: s.refresh_token }; };
+  /* link do e-mail de recuperação: hash '#access_token=...&refresh_token=...&type=recovery' (vale uma vez). opts: { expired: link vencido (#error_code=otp_expired),
+     used: já consumido (setSession falha), bad: token ilegível } */
+  const recovery = { n: 0 };
+  const recoveryHash = (email, opts = {}) => {
+    if (opts.expired) return '#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
+    if (opts.bad) return '#access_token=lixo&refresh_token=lixo&type=recovery';
+    const u = state.users.get(email);
+    const n = ++recovery.n;
+    const now = Math.floor(Date.now() / 1000);
+    const claims = { sub: u.id, email: u.email, role: 'authenticated', aud: 'authenticated', aal: 'aal1', exp: now + 3600, iat: now, session_id: 'rec-' + n, rec: 'r' + n, amr: [{ method: 'otp', timestamp: now }] };
+    if (opts.used) state.recUsed.add('rec:r' + n);
+    const rt = Buffer.from(JSON.stringify({ id: u.id })).toString('base64url');
+    return `#access_token=${jwt(claims)}&expires_in=3600&refresh_token=${rt}&token_type=bearer&type=recovery`;
+  };
   /* repasse: usuários vêm de auth.users do banco local (senha conferida com crypt no login) */
   async function loadUsers() {
     state.users.clear();
@@ -205,6 +255,6 @@ function create(opts = {}) {
   const query = (sql, params) => pool.query(sql, params);
   /* o código mais recente que o banco gravou para o usuário (só enquanto o envio está 'queued', R2) */
   const codeOf = async (email) => ((await pool.query(`select o.params ->> 'code' as c from public.sign_outbox o join auth.users u on u.id = o.user_id where lower(u.email) = lower($1) order by o.id desc limit 1`, [email])).rows[0] || {}).c;
-  return { state, server, start, seed, mint, query, codeOf, loadUsers, stop: () => { server.close(); if (pool) pool.end().catch(() => {}); } };
+  return { state, server, start, seed, mint, recoveryHash, query, codeOf, loadUsers, stop: () => { server.close(); if (pool) pool.end().catch(() => {}); } };
 }
 module.exports = { create, rpcCount };

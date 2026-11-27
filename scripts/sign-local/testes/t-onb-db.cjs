@@ -46,7 +46,7 @@ const FN8 = ['sign_me()', 'sign_onboarding_done()', 'sign_phone_send(text,text)'
 (async () => {
   console.info('recriando bancos locais isolados (ANTES, DEPOIS, MEIO, CRON)...');
   reset('antes15');
-  reset('depois');
+  process.env.SIGN_SO_ATE = '1.3'; reset('depois'); delete process.env.SIGN_SO_ATE; // C2-13: o DEPOIS da 1.3 não inclui a migração 20261129120000
   const env = (extra) => ({ ...process.env, SIGN_SCHEMA: process.env.SIGN_SCHEMA || '/root/sign-schema.sql', ...extra });
   cp.execFileSync(path.join(ROOT, 'scripts/sign-local/reset.sh'), ['depois'], { env: env({ SIGN_DB: DB_MEIO, SIGN_SO_ATE: '1.5' }), encoding: 'utf8' });
   cp.execFileSync(path.join(ROOT, 'scripts/sign-local/reset.sh'), ['depois'], { env: env({ SIGN_DB: DB_CRON, SIGN_SO_ATE: '1.5' }), encoding: 'utf8' });

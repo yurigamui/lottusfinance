@@ -302,12 +302,12 @@ const svgs = (p) => p.evaluate(() => [...document.querySelectorAll('.banner svg,
     await ver(d, f); await wait(p, () => location.hash === '#/documentos'); await irPara(p, '#/conta/verificacao'); await wait(p, () => document.querySelector('.vf-value'));
     check('AC-R5 Verificação, celular: "Celular verificado" e número mascarado', /Celular verificado/.test(await text(p, '.vf-value')) && /\(11\) •••••-1234/.test(await text(p, '.vf-value')), await text(p, '.vf-value'));
     await irPara(p, '#/conta/perfil'); await wait(p, () => document.querySelector('#pf-cel-l'));
-    check('AC-R5 Perfil, celular verificado por celular: selo "Verificado"', /Verificado/.test(await text(p, '#pf-cel-l + .pf-value')) && !/Não verificado/.test(await text(p, '#pf-cel-l + .pf-value')), await text(p, '#pf-cel-l + .pf-value'));
+    check('AC-R5 Perfil, celular verificado por celular: selo "Celular verificado" (B-5: rótulo literal)', /Celular verificado/.test(await text(p, '#pf-cel-l + .pf-value')) && !/Não verificado/.test(await text(p, '#pf-cel-l + .pf-value')), await text(p, '#pf-cel-l + .pf-value'));
     await sai(d);
     const g = await prep(d, 'g', { verif: 'email', done: true }); await q(d, `update public.profiles set phone = '5511987651234' where id = $1`, [g.id]); await q(d, `update public.sign_identity set phone = '5511987651234' where user_id = $1`, [g.id]);
     await ver(d, g); await wait(p, () => location.hash === '#/documentos'); await irPara(p, '#/conta/perfil'); await wait(p, () => document.querySelector('#pf-cel-l'));
     check('AC-R5 (V6-01) Perfil, verificação por e-mail: o celular NÃO é rotulado "Verificado" (era o defeito); selo "Não verificado"', /Não verificado/.test(await text(p, '#pf-cel-l + .pf-value')), await text(p, '#pf-cel-l + .pf-value'));
-    check('AC-R5 Perfil: e-mail "Confirmado"', /Confirmado/.test(await text(p, '#pf-mail-l + .pf-value')));
+    check('AC-R5 Perfil: e-mail "E-mail confirmado" (B-5: contact_kind=email)', /E-mail confirmado/.test(await text(p, '#pf-mail-l + .pf-value')));
   });
 
   // ---------------------------------------------------------------------------------------------------------------- AC-R8 CPF no titular

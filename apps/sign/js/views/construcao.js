@@ -1,6 +1,6 @@
-/* Telas provisórias: destinos que ainda não existem (1.2, Partes 2 a 5) e rota desconhecida. Sempre com saída.
-   Públicas (recuperar, nova-senha, rota desconhecida sem sessão): .sg-single. Privadas: dentro do shell (1.0). */
-import { h, mount, setKids, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261128a';
+/* Telas provisórias: destinos que ainda não existem (Partes 2 a 5) e rota desconhecida. Sempre com saída.
+   Pública (rota desconhecida sem sessão): .sg-single. Privadas: dentro do shell (1.0). A 1.2 tirou daqui #/recuperar e #/nova-senha (views/senha.js). */
+import { h, mount, setKids, brandLogo, pageHead, emptyState, abasConta } from '../lib/ui.js?v=20261129a';
 
 function pagina(ctx, title, text, actions) {
   mount(ctx.root, h('div', { class: 'sg-page sg-single' },
@@ -13,19 +13,6 @@ function pagina(ctx, title, text, actions) {
 function linkEntrar(ctx, texto) {
   return h('a', { class: 'btn lg block', href: '#/entrar', onclick: (e) => { if (e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey) return; e.preventDefault(); ctx.go('#/entrar', true); } }, texto);
 }
-
-export const construcao = {
-  title: 'Em construção',
-  render(ctx) {
-    const actions = [];
-    if (ctx.hasSession) {
-      actions.push(h('button', { class: 'btn lg block', type: 'button', onclick: async () => { await ctx.api.signOut(); ctx.go('#/entrar', true); } }, 'Sair'));
-    } else {
-      actions.push(linkEntrar(ctx, 'Voltar ao início'));
-    }
-    pagina(ctx, 'Em construção', 'Esta área está em construção.', actions);
-  },
-};
 
 export const naoencontrada = {
   title: 'Página não encontrada',

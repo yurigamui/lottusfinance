@@ -1,6 +1,6 @@
 /* Lottus Sign: roteador por hash. Guarda de rota, retorno à origem (lista branca) e foco/título a cada rota. */
-import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261128a';
-import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261128a';
+import { mount, spinner, loading, focusH1, setTitle, safeStore, confirm } from './ui.js?v=20261129a';
+import { ensureShell, releaseShell, dropShell } from '../views/shell.js?v=20261129a';
 
 export const WHITELIST = ['#/documentos', '#/envio/novo', '#/plano', '#/conta/perfil', '#/conta/verificacao', '#/conta/seguranca'];
 export const DE_KEY = 'lottus.sign.de';
@@ -13,8 +13,8 @@ const ONB_RE = /^#\/onboarding(\/.*)?$/;
 const ROUTES = {
   '#/entrar': { view: 'entrar', pub: true, tab: 'entrar' },
   '#/criar': { view: 'entrar', pub: true, tab: 'criar' },
-  '#/recuperar': { view: 'construcao', pub: true },
-  '#/nova-senha': { view: 'construcao', pub: true },
+  '#/recuperar': { view: 'recuperar', pub: true },
+  '#/nova-senha': { view: 'novasenha', pub: true },
   '#/onboarding/1': { view: 'onboarding', gate: false },
   '#/onboarding/2': { view: 'onboarding', gate: false },
   '#/onboarding/3': { view: 'onboarding', gate: false },
